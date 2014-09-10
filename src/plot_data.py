@@ -22,6 +22,9 @@ def plot_segment(segment_object, channel_slice=None, column_slice=None):
             channel_data = data[i][column_slice]
             ax.plot(channel_data)
 
+    plt.suptitle(segment_object.get_filename())
+
+
 def test():
     s = segment.test()
     plot_segment(s, channel_slice=slice(0,1), column_slice=slice(0, 100))
