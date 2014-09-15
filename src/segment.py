@@ -45,7 +45,10 @@ class Segment:
 
 
 
-def test():
+def test_preictal():
     return Segment('../data/Dog_1/Dog_1_preictal_segment_0001.mat')
 
+
+def test_interictal():
+    return Segment('../data/Dog_1/Dog_1_interictal_segment_0001.mat')
 
