@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 import segment
 
 def plot_segment(segment_object, channel_slice=None, column_slice=None):
-    """Plots the given segment. If *range* is given as a slice object, it will be used to select the data which will be plotted"""
+    """Plots the given segment. If the argument *channel_slice* is given as a slice object,
+    only the sliced channels (rows in the segment data matrix) will be plotted.
+    If *column_slice* is given as a slice object,
+    it will be used to select which columns of the electrode data which will be plotted."""
 
     channels = segment_object.get_channels()
     if channel_slice is not None:
