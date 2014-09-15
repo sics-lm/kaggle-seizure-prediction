@@ -2,6 +2,7 @@ __author__ = 'erik'
 
 import scipy.io
 import os.path
+import pandas
 
 class Segment:
     def __init__(self, mat_filename):
@@ -14,7 +15,8 @@ class Segment:
         self.filename = os.path.basename(mat_filename)
         self.dirname = os.path.dirname(os.path.abspath(mat_filename))
         self.name = struct
-        self.mat_struct = scipy.io.loadmat(mat_filename)[self.name]
+        self.mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[self.name]
+        self.dataframe = pandas.DataFrame(self.mat_struct.data.transpose(), columns=self.mat_struct.channels)
 
     def get_name(self):
         return self.name
@@ -24,21 +26,22 @@ class Segment:
 
     def get_dirname(self):
         return self.dirname
-    
+
     def get_channels(self):
-        return [channel[0] for channel in self.mat_struct['channels'][0][0][0]]
+        return self.mat_struct.channels
 
     def get_data(self):
-        return self.mat_struct['data'][0][0]
+        return self.mat_struct.data
 
     def get_length_sec(self):
-        return self.mat_struct['data_length_sec'][0][0][0][0]
+        return self.mat_struct.data_length_sec
 
     def get_sampling_frequency(self):
-        return self.mat_struct['sampling_frequency'][0][0][0][0]
+        return self.mat_struct.sampling_frequency
 
     def get_sequence(self):
-        return self.mat_struct['sequence'][0][0][0][0]
+        return self.mat_struct.sequence
+
 
 
 
