@@ -32,6 +32,15 @@ class Segment:
     def get_channels(self):
         return self.mat_struct.channels
 
+    def get_channel_data(self, channel):
+        """Returns all data of the given channel as a numpy array.
+        *channel* can be either the name of the channel or the index of the channel."""
+        if isinstance(channel, str):
+            index = list(self.get_channels()).index(channel)
+        else:
+            index = channel
+        return self.get_data()[index]
+
     def get_data(self):
         return self.mat_struct.data
 
