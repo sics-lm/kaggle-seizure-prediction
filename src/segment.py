@@ -44,13 +44,14 @@ class Segment:
     def get_sequence(self):
         return self.mat_struct.sequence
 
+    def get_dataframe(self):
+        return self.dataframe
 
 
-
-def test_preictal():
+def example_preictal():
     return Segment('../data/Dog_1/Dog_1_preictal_segment_0001.mat')
 
 
-def test_interictal():
+def example_interictal():
     return Segment('../data/Dog_1/Dog_1_interictal_segment_0001.mat')
 
