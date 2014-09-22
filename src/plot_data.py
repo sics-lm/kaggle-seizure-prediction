@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import segment
 import os
 import os.path
+import fileutils
 
 def plot_segment(segment_object, channel_slice=None, column_slice=None):
     """Plots the given segment. If the argument *channel_slice* is given as a slice object,
@@ -51,28 +52,6 @@ def plot_many(filenames, output_dir=None, format='png', columns_slice=None, chan
             fig.savefig(output_path, format=format, **kwargs)
 
 
-def expand_paths(filenames, recursive=True):
-    """Goes through the list of *filenames* and expands any directory to the files included in that directory.
-    If *recursive* is True, any directories in the base directories will be expanded as well. If *recursive* is
-    False, only normal files in the directories will be included.
-    The returned list only includes non-directory files."""
-    new_files = []
-    for file in filenames:
-        if os.path.isdir(file):
-            if recursive:
-                #We recurse over all files contained in the directory and add them to the list of files
-                for dirpath, dirnames, subfilenames in os.walk(file):
-                    new_files.extend([os.path.join(dirpath, fn) for fn in subfilenames])
-            else:
-                #No recursion, we just do a listfile on the files of any directoy in filenames
-                for subfile in os.listdir(file):
-                    if os.path.isfile(subfile):
-                        new_files.append(os.path.join(file, subfile))
-        elif os.path.isfile(file):
-            new_files.append(file)
-    return new_files
-
-
 def test():
     s = segment.test_preictal()
     plot_segment(s, channel_slice=slice(0,1), column_slice=slice(0, 100))
@@ -89,7 +68,7 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
-    files = expand_paths(args.files)
+    files = fileutils.expand_paths(args.files)
     channels = slice(*args.channels) if args.channels else None
     sample = slice(*args.sample) if args.sample else None
     plot_many(files, format=args.format, output_dir=args.output,
