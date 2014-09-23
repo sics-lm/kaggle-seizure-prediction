@@ -36,6 +36,29 @@ def load_modules(module_names):
         modules.append(mod)
     return modules
 
+def get_preictal_files(dirname):
+    """
+    Returns all .mat files in the directory which correspond to preictal segments.
+    """
+    all_files = expand_paths([dirname])
+    return list(filter(lambda x: '.mat' in x and 'preictal' in x, all_files))
+
+
+def get_interictal_files(dirname):
+    """
+    Returns all .mat files in the directory which correspond to interictal segments.
+    """
+    all_files = expand_paths([dirname])
+    return list(filter(lambda x: '.mat' in x and 'interictal' in x, all_files))
+
+
+def get_test_files(dirname):
+    """
+    Returns all .mat files in the directory which correspond to test segments.
+    """
+    all_files = expand_paths([dirname])
+    return list(filter(lambda x: '.mat' in x and 'test' in x, all_files))
+
 
 def process_segments(files, fun, output_format="{basename}_{fun_name}.txt"):
     """Loads each of the files in the list *files* as segments and applies the function *fun* to each of the segment.
