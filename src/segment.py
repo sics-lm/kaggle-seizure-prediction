@@ -39,14 +39,37 @@ class Segment:
     def get_channels(self):
         return self.mat_struct.channels
 
-    def get_channel_data(self, channel):
+    def get_n_samples(self):
+        """Returns the number of samples in this segment"""
+        return self.mat_struct.data.shape[1]
+
+    def get_duration(self):
+        """Returns the length of this segment in seconds"""
+        return self.get_n_samples() * self.get_sampling_frequency()
+
+    def get_channel_data(self, channel, start_time=None, end_time=None):
         """Returns all data of the given channel as a numpy array.
-        *channel* can be either the name of the channel or the index of the channel."""
+        *channel* can be either the name of the channel or the index of the channel.
+        If *start_time* or *end_time* is given in seconds, only the data corresponding to that window will be returned.
+        If *start_time* is after the end of the segment, nothing is returned."""
         if isinstance(channel, str):
             index = list(self.get_channels()).index(channel)
         else:
             index = channel
-        return self.get_data()[index]
+
+        if start_time is not None or end_time is not None:
+            if start_time is None:
+                start_index = 0
+            else:
+                start_index = start_time * self.get_sampling_frequency()
+
+            if end_time is None:
+                end_index = self.mat_struct.data.shape[1]
+            else:
+                end_index = end_time * self.get_sampling_frequency()
+            return self.get_data()[index][start_index:end_index]
+        else:
+            return self.get_data()[index]
 
     def get_data(self):
         return self.mat_struct.data
@@ -62,6 +85,8 @@ class Segment:
 
     def get_dataframe(self):
         return self.dataframe
+
+
 
 
 def example_preictal():
