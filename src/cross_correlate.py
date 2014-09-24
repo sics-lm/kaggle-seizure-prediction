@@ -165,7 +165,8 @@ def plot_correlations(correlations, output):
             #Every channel pair becomes a row in the image
             corrdata = [float(correlation) for (window_start, window_end), (t_offset, correlation) in sorted(frames.items())]
             corrmap.append(corrdata)
-        plt.imshow(corrmap)
+        heatmap = plt.imshow(corrmap)
+        fig.colorbar(heatmap)
     fig.savefig(output)
 
 if __name__ == '__main__':
