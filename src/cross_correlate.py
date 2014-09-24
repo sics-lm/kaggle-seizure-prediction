@@ -178,9 +178,10 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="Calculates the cross-correlation between the channels in the given segments.")
 
-    parser.add_argument("files", help="The files to process. This can either be the path to a matlab file holding the segment or a directory holding such files.", nargs='+', metavar="SEGMENT_FILE")
-    parser.add_argument("-o", "--output", help="Plots the correlations as a heatmap to the supplied file.", metavar="FILENAME", dest='output')
+    parser.add_argument("--segments", help="The files to process. This can either be the path to a matlab file holding the segment or a directory holding such files.", nargs='+', metavar="SEGMENT_FILE")
+    parser.add_argument("--plot", help="Plots the correlations as a heatmap to the supplied file.", metavar="FILENAME")
     parser.add_argument("--write-csv", help="Writes the cross-correlations to csv files.", action='store_true')
+    parser.add_argument("--read-csv", help="Reads the data from the given csv files instead of generating it from segments. Useful in combination with '--plot'.", nargs='+')
     parser.add_argument("--time-delta", help="Time delta in seconds to use for the cross-correlations. May be a floating point number.", type=float, default=0)
     parser.add_argument("--window-length", help="If this argument is supplied, the cross correlation will be done on windows of this length in seconds. If this argument is omitted, the whole segment will be used.", type=float)
     parser.add_argument("--segment-start", help="If this argument is supplied, only the segment after this time will be used.", type=float)
@@ -190,18 +191,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     channels = None
-
-    files = sorted(fileutils.expand_paths(args.files))
-    correlations = { f: calculate_cross_correlations(segment.Segment(f),
+    if args.segments:
+        files = sorted(fileutils.expand_paths(args.segments))
+        correlations = { f: calculate_cross_correlations(segment.Segment(f),
                                                  args.time_delta, window_length=args.window_length,
                                                  channels=channels,
                                                  segment_start=args.segment_start,
                                                  segment_end=args.segment_end
-                                                 ) for f in files}
+                                                 ) for f in files if '.mat' in f}
+    elif args.read_csv:
+        files = sorted(fileutils.expand_paths(args.read_csv))
+        correlations = { f: read_csv(f) for f in files if '.csv' in f }
 
     if args.write_csv:
          write_csv(correlations)
-    if args.output:
-        plot_correlations(correlations, args.output)
+
+    if args.plot:
+        plot_correlations(correlations, args.plot)
 
 
