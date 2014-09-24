@@ -120,6 +120,7 @@ def test():
     # corrs = calculate_window_cross_correlation(s, 1, 100, 110, channels)
     # print(corrs)
 
+
 def write_csv(correlations):
     import csv
 
@@ -137,15 +138,35 @@ def write_csv(correlations):
                     writer.writerow(row)
 
 
+def read_csv(correlation_file):
+    import csv
+    correlations = defaultdict(dict)
+    with open(correlation_file) as csv_file:
+        reader = csv.DictReader(csv_file, delimiter='\t')
+        for row in reader:
+            channel_i = row['channel_i']
+            channel_j = row['channel_j']
+            window_start = float(row['start_sample'])
+            window_end = float(row['end_sample'])
+            t_offset = int(row['t_offset'])
+            correlation = float(row['correlation'])
+            correlations[(channel_i, channel_j)][(window_start, window_end)] = (t_offset, correlation)
+    return correlations
+
+
 def plot_correlations(correlations, output):
     import matplotlib.pyplot as plt
 
     for f, corrs in correlations.items():
-        for frame, (t_offset, correlation) in corrs.items():
-            #Corrmap should be a 2d array, where the columns correspond to the channel combinations
-            corrmap = None
-            plt.imshow(corrmap)
+        corrmap = []
+        fig = plt.figure()
 
+        for (channel_i, channel_j), frames in corrs.items():
+            #Every channel pair becomes a row in the image
+            corrdata = [float(correlation) for (window_start, window_end), (t_offset, correlation) in sorted(frames.items())]
+            corrmap.append(corrdata)
+        plt.imshow(corrmap)
+    fig.savefig(output)
 
 if __name__ == '__main__':
     #test()
