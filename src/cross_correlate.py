@@ -86,7 +86,7 @@ def maximum_crosscorelation(x, y, sample_delta):
     C_yy = np.dot(y,y)/y.size
 
     norm_const = np.sqrt(C_xx * C_yy)
-    print("Sample delta: ", sample_delta)
+
     for t in range(1, sample_delta):
         # For the negative values of t, we flip the arguments to corr, that is, y is shifted 'to the right' of x
         C_yx = corr(y, x, t)
