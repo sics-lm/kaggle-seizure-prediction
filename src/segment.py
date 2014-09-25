@@ -3,6 +3,7 @@ __author__ = 'erik'
 import scipy.io
 import os.path
 import pandas
+import numpy as np
 
 class Segment:
     def __init__(self, mat_filename):
@@ -61,12 +62,12 @@ class Segment:
             if start_time is None:
                 start_index = 0
             else:
-                start_index = start_time * self.get_sampling_frequency()
+                start_index = int(np.floor(start_time * self.get_sampling_frequency()))
 
             if end_time is None:
                 end_index = self.mat_struct.data.shape[1]
             else:
-                end_index = end_time * self.get_sampling_frequency()
+                end_index = int(np.ceil(end_time * self.get_sampling_frequency()))
             return self.get_data()[index][start_index:end_index]
         else:
             return self.get_data()[index]
