@@ -48,23 +48,27 @@ def calculate_cross_correlations(s, delta_t, channels=None, window_length=None,
                     window_j = s.get_channel_data(channel_j, window_start, window_end)
                     #maximum_crosscorr = maximum_crosscorelation(window_i, window_j, sample_delta)
                     #correlations[channel_i, channel_j][window_start, window_end] = maximum_crosscorr
-                    jobs.append((channel_i, channel_j, window_start, window_end, window_i, window_j, sample_delta))
+                    if len(window_i) > 2:
+                        #We skip strange boundry cases where the slice is too small to be useful
+                        jobs.append((channel_i, channel_j, window_start, window_end, window_i, window_j, sample_delta))
             else:
                 segment_i = s.get_channel_data(channel_i, segment_start, segment_end)
                 segment_j = s.get_channel_data(channel_j, segment_start, segment_end)
                 #maximum_crosscorr = maximum_crosscorelation(segment_i, segment_j, sample_delta)
                 #correlations[channel_i, channel_j][segment_start, segment_end] = maximum_crosscorr
-                jobs.append((channel_i, channel_j, segment_start, segment_end, segment_i, segment_j, sample_delta))
+                if len(segment_i) > 2:
+                    #We skip strange boundry cases where the slice is too small to be useful
+                    jobs.append((channel_i, channel_j, segment_start, segment_end, segment_i, segment_j, sample_delta))
     if workers > 1:
         print("Workers are: ", workers)
-        pool = multiprocessing.Pool(processes=workers)
-
-        for result in pool.imap_unordered(worker_function, jobs):
-            channel_i, channel_j, window_start, window_end, best_delta, correlation = result
-            correlations[channel_i, channel_j][window_start, window_end] = (best_delta, correlation)
-            if csv_writer is not None:
-                csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
-                                         end_sample=window_end, t_offset=best_delta, correlation=correlation))
+        with multiprocessing.Pool(processes=workers) as pool:
+            for result in pool.imap_unordered(worker_function, jobs):
+                channel_i, channel_j, window_start, window_end, best_delta, correlation = result
+                correlations[channel_i, channel_j][window_start, window_end] = (best_delta, correlation)
+                if csv_writer is not None:
+                    csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
+                                             end_sample=window_end, t_offset=best_delta, correlation=correlation))
+            pool.close()
     else:
         for result in map(worker_function, jobs):
             channel_i, channel_j, window_start, window_end, best_delta, correlation = result
@@ -220,7 +224,7 @@ if __name__ == '__main__':
     parser.add_argument("--window-length", help="If this argument is supplied, the cross correlation will be done on windows of this length in seconds. If this argument is omitted, the whole segment will be used.", type=float)
     parser.add_argument("--segment-start", help="If this argument is supplied, only the segment after this time will be used.", type=float)
     parser.add_argument("--segment-end", help="If this argument is supplied, only the segment before this time will be used.", type=float)
-    parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int)
+    parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
