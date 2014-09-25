@@ -46,7 +46,7 @@ class Segment:
 
     def get_duration(self):
         """Returns the length of this segment in seconds"""
-        return self.get_n_samples() * self.get_sampling_frequency()
+        return self.get_n_samples() / self.get_sampling_frequency()
 
     def get_channel_data(self, channel, start_time=None, end_time=None):
         """Returns all data of the given channel as a numpy array.
