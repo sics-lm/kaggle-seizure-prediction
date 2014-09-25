@@ -14,6 +14,7 @@ import csv
 import fileutils
 import segment
 
+csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
 
 def calculate_cross_correlations(s, delta_t, channels=None, window_length=None,
                                  segment_start=None, segment_end=None,
@@ -155,8 +156,7 @@ def write_csv(correlations):
         name, ext = os.path.splitext(f)
         csv_name = "{}_cross_correlation.csv".format(name)
         with open(csv_name, 'w') as csv_file:
-            fieldnames=['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+            writer = csv.DictWriter(csv_file, fieldnames=csv_fieldnames, delimiter='\t')
             writer.writeheader()
             for (channel_i, channel_j), frames in corrs.items():
                 for (start_sample, end_sample), (t_offset, corr_val) in sorted(frames.items()):
@@ -233,8 +233,7 @@ if __name__ == '__main__':
             for f in files:
                 csv_name = get_csv_name(f, args.write_csv)
                 with open(csv_name, 'w') as csv_file:
-                    fieldnames=['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
-                    writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+                    writer = csv.DictWriter(csv_file, fieldnames=csv_fieldnames, delimiter='\t')
                     writer.writeheader()
 
                     correlations[f] = calculate_cross_correlations(segment.Segment(f),
