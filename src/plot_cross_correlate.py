@@ -15,26 +15,50 @@ import segment
 import cross_correlate
 
 
-def plot_correlations(correlations, output, subplot_rows=1, subplot_cols = 10):
+def plot_correlations(correlations, output, subplot_rows=1, subplot_cols = 6):
     pp = PdfPages(output)
 
-    figs = []
-    for f, corrs in correlations.items():
-        corrmap = []
-        fig = plt.figure()
+    fig_mappings = dict()
+    fig_files = defaultdict(list)
+    pair_order = None
+    for i, (f, corrs) in enumerate(sorted(correlations.items())):
+        index = i % (subplot_cols*subplot_rows)
+        if index == 0:
+            fig, subplots = plt.subplots(subplot_rows, subplot_cols, sharey=True, squeeze=False)
+            subplots = [ax for row in subplots for ax in row]
+            for ax in subplots:
+                ax.set_visible(False)
+            fig_mappings[fig] = subplots
 
-        for (channel_i, channel_j), frames in sorted(corrs.items()):
+        fig_files[fig].append(f)
+        corrmap = []
+
+        if pair_order is None:
+            pair_order = sorted(corrs.keys())
+        for channel_pair in pair_order:
+            frames = corrs[channel_pair]
             #Every channel pair becomes a row in the image
             corrdata, window_sizes = zip(*[(float(correlation), window_end - window_start) for (window_start, window_end), (t_offset, correlation) in sorted(frames.items())])
             corrmap.append(corrdata)
-        heatmap = plt.imshow(corrmap)
-        plt.title("Cross correlations for channels from file: {}".format(f))
-        plt.xlabel("Frames ({} s)".format(max(window_sizes)))
-        plt.ylabel("Channel pairs")
-        fig.colorbar(heatmap)
+
+        ax = subplots[index]
+        ax.set_visible(True)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        heatmap = ax.imshow(corrmap)
+        #ax.set_title("Cross correlations for channels from file: {}".format(f))
+        if index == 0:
+            ax.set_xlabel("Frames ({} s)".format(max(window_sizes)))
+            ax.set_ylabel("Channel pairs")
+
+
+
+    for fig, subplots in fig_mappings.items():
+        title = ", ".join([os.path.basename(f) for f in sorted(fig_files[fig])])
+        fig.suptitle(title, fontsize=8)
+        #fig.colorbar(subplots.take(0))
         pp.savefig(fig)
         plt.close(fig)
-
     pp.close()
 
 
@@ -55,7 +79,8 @@ if __name__ == '__main__':
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
-    files = filter(lambda x: '.csv' in x, fileutils.expand_paths(args.csv_files))
+    files = sorted(filter(lambda x: '.csv' in x, fileutils.expand_paths(args.csv_files)))
+
     correlations = dict()
     for f in files:
         try:
