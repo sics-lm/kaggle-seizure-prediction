@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Module for producing spectra using the Welch method as provided by scipy.
+Module for calculating the cross correlation between channels.
 """
 import numpy as np
 import math
@@ -39,6 +39,7 @@ def calculate_cross_correlations(s, delta_t, channels=None, window_length=None,
     if segment_end is None:
         segment_end = s.get_duration()
 
+    jobs = []
     for i, channel_i in enumerate(channels[:-1]):
         for channel_j in channels[i+1:]:
             if window_length is not None:
