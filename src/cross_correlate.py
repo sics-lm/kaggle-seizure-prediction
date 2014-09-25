@@ -7,13 +7,17 @@ import math
 import scipy.signal
 from collections import defaultdict
 import matplotlib.pyplot as plt
+import multiprocessing
+import os.path
+import csv
 
 import fileutils
 import segment
-import os.path
 
 
-def calculate_cross_correlations(s, delta_t, channels=None, window_length=None, segment_start=None, segment_end=None):
+def calculate_cross_correlations(s, delta_t, channels=None, window_length=None,
+                                 segment_start=None, segment_end=None,
+                                 workers=None, csv_writer=None):
     """Calculates the maximum cross-correlation of all pairs of channels in the segment s.
     *delta_t* is the time lag in seconds to do the cross correlations over, that is, the cross correlation will be
     over the time shifts (channel_0-delta_t * channel_1, ..., channel_0+delta_t * channel_1).
@@ -41,14 +45,39 @@ def calculate_cross_correlations(s, delta_t, channels=None, window_length=None, 
                     window_end = window_start + window_length
                     window_i = s.get_channel_data(channel_i, window_start, window_end)
                     window_j = s.get_channel_data(channel_j, window_start, window_end)
-                    maximum_crosscorr = maximum_crosscorelation(window_i, window_j, sample_delta)
-                    correlations[channel_i, channel_j][window_start, window_end] = maximum_crosscorr
+                    #maximum_crosscorr = maximum_crosscorelation(window_i, window_j, sample_delta)
+                    #correlations[channel_i, channel_j][window_start, window_end] = maximum_crosscorr
+                    jobs.append((channel_i, channel_j, window_start, window_end, window_i, window_j, sample_delta))
             else:
                 segment_i = s.get_channel_data(channel_i, segment_start, segment_end)
                 segment_j = s.get_channel_data(channel_j, segment_start, segment_end)
-                maximum_crosscorr = maximum_crosscorelation(segment_i, segment_j, sample_delta)
-                correlations[channel_i, channel_j][segment_start, segment_end] = maximum_crosscorr
+                #maximum_crosscorr = maximum_crosscorelation(segment_i, segment_j, sample_delta)
+                #correlations[channel_i, channel_j][segment_start, segment_end] = maximum_crosscorr
+                jobs.append((channel_i, channel_j, segment_start, segment_end, segment_i, segment_j, sample_delta))
+    if workers > 1:
+        print("Workers are: ", workers)
+        pool = multiprocessing.Pool(processes=workers)
+
+        for result in pool.imap_unordered(worker_function, jobs):
+            channel_i, channel_j, window_start, window_end, best_delta, correlation = result
+            correlations[channel_i, channel_j][window_start, window_end] = (best_delta, correlation)
+            if csv_writer is not None:
+                csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
+                                         end_sample=window_end, t_offset=best_delta, correlation=correlation))
+    else:
+        for result in map(worker_function, jobs):
+            channel_i, channel_j, window_start, window_end, best_delta, correlation = result
+            correlations[channel_i, channel_j][window_start, window_end] = (best_delta, correlation)
+            if csv_writer is not None:
+                csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
+                                         end_sample=window_end, t_offset=best_delta, correlation=correlation))
     return correlations
+
+def worker_function(data):
+    channel_i, channel_j, window_start, window_end, window_i, window_j, sample_delta = data
+    (best_delta_t, correlation) = maximum_crosscorelation(window_i, window_j, sample_delta)
+    return channel_i, channel_j, window_start, window_end, best_delta_t, correlation
+
 
 def corr(x,y, t):
     """
@@ -122,8 +151,6 @@ def test():
 
 
 def write_csv(correlations):
-    import csv
-
     for f, corrs in correlations.items():
         name, ext = os.path.splitext(f)
         csv_name = "{}_cross_correlation.csv".format(name)
@@ -139,7 +166,6 @@ def write_csv(correlations):
 
 
 def read_csv(correlation_file):
-    import csv
     correlations = defaultdict(dict)
     with open(correlation_file) as csv_file:
         reader = csv.DictReader(csv_file, delimiter='\t')
@@ -155,8 +181,6 @@ def read_csv(correlation_file):
 
 
 def plot_correlations(correlations, output):
-    import matplotlib.pyplot as plt
-
     for f, corrs in correlations.items():
         corrmap = []
         fig = plt.figure()
@@ -168,6 +192,15 @@ def plot_correlations(correlations, output):
         heatmap = plt.imshow(corrmap)
         fig.colorbar(heatmap)
     fig.savefig(output)
+
+
+def get_csv_name(f, csv_directory):
+    name, ext = os.path.splitext(f)
+    if csv_directory is not None:
+        basename = os.path.basename(name)
+        name = os.path.join(csv_directory, basename)
+    csv_name = "{}_cross_correlation.csv".format(name)
+    return csv_name
 
 if __name__ == '__main__':
     #test()
@@ -181,31 +214,52 @@ if __name__ == '__main__':
 
     parser.add_argument("--segments", help="The files to process. This can either be the path to a matlab file holding the segment or a directory holding such files.", nargs='+', metavar="SEGMENT_FILE")
     parser.add_argument("--plot", help="Plots the correlations as a heatmap to the supplied file.", metavar="FILENAME")
-    parser.add_argument("--write-csv", help="Writes the cross-correlations to csv files.", action='store_true')
+    parser.add_argument("--write-csv", help="Writes the cross-correlations to csv files. If no value is given for the output directory, the files will be collected to the same place as the input file(s).", nargs='?', metavar="CSV_OUTPUT_DIRECTORY")
     parser.add_argument("--read-csv", help="Reads the data from the given csv files instead of generating it from segments. Useful in combination with '--plot'.", nargs='+')
     parser.add_argument("--time-delta", help="Time delta in seconds to use for the cross-correlations. May be a floating point number.", type=float, default=0)
     parser.add_argument("--window-length", help="If this argument is supplied, the cross correlation will be done on windows of this length in seconds. If this argument is omitted, the whole segment will be used.", type=float)
     parser.add_argument("--segment-start", help="If this argument is supplied, only the segment after this time will be used.", type=float)
     parser.add_argument("--segment-end", help="If this argument is supplied, only the segment before this time will be used.", type=float)
+    parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int)
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
 
     channels = None
     if args.segments:
-        files = sorted(fileutils.expand_paths(args.segments))
-        correlations = { f: calculate_cross_correlations(segment.Segment(f),
-                                                 args.time_delta, window_length=args.window_length,
-                                                 channels=channels,
-                                                 segment_start=args.segment_start,
-                                                 segment_end=args.segment_end
-                                                 ) for f in files if '.mat' in f}
-    elif args.read_csv:
-        files = sorted(fileutils.expand_paths(args.read_csv))
-        correlations = { f: read_csv(f) for f in files if '.csv' in f }
+        files = filter(lambda x: '.mat' in x, sorted(fileutils.expand_paths(args.segments)))
+        if args.write_csv:
+            correlations = dict()
+            for f in files:
+                csv_name = get_csv_name(f, args.write_csv)
+                with open(csv_name, 'w') as csv_file:
+                    fieldnames=['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
+                    writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+                    writer.writeheader()
 
-    if args.write_csv:
-         write_csv(correlations)
+                    correlations[f] = calculate_cross_correlations(segment.Segment(f),
+                                                     args.time_delta, window_length=args.window_length,
+                                                     channels=channels,
+                                                     segment_start=args.segment_start,
+                                                     segment_end=args.segment_end,
+                                                     csv_writer=writer,
+                                                     workers=args.workers)
+        else:
+            #Don't write to csv, only useful for directly plotting or testing
+            correlations = { f: calculate_cross_correlations(segment.Segment(f),
+                                                     args.time_delta, window_length=args.window_length,
+                                                     channels=channels,
+                                                     segment_start=args.segment_start,
+                                                     segment_end=args.segment_end,
+                                                     workers=args.workers) for f in files }
+
+
+    elif args.read_csv:
+        files = filter(lambda x: '.csv' in x, sorted(fileutils.expand_paths(args.read_csv)))
+        correlations = { f: read_csv(f) for f in files}
+
+    #if args.write_csv:
+    #     write_csv(correlations)
 
     if args.plot:
         plot_correlations(correlations, args.plot)
