@@ -61,7 +61,6 @@ def calculate_cross_correlations(s, delta_t, channels=None, window_length=None,
                     #We skip strange boundry cases where the slice is too small to be useful
                     jobs.append((channel_i, channel_j, segment_start, segment_end, segment_i, segment_j, sample_delta))
     if workers > 1:
-        print("Workers are: ", workers)
         with multiprocessing.Pool(processes=workers) as pool:
             for result in pool.imap_unordered(worker_function, jobs):
                 channel_i, channel_j, window_start, window_end, best_delta, correlation = result
