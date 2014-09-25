@@ -155,10 +155,10 @@ def test():
     # print(corrs)
 
 
-def write_csv(correlations):
+def write_csv(correlations, window_length, time_delta):
     for f, corrs in correlations.items():
         name, ext = os.path.splitext(f)
-        csv_name = "{}_cross_correlation.csv".format(name)
+        csv_name = "{}_cross_correlation_{}s_{}dt.csv".format(name, window_length, time_delta)
         with open(csv_name, 'w') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=csv_fieldnames, delimiter='\t')
             writer.writeheader()
@@ -198,13 +198,18 @@ def plot_correlations(correlations, output):
     fig.savefig(output)
 
 
-def get_csv_name(f, csv_directory):
+def get_csv_name(f, csv_directory, window_length=None, time_delta=None):
     name, ext = os.path.splitext(f)
     if csv_directory is not None:
         basename = os.path.basename(name)
         name = os.path.join(csv_directory, basename)
-    csv_name = "{}_cross_correlation.csv".format(name)
-    return csv_name
+    csv_name = "{}_cross_correlation".format(name)
+    if window_length is not None:
+        csv_name += "_{}s".format(window_length)
+    if time_delta is not None:
+        csv_name += "_{}dt".format(time_delta)
+
+    return csv_name + '.csv'
 
 if __name__ == '__main__':
     #test()
@@ -235,7 +240,7 @@ if __name__ == '__main__':
         if args.write_csv:
             correlations = dict()
             for f in files:
-                csv_name = get_csv_name(f, args.write_csv)
+                csv_name = get_csv_name(f, args.write_csv, args.window_length, args.time_delta)
                 with open(csv_name, 'w') as csv_file:
                     writer = csv.DictWriter(csv_file, fieldnames=csv_fieldnames, delimiter='\t')
                     writer.writeheader()
