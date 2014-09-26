@@ -2,7 +2,7 @@ __author__ = 'erik'
 
 import scipy.io
 import os.path
-import pandas
+#import pandas
 import numpy as np
 
 class Segment:
@@ -26,7 +26,7 @@ class Segment:
         except ValueError as e:
             print("Error when loading {}".format(mat_filename))
             raise e
-        self.dataframe = pandas.DataFrame(self.mat_struct.data.transpose().astype('float32'), columns=self.mat_struct.channels)
+        #self.dataframe = pandas.DataFrame(self.mat_struct.data.transpose().astype('float32'), columns=self.mat_struct.channels)
 
     def get_name(self):
         return self.name
@@ -53,10 +53,10 @@ class Segment:
         *channel* can be either the name of the channel or the index of the channel.
         If *start_time* or *end_time* is given in seconds, only the data corresponding to that window will be returned.
         If *start_time* is after the end of the segment, nothing is returned."""
-        if isinstance(channel, str):
-            index = list(self.get_channels()).index(channel)
-        else:
+        if isinstance(channel, int):
             index = channel
+        else:
+            index = list(self.get_channels()).index(str(channel))
 
         if start_time is not None or end_time is not None:
             if start_time is None:
