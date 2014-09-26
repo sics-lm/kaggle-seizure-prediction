@@ -15,7 +15,7 @@ import segment
 import cross_correlate
 
 
-def plot_correlations(correlations, output, subplot_rows=1, subplot_cols = 6):
+def plot_correlations(correlations, output, segment_start=None, segment_end=None, subplot_rows=1, subplot_cols = 6):
     pp = PdfPages(output)
 
     fig_mappings = dict()
@@ -38,7 +38,16 @@ def plot_correlations(correlations, output, subplot_rows=1, subplot_cols = 6):
         for channel_pair in pair_order:
             frames = corrs[channel_pair]
             #Every channel pair becomes a row in the image
-            corrdata, window_sizes = zip(*[(float(correlation), window_end - window_start) for (window_start, window_end), (t_offset, correlation) in sorted(frames.items())])
+            corrdata = []
+            window_sizes = set()
+            for (window_start, window_end), time_deltas in sorted(frames.items()):
+                if ((segment_start is not None and window_end <= segment_start) or
+                    (segment_end is not None and window_start >= segment_end)):
+                    continue
+                (t_offset, correlation) = max(time_deltas, key=lambda x: x[1])
+                corrdata.append(float(correlation))
+                window_sizes.add(window_end - window_start)
+
             corrmap.append(corrdata)
 
         ax = subplots[index]
@@ -87,6 +96,6 @@ if __name__ == '__main__':
             correlations[f] = cross_correlate.read_csv(f)
         except:
             print("Error reading {} as a csv".format(f))
-    plot_correlations(correlations, args.output)
+    plot_correlations(correlations, args.output, segment_start=args.segment_start, segment_end=args.segment_end)
 
 
