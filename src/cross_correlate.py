@@ -3,10 +3,7 @@
 Module for calculating the cross correlation between channels.
 """
 import numpy as np
-import math
-import scipy.signal
 from collections import defaultdict
-import matplotlib.pyplot as plt
 import multiprocessing
 import os.path
 import csv
