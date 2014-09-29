@@ -67,7 +67,8 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                     #We skip strange boundry cases where the slice is too small to be useful
                     jobs.append((channel_i, channel_j, segment_start, segment_end, segment_i, segment_j, time_delta_range, all_time_deltas))
     if workers > 1:
-        with multiprocessing.Pool(processes=workers) as pool:
+        try:
+            pool = multiprocessing.Pool(processes=workers)
             for result in pool.imap_unordered(worker_function, jobs):
                 channel_i, channel_j, window_start, window_end, time_deltas = result
                 #time_deltas is a list of (delta_t, correlation) values, if all_time_deltass is False, it will be the maximum correlation
@@ -75,6 +76,7 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                     t_offset = delta_t / frequency
                     csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
                                              end_sample=window_end, t_offset=t_offset, correlation=correlation))
+        finally:
             pool.close()
     else:
         for result in map(worker_function, jobs):
