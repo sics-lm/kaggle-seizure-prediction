@@ -3,19 +3,16 @@
 Module for calculating the cross correlation between channels.
 """
 import numpy as np
-import math
-import scipy.signal
 from collections import defaultdict
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import multiprocessing
-import os.path
-import csv
+from matplotlib.backends.backend_pdf import PdfPages
 
 import fileutils
-import segment
 import cross_correlate
 
-from matplotlib.backends.backend_pdf import PdfPages
 
 def get_delta_ts(file_correlations, segment_start=None, segment_end=None):
     """Extract the delta_t:s from the correlations"""
@@ -58,39 +55,60 @@ def plot_delta_ts(file_correlations, output=None, channels_per_plot=4, **kwargs)
 
 
 def get_delta_t_distributions(file_correlations, segment_start=None, segment_end=None):
-    """Returns the distributions of time deltas vs. cross correalation values"""
-    delta_dist = defaultdict(list)
+    """Returns the distributions of time deltas vs. cross correalation values."""
+    interictal_delta_dist = defaultdict(list)
+    preictal_delta_dist = defaultdict(list)
     for filename, correlations in file_correlations.items():
         for (channel_i, channel_j), frames in correlations.items():
             for (window_start, window_end), time_deltas in sorted(frames.items()):
                 if ((segment_start is not None and window_end <= segment_start) or
                     (segment_end is not None and window_start >= segment_end)):
                     continue
-                delta_dist[channel_i, channel_j].append(sorted(time_deltas))
-    return delta_dist
+                if 'preictal' in filename.lower():
+                    preictal_delta_dist[channel_i, channel_j].append(sorted(time_deltas))
+                elif 'interictal' in filename.lower():
+                    interictal_delta_dist[channel_i, channel_j].append(sorted(time_deltas))
+    return interictal_delta_dist, preictal_delta_dist
+
 
 def plot_delta_t_distributions(file_correlations, output, channels_per_plot=1, **kwargs):
-    delta_dists = get_delta_t_distributions(file_correlations, **kwargs)
+    interictal_delta_dists, preictal_delta_dists = get_delta_t_distributions(file_correlations, **kwargs)
     figs = []
     pp = PdfPages(output)
-
-    for i, (channel_pair, distributions) in enumerate(sorted(delta_dists.items())):
+    channels = interictal_delta_dists.keys()
+    for i, channels in enumerate(sorted(channels)):
         fig = plt.figure(dpi=300)
+
         #Distributions is a list of lists: [[(delta_t, corrvalue)]] #We should plot the distributions as stacked plots,
         #We extract the times from the first distribution
-        x = [delta_t for (delta_t, corrvalue) in distributions[0]]
-        ys = [[corrvalue for delta_t, corrvalue in dist] for dist in distributions]
+        interictal_dist = interictal_delta_dists[channels]
+        preictal_dist = preictal_delta_dists[channels]
+
+        interictal_x = [delta_t for (delta_t, corrvalue) in interictal_dist[0]]
+        interictal_ys = [[corrvalue for delta_t, corrvalue in dist] for dist in interictal_dist]
+
+        preictal_x = [delta_t for (delta_t, corrvalue) in preictal_dist[0]]
+        preictal_ys = [[corrvalue for delta_t, corrvalue in dist] for dist in preictal_dist]
+
         ##This will probably be very hard to see, we might want to add the ys together instead
-        plt.stackplot(x, ys)
-        label = "{} {}".format(*channel_pair)
+        #plt.stackplot(x, ys)
+
+        label = "{} {}".format(*channels)
         print("Plotting: {}".format(label))
-        #y = np.sum(ys, axis=0)
-        #plt.plot(x,y,label=label)
-        #plt.legend()
+
+        interictal_y = np.sum(interictal_ys, axis=0)
+        interictal_norm = np.sum(interictal_y) # Calculate a constant to divide the interictal_y's with, so the integral is 1
+        plt.plot(interictal_x,interictal_y/interictal_norm, label="Interictal")
+
+        preictal_y = np.sum(preictal_ys, axis=0)
+        preictal_norm = np.sum(preictal_y) # Calculate a constant to divide the preictal_y's with, so the integral is 1
+        plt.plot(preictal_x,preictal_y/preictal_norm, label="Preictal")
+        plt.legend()
         plt.suptitle(label)
+
         plt.ylim((0,1))
         plt.xlabel("Time shift (s)")
-        plt.ylabel("Correlation")
+        plt.ylabel("Normalized Correlation")
         pp.savefig(fig, dpi=300, papertype='a0')
         plt.close(fig)
     pp.close()
