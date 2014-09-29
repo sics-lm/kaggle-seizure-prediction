@@ -121,7 +121,7 @@ def maximum_crosscorelation(x, y, time_delta_range, all_time_deltas=False):
     """Returns the maximal normalized cross-correlation for the two sequences x and y. *sample_delta* is the most *x* will be
     shifted 'to the left' and 'to the right' of *y*. If *all_time_deltas* is True, all time deltas and their response will be included."""
 
-    current_max = 0
+    current_max = -1
     best_t = None
 
     #normalization of the values are done with sqrt(corr(x,x) dot corr(y,y))
