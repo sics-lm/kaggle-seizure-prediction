@@ -106,7 +106,6 @@ def plot_delta_t_distributions(file_correlations, output, channels_per_plot=1, *
         plt.legend()
         plt.suptitle(label)
 
-        plt.ylim((0,1))
         plt.xlabel("Time shift (s)")
         plt.ylabel("Normalized Correlation")
         pp.savefig(fig, dpi=300, papertype='a0')
