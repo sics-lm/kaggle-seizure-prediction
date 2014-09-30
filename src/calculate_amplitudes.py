@@ -76,7 +76,7 @@ if __name__ == '__main__':
     parser.add_argument("--write-csv", help="Writes the histograms to csv files.", action='store_true')
     args = parser.parse_args()
 
-    files = fileutils.expand_paths(args.files)
+    files = sorted(fileutils.expand_paths(args.files))
     if args.write_csv:
         fileutils.process_segments(files, process_segment, output_format="{basename}_amplitude_histogram.csv")
     if args.plot:
