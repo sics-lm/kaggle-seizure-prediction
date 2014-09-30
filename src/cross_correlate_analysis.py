@@ -17,7 +17,7 @@ import cross_correlate
 def get_delta_ts(file_correlations, segment_start=None, segment_end=None):
     """Extract the delta_t:s from the correlations"""
     delta_ts = defaultdict(list)
-    for filename, correlations in file_correlations.items():
+    for filename, correlations in file_correlations:
         for (channel_i, channel_j), frames in correlations.items():
             for (window_start, window_end), time_deltas in sorted(frames.items()):
                 if ((segment_start is not None and window_end <= segment_start) or
@@ -58,7 +58,7 @@ def get_delta_t_distributions(file_correlations, segment_start=None, segment_end
     """Returns the distributions of time deltas vs. cross correalation values."""
     interictal_delta_dist = defaultdict(list)
     preictal_delta_dist = defaultdict(list)
-    for filename, correlations in file_correlations.items():
+    for filename, correlations in file_correlations:
         for (channel_i, channel_j), frames in correlations.items():
             for (window_start, window_end), time_deltas in sorted(frames.items()):
                 if ((segment_start is not None and window_end <= segment_start) or
@@ -128,13 +128,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     files = sorted(filter(lambda x: '.csv' in x, fileutils.expand_paths(args.csv_files)))
 
-    correlations = dict()
-    for f in files:
-        try:
-            correlations[f] = cross_correlate.read_csv(f)
-        except:
-            print("Error reading {} as a csv".format(f))
-            raise
+    correlations = cross_correlate.read_csv_files(files)
     if args.mode == 'delta_times':
         plot_delta_ts(correlations, output=args.output, segment_start=args.segment_start, segment_end=args.segment_end,
                   channels_per_plot=args.channels_per_plot)

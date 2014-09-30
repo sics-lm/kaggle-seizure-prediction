@@ -21,7 +21,7 @@ def plot_correlations(correlations, output, segment_start=None, segment_end=None
     fig_mappings = dict()
     fig_files = defaultdict(list)
     pair_order = None
-    for i, (f, corrs) in enumerate(sorted(correlations.items())):
+    for i, (f, corrs) in enumerate(sorted(correlations)):
         index = i % (subplot_cols*subplot_rows)
         if index == 0:
             fig, subplots = plt.subplots(subplot_rows, subplot_cols, sharey=True, squeeze=False)
@@ -76,7 +76,7 @@ def class_corr_scatter(file_correlations, output, segment_start = None, segment_
     preictal_channel_corrs = defaultdict(list)
     interictal_channel_corrs = defaultdict(list)
     channels = set()
-    for f, correlations in file_correlations.items():
+    for f, correlations in file_correlations:
         for channel_pair, frames in correlations.items():
             channels.add(channel_pair)
             for (window_start, window_end), time_corrlist in frames.items():
@@ -109,7 +109,7 @@ def corr_box_plot(file_correlations, output, channels_per_plot=10, segment_start
     preictal_channel_corrs = defaultdict(list)
     interictal_channel_corrs = defaultdict(list)
     channels = set()
-    for f, correlations in file_correlations.items():
+    for f, correlations in file_correlations:
         for channel_pair, frames in correlations.items():
             channels.add(channel_pair)
             for (window_start, window_end), time_corrlist in frames.items():
@@ -180,13 +180,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     files = sorted(filter(lambda x: '.csv' in x, fileutils.expand_paths(args.csv_files)))
 
-    correlations = dict()
-    for f in files:
-        try:
-            correlations[f] = cross_correlate.read_csv(f)
-        except:
-            print("Error reading {} as a csv".format(f))
-            raise
+    correlations = cross_correlate.read_csv_files(files)
+
     if args.mode == "heatmap":
         plot_correlations(correlations, args.output, segment_start=args.segment_start, segment_end=args.segment_end)
     elif args.mode == "class_scatter":
