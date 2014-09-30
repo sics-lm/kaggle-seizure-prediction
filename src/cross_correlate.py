@@ -206,6 +206,14 @@ def read_csv(correlation_file):
     return correlations
 
 
+def read_csv_files(correlation_files):
+    """
+    Generator for dealing with correlation files. Returns one correlation at a time.
+    """
+    for f in correlation_files:
+        yield f, read_csv(f)
+
+
 def get_csv_name(f, csv_directory, window_length=None, time_delta_config=None):
     name, ext = os.path.splitext(f)
     if csv_directory is not None:
