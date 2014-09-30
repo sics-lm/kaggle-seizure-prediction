@@ -2,6 +2,8 @@
 """
 Module for calculating the cross correlation between channels.
 """
+from __future__ import division
+
 import numpy as np
 from collections import defaultdict
 import multiprocessing
@@ -73,7 +75,7 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                 channel_i, channel_j, window_start, window_end, time_deltas = result
                 #time_deltas is a list of (delta_t, correlation) values, if all_time_deltass is False, it will be the maximum correlation
                 for delta_t, correlation in time_deltas:
-                    t_offset = delta_t / frequency
+                    t_offset = delta_t / float(frequency)
                     csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
                                              end_sample=window_end, t_offset=t_offset, correlation=correlation))
         finally:
@@ -83,7 +85,7 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
             channel_i, channel_j, window_start, window_end, time_deltas = result
             #time_deltas is a list of (delta_t, correlation) values, if all_time_deltass is False, it will be the maximum correlation
             for delta_t, correlation in time_deltas:
-                t_offset = delta_t / frequency
+                t_offset = delta_t / float(frequency)  # Python 2 will return an int if both these are int
                 csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
                                          end_sample=window_end, t_offset=t_offset, correlation=correlation))
 
