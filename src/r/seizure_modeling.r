@@ -1,11 +1,10 @@
 library(caret)
 
-
 trainModel <- function(trainingData) {
     ## Creates a model using caret based on the given dataframe
 
     ## Create a resampling control object, "repeatedcv" uses repeated k-fold cross-validation with k=number
-    ctrl <- trainControl(method="repeatedcv", repeats=3, #number=5,
+    ctrl <- trainControl(method="repeatedcv", repeats=4, number=5,
                          classProbs = TRUE,
                          summaryFunction = twoClassSummary)
 
@@ -23,11 +22,11 @@ trainModel <- function(trainingData) {
 
     ##Decision Tree classifier
     classLabels <- ordered(classLabels)  # The class labels needs to be factors for the decision tree
-    model <- train(##preictal ~ .,
-                   x=observations,
+    model <- train(x=observations,
                    y=classLabels,
                    method="rpart",
-                   )#trControl=ctrl) #, metric="ROC")
+                   trControl=ctrl,
+                   metric="ROC")
     return(model)
 }
 
