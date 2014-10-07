@@ -41,5 +41,6 @@ calculateClassProbs <- function(model, testing) {
 runTests <- function(model, testSegments) {
     ## Returns an array containing the file names of testSegments and the preictal probabilities
     plsProbs <- predict(model, newdata = testSegments)
-    return(cbind(testSegments$file_name, plsProbs))
+#    return(cbind(row.names(testSegments), plsProbs))
+    plsProbs
 }
