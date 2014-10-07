@@ -33,8 +33,8 @@ trainModel <- function(trainingData) {
 
 calculateClassProbs <- function(model, testing) {
     ## Calculates the class probabilities given the *testing* dataset using the fitted *model*
-    plsProbs <- predict(model, newdata = testing)#, type = "prob")
-    return(plsProbs)
+    plsPreds <- predict(model, newdata = testing)#, type = "prob")
+    return(plsPreds)
 }
 
 
