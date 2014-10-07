@@ -16,7 +16,7 @@ loadAndPivot <- function(filename) {
   #   A pivoted dataframe.
   a <- read.csv(filename, stringsAsFactors = FALSE, sep = "\t")
 
-  a$channel_pair <- paste(a$channel_i, a$channel_j)
+  a$channel_pair <- paste(a$channel_i, a$channel_j, sep=":")
 
   subset <- a[,c("channel_pair", "start_sample", "correlation")]
   melted_subset <- melt(subset, id.vars = c("start_sample", "channel_pair"))
