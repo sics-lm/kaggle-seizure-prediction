@@ -44,7 +44,115 @@ convert_csv_files <- function(file_prefix, type, start_number, end_number) {
   saveRDS(bigDf, paste(file_prefix, type, ".rds", sep=""))
 }
 
-create_experiment_data <- function(filepath, no.cores = 4, training.perc = .8) {
+
+loadCorrelationFiles <- function(featureFolder, className,
+                                 filePattern=".*5\\.0s\\.csv$",
+                                 cluster=NULL, rebuildData=FALSE) {
+    ## Loads the files matched by filePattern from from featureFolder using cluster for creating the dataframes in parallell
+    ## Arguments:
+    ##    featureFolder: the folder containing correlation csv files
+    ##    className: the name to use for matching csv files, usually "interictal", "preictal" or "test"
+    ##    filePattern: a regular expression used to match the filenames apart from the class name
+    ##    cluster: optionally a cluster object created by the parallel package
+    ##    rebuildData: flag to toggle wether to use cached data for the dataframes or re-read the features from the files
+    ## Returns:
+    ##    A dataframe containing the data from the files matched by the pattern
+    fullPattern <- sprintf("(%s)%s", className, filePattern)
+    cachedFile <- file.path(featureFolder,
+                            sprintf("%s_cache.rds", className))
+    
+    if (rebuildData || !file.exists(cachedFile)) {
+        ## We rebuild the dataframes by reading the csv files
+        corrFiles <- list.files(path=featureFolder,
+                                full.names = TRUE,
+                                pattern=fullPattern)
+        if (is.null(cluster)) {
+            corrList <- lapply(corrFiles, loadAndPivot)
+        }
+        else {
+            corrList <- parLapply(cluster, corrFiles, loadAndPivot)
+        }
+        
+        ## We can't really parallelize rbind, but using plyr makes it much faster
+        corrDF <- rbind.fill(corrList)
+        row.names(corrDF) <- unlist(lapply(corrList, row.names))
+        
+        saveRDS(corrDF, cachedFile)
+        return(corrDF)
+    }
+    else {
+        ## We use the cached data
+        
+        corrDF <- readRDS(cachedFile)
+        return(corrDF)
+    }
+}
+
+loadDataFrames <- function(featureFolder,  no.cores = 4, rebuildData=FALSE) {
+    ## Loads the dataframes from featureFolder into three seperate dataframes, interictal, preictal and test
+    ## Args:
+    ##    featureFolder: a path to a folder containing correlation feature csv files
+    ##    no.cores: the number of cores to use for parallel execution
+    ##    rebuildData: Flag for rebuilding data even if there is a cached version in the feature folder
+    ## Returns:
+    ##    A three element list with (interictal, preictal, test) dataframes. 
+    
+    filePattern <- ".*5\\.0s\\.csv$"
+
+    cl <- makeCluster(getOption("cl.cores", no.cores))
+    clusterEvalQ(cl, library(reshape2))
+    pre.df <- loadCorrelationFiles(featureFolder,
+                                   className="preictal",
+                                   filePattern=filePattern,
+                                   cl,
+                                   rebuildData)
+    int.df <- loadCorrelationFiles(featureFolder,
+                                   className="interictal",
+                                   filePattern=filePattern,
+                                   cl,
+                                   rebuildData)
+    test.df <- loadCorrelationFiles(featureFolder,
+                                    className="test",
+                                    filePattern=filePattern,
+                                    cl,
+                                    rebuildData)
+    stopCluster(cl)
+    
+    return(list(int.df, pre.df, test.df))
+}
+
+
+splitExperimentData <- function(interictalDF,
+                                preictalDF,
+                                trainingPerc = .8) {
+    ## Creates a stratified sample of the concatenation of the given interictal and preictal dataframes. Adds a class label column.
+    ## Args:
+    ##    interictalDF: dataframe containing interictal samples
+    ##    preictalDF: dataframe containing preictal samples
+    ##    trainingPerc: percentage of the data to use for training
+    ## Returns:
+    ## A list with two dataframes, the first is the training dataset and the second a test dataset. The dataframes contains the same columns as the input dataframes, with an additional class column called 'preictal' which is 1 if the row is a preictal sample and 0 if it's not
+
+    ## Assign class labels
+    interictalDF$preictal = 0
+    preictalDF$preictal = 1
+
+    ## Combine dataframes
+    comp.df <- rbind.fill(preictalDF, interictalDF)
+
+    ## createDataPartition performs stratified sampling, attempting to keep the percentage of class
+    ## examples in the original data consistent in the test and train data.
+    ## Consider using createTimeSlices here as it specifically built for time series data
+    ## See: http://topepo.github.io/caret/splitting.html
+    train.index <- createDataPartition(comp.df$preictal, p = trainingPerc, list = FALSE, times = 1)
+    
+    comp.train <- comp.df[ train.index,]
+    comp.test  <- comp.df[-train.index,]
+    return(list(comp.train, comp.test))
+}
+
+
+create_experiment_data <- function(filepath, no.cores = 4, training.perc = .8, rebuildData=FALSE) {
   # Creates a split of the complete training data into a training and test set
   #
   # Args:
