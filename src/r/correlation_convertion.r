@@ -17,13 +17,13 @@ loadAndPivot <- function(filename) {
   a <- read.csv(filename, stringsAsFactors = FALSE, sep = "\t")
 
   a$channel_pair <- paste(a$channel_i, a$channel_j, sep=":")
-
   subset <- a[,c("channel_pair", "start_sample", "correlation")]
   melted_subset <- melt(subset, id.vars = c("start_sample", "channel_pair"))
   pivot_subset <- dcast(data = melted_subset, start_sample ~ channel_pair)
+  row.names(pivot_subset) <- paste(row.names(pivot_subset), basename(filename), sep=":")
+
   return(pivot_subset)
 }
-
 
 
 convert_csv_files <- function(file_prefix, type, start_number, end_number) {
