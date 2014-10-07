@@ -156,44 +156,28 @@ create_experiment_data <- function(filepath, no.cores = 4, training.perc = .8, r
   # Creates a split of the complete training data into a training and test set
   #
   # Args:
-  #   filepath: The path under which the interictal and preictal files lie
+  #   filepath: The path to a folder containing correlation csv files
   #   no.cores: the number of cores to use for parallel execution
   #   training.perc: The percentage of the data to be used as training data
+  #   rebuild_data: Flag whether the dataframes should be rebuildt, even if there is a cached version of the data in the filepath folder
   # Returns:
   #   A list containing the train and test splits of the data
 
+  dataSet <- loadDataFrames(filepath, no.cores, rebuildData)
+  int.df <- dataSet[[1]]
+  pre.df <- dataSet[[2]]
 
-  cl <- makeCluster(getOption("cl.cores", no.cores))
-  clusterEvalQ(cl, library(reshape2))
+  trainingSplit <- splitExperimentData(interictalDF = int.df,
+                                       preictalDF = pre.df,
+                                       trainingPerc = training.perc)
+  return(trainingSplit)
+}
 
-  pre.files <- list.files(path=filepath, full.names = TRUE, pattern="(preictal).*5\\.0s\\.csv$")
-  int.files <- list.files(path=filepath, full.names = TRUE, pattern="(interictal).*5\\.0s\\.csv$")
 
-  # Create the list of dfs in parallel
-  pre.list <- parLapply(cl, pre.files, loadAndPivot)
-  int.list <- parLapply(cl, int.files, loadAndPivot)
-
-  stopCluster(cl)
-
-  # We can't really parallelize rbind, but using plyr makes it much faster
-  pre.df <- rbind.fill(pre.list)
-  int.df <- rbind.fill(int.list)
-
-  # Assign class labels
-  pre.df$preictal = 1
-  int.df$preictal = 0
-
-  # Combine dataframes
-  comp.df <- rbind.fill(pre.df, int.df)
-
-  # createDataPartition performs stratified sampling, attempting to keep the percentage of class
-  # examples in the original data consistent in the test and train data.
-  # Consider using createTimeSlices here as it specifically built for time series data
-  # See: http://topepo.github.io/caret/splitting.html
-  train.index <- createDataPartition(comp.df$preictal, p = training.perc, list = FALSE, times = 1)
-
-  comp.train <- comp.df[ train.index,]
-  comp.test  <- comp.df[-train.index,]
-
-  return(list(comp.train, comp.test))
+removeCol <- function(df, colname) {
+    return(removeCols(df, c(colname)))
+}
+removeCols <- function(df, colnames) {
+    ## Convenience function for removing columns from a dataframe. Returns a new dataframe where the column with names in colnames are removed
+    return(df[, !(names(df) %in% colnames)])
 }
