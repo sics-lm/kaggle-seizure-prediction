@@ -21,7 +21,7 @@ trainModel <- function(trainingData) {
     ##                metric="ROC")
 
     ##Decision Tree classifier
-    classLabels <- ordered(classLabels)  # The class labels needs to be factors for the decision tree
+    classLabels <- factor(classLabels)  # The class labels needs to be factors for the decision tree
     model <- train(x=observations,
                    y=classLabels,
                    method="rpart",
