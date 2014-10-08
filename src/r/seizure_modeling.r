@@ -1,4 +1,5 @@
 library(caret)
+library("stringr")  #String regular expressions
 
 trainModel <- function(trainingData) {
     ## Creates a model using caret based on the given dataframe
