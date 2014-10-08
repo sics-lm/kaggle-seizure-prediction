@@ -14,12 +14,34 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8
                                            trainingPerc=trainingRatio)
     trainingData <- experimentSplit[[1]]
     testData <- experimentSplit[[2]]
-    fit <- trainModel(trainingData)
-    classProbs <- calculateClassProbs(fit, testData)
-    confMatrix <- confusionMatrix(data=classProbs, reference = testData$preictal)
-    unlabeledProbs <- runTests(fit, unlabeledTests)
-    list(fit, confMatrix, unlabeledProbs)
+    model <- trainModel(trainingData)
+
+    ## ### Save the model to an rds ## ##
+    modelLabel <- model$modelInfo$label
+    modelTime <- format(Sys.time(), "%Y-%m-%d-%H:%M:%S")
+    modelFileName <- sprintf("model_%s_%s.rds", modelLabel, modelTime)
+    modelPath <- file.path(featureFolder, modelFileName)
+
+    saveRDS(model, modelPath)
+    ## ## Done saving model ## ##
+
+    segmentClassification <- assignSegmentProbability(model, unlabeledTests)
+    ## ## Saving segment class probabilities ## ##
+    probsFileName <- sprintf("classification_%s.csv", modelTime)
+    segmentClassificationCSV <- file.path(featureFolder, probsFileName)
+    write.csv(segmentClassification,
+              file=segmentClassificationCSV,
+              sep="\t", row.names=FALSE)
+    ## ## Done saving segment class probabilities ## ##
+
+    classProbs <- calculateClassProbs(model, testData)
+    confMatrix <- tryCatch(
+        confusionMatrix(data=classProbs, reference = testData$preictal),
+        error = function(e) {
+            NA
+        }
+    )
+
+    list(model, confMatrix, segmentClassification)
 }
-
-
 
