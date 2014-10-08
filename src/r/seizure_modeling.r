@@ -38,9 +38,22 @@ calculateClassProbs <- function(model, testing) {
 }
 
 
-runTests <- function(model, testSegments) {
-    ## Returns an array containing the file names of testSegments and the preictal probabilities
-    plsProbs <- predict(model, newdata = testSegments)
-#    return(cbind(row.names(testSegments), plsProbs))
-    plsProbs
+preictalRatio <- function(classifications) {
+    ## Returns the number of "1" elements in the *classifications* vector
+    n <- max(1, length(classifications))
+    length(classifications[classifications == "1"]) / n
+}
+    
+assignSegmentProbability <- function(model, testSegments) {
+    ## Returns an dataframe with the filenames for the segment features and counds of the assigned classes
+    guesses <- predict(model, newdata = testSegments)
+
+    segmentNames <- row.names(testSegments)
+    fileNames <- str_match(segmentNames, ".*:(.*)$")[,-1]
+
+    namedGuesses <- data.frame(preictal=guesses, file=fileNames)
+    moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
+    segmentClassification <- dcast(moltenPredictions, file ~ variable,
+                                   fun.aggregate=preictalRatio)
+    segmentClassification
 }
