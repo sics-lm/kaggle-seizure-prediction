@@ -20,7 +20,7 @@ class Segment:
 
             #The matlab struct contains the variable mappings, we're only interested in the variable *self.name*
             self.mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[self.name]
-            self.mat_struct.data = self.mat_struct.data.astype('float32')
+            self.mat_struct.data = self.mat_struct.data.astype('float64')
 
 
         except ValueError as e:
