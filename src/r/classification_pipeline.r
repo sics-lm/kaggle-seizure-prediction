@@ -36,7 +36,7 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8
                                     name=row.names(fileInfos),
                                     stringsAsFactors=FALSE)
             latestDate <- max(fileDates$ctime)
-            modelFile <- fileDates[fileDates$ctime==latest,]$name[[1]]
+            modelFile <- fileDates[fileDates$ctime==latestDate,]$name[[1]]
         }
         else {
             rebuildModel <- TRUE
