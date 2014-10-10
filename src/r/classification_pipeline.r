@@ -43,15 +43,15 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8
         }
     }
 
+    timestamp <- format(Sys.time(), "%Y-%m-%d-%H:%M:%S")
     if (rebuildModel) {
         model <- trainModel(trainingData)
 
         if (is.null(modelFile)) {
             modelLabel <- model$modelInfo$label
-            modelTime <- format(Sys.time(), "%Y-%m-%d-%H:%M:%S")
             modelFileName <- sprintf("model_%s_%s.rds",
                                      modelLabel,
-                                     modelTime)
+                                     timestamp)
             modelFile <- file.path(featureFolder, modelFileName)
         }
         saveRDS(model, modelFile)
@@ -62,7 +62,7 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8
 
     segmentClassification <- assignSegmentProbability(model, unlabeledTests)
     ## ## Saving segment class probabilities ## ##
-    probsFileName <- sprintf("classification_%s.csv", modelTime)
+    probsFileName <- sprintf("classification_%s.csv", timestamp)
     segmentClassificationCSV <- file.path(featureFolder, probsFileName)
     write.csv(segmentClassification,
               file=segmentClassificationCSV,
