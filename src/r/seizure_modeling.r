@@ -2,9 +2,31 @@ library(caret)
 library("stringr")  #String regular expressions
 
 
-standardizeChannels <- function(df) {
+
+## calculateCombinedMeans <- function(interictal, preictal, test) {
+##     colMeans(getChannelDF(rbind.fill(interictal, preictal, test)))
+## }
+
+
+calculateCombinedMeans <- function(interictal, preictal, test) {
+    ## This is substantially faster than using colMeans on the rbound result of the frames. There seems to be some accuracy differences though, not sure which one is better
+    (colSums(getChannelDF(interictal)) +
+            colSums(getChannelDF(preictal)) +
+                    colSums(getChannelDF(test))) /
+                        (nrow(interictal)+nrow(preictal)+nrow(test))
+}
+
+
+calculateCombinedStd <- function(interictal, preictal, test) {
+    apply(getChannelDF(rbind.fill(interictal, preictal, test)), 2, sd, na.rm = TRUE)
+}
+
+
+standardizeChannels <- function(df, center=TRUE, scale=TRUE) {
     ## Centers and scales the channel columns of the given dataframe
-    df[,getChannelCols(df)] <- scale(df[,getChannelCols(df)])
+    df[,getChannelCols(df)] <- scale(df[,getChannelCols(df)],
+                                     center=center,
+                                     scale=scale)
     df
 }
 
