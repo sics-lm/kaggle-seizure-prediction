@@ -123,13 +123,13 @@ loadDataFrames <- function(featureFolder,  no.cores = 4, rebuildData=FALSE) {
 splitExperimentData <- function(interictalDF,
                                 preictalDF,
                                 trainingPerc = .8,
-                                downSample=FALSE) {
+                                doDownSample=FALSE) {
     ## Creates a stratified sample of the concatenation of the given interictal and preictal dataframes. Adds a class label column.
     ## Args:
     ##    interictalDF: dataframe containing interictal samples
     ##    preictalDF: dataframe containing preictal samples
     ##    trainingPerc: percentage of the data to use for training
-    ##    downSample: Logic flag of whether to downsample the data to equal class distributions
+    ##    doDownSample: Logic flag of whether to downsample the data to equal class distributions
     ## Returns:
     ## A list with two dataframes, the first is the training dataset and the second a test dataset. The dataframes contains the same columns as the input dataframes, with an additional class column called 'preictal' which is 1 if the row is a preictal sample and 0 if it's not
 
@@ -144,10 +144,11 @@ splitExperimentData <- function(interictalDF,
     ## examples in the original data consistent in the test and train data.
     ## Consider using createTimeSlices here as it specifically built for time series data
     ## See: http://topepo.github.io/caret/splitting.html
-    if (downSample) {
-        comp.df <- downSample(comp.df,
-                              factor(comp.df$preictal),
-                              list=FALSE)
+    if (doDownSample) {
+        downSampledList <- downSample(comp.df,
+                                      factor(comp.df$preictal),
+                                      list=TRUE)
+        comp.df <- downSampledList[[1]]
     }
 
     train.index <- createDataPartition(comp.df$preictal,
