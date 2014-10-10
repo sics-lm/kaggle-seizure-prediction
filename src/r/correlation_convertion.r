@@ -15,8 +15,15 @@ loadAndPivot <- function(filename) {
   # Returns:
   #   A pivoted dataframe.
   a <- read.csv(filename, stringsAsFactors = FALSE, sep = "\t")
+#  channel_pattern <- ".*_(c[0-9]*)$|([a-zA-Z]*_[0-9]*)$"
+  channel_pattern <- "(?:[a-zA-Z0-9]*_[a-zA-Z0-9]*_[a-zA-Z0-9]*)?(c[a-zA-Z0-9]*|[A-Z]*_[0-9]*)$"
+  channel_i_matches <- str_match(a$channel_i, channel_pattern)[,-1]
+  channel_j_matches <- str_match(a$channel_j, channel_pattern)[,-1]
 
-  a$channel_pair <- paste(a$channel_i, a$channel_j, sep=":")
+  channel_i_names <- paste("channel", channel_i_matches, sep="_")
+  channel_j_names <- paste("channel", channel_j_matches, sep="_")
+  
+  a$channel_pair <- paste(channel_i_names, channel_j_names, sep=":")
   subset <- a[,c("channel_pair", "start_sample", "correlation")]
   melted_subset <- melt(subset, id.vars = c("start_sample", "channel_pair"))
   pivot_subset <- dcast(data = melted_subset, start_sample ~ channel_pair)
