@@ -111,11 +111,15 @@ loadDataFrames <- function(featureFolder,  no.cores = 4, rebuildData=FALSE) {
                                    filePattern=filePattern,
                                    cl,
                                    rebuildData)
+    pre.df$preictal <- 1
+
     int.df <- loadCorrelationFiles(featureFolder,
                                    className="interictal",
                                    filePattern=filePattern,
                                    cl,
                                    rebuildData)
+    int.df$preictal <- 0
+    
     test.df <- loadCorrelationFiles(featureFolder,
                                     className="test",
                                     filePattern=filePattern,
