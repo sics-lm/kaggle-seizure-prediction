@@ -1,14 +1,17 @@
+library("caret")
+
 source("correlation_convertion.r")
 source("seizure_modeling.r")
 
-runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8, rebuildModel=FALSE, modelFile=NULL) {
+runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8, rebuildModel=FALSE, modelFile=NULL, downSample=FALSE) {
     ## Runs the whole classification on the featureFolder
     ## Args:
     ##    featureFolder: a folder containing the feature csv files to train on
-    ##    reuildData: Logic flag whether to rebuild the feature dataframes. If false, cached versions will be used if they exist
+    ##    reuildData: Logic flag whether to rebuild the feature dataframes. If false, cached versions will be used if they exist.
     ##    trainingRatio: the ratio of data to use for training the model. 1.0 uses almost all data for the training set (1 example be left in the test set)
     ##    modelFile: Name of a model RDS file to use. If NULL and rebuildModel is FALSE, the newest model file in featureFolder will be used. If NULL and rebuildModel is TRUE, a name will be generated based on the model label in caret and the time the model was built. 
     ##    rebuildModel: Logic flag whether to rebuild the model. If FALSE, the latest file with the suffix model_ in the feature folder will be used as the model
+    ##    downSample: Logic flag of whether to downsample the classes to create equal distributions
     ## Returns:
     ##    A list with (model, confMatrix, segmentClassification) for convenience. segmentClassification is a table of the original feature file names and a score based on how preictal they are. This data is automatically saved to a CSV file during the run of the function.
     ##
@@ -21,7 +24,8 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8
     ## For now this is just a single run, should probably be iterated
     experimentSplit <- splitExperimentData(interictal,
                                            preictal,
-                                           trainingPerc=trainingRatio)
+                                           trainingPerc=trainingRatio,
+                                           downSample=downSample)
     trainingData <- experimentSplit[[1]]
     testData <- experimentSplit[[2]]
 
