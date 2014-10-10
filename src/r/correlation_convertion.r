@@ -205,7 +205,7 @@ removeCols <- function(df, colnames) {
 
 getChannelCols <- function(df) {
     ## Returns vector of logic values where the corresponding column position is TRUE if the column name contains "channel", and false otherwise
-    grepl("channel", names(df))
+    grepl(":", names(df))
 }
 getChannelDF <- function(df) {
     ## Returns the part of the dataframe df which contains the channels
