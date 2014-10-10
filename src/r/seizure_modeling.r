@@ -1,6 +1,13 @@
 library(caret)
 library("stringr")  #String regular expressions
 
+
+standardizeChannels <- function(df) {
+    ## Centers and scales the channel columns of the given dataframe
+    df[,getChannelCols(df)] <- scale(df[,getChannelCols(df)])
+    df
+}
+
 trainModel <- function(trainingData) {
     ## Creates a model using caret based on the given dataframe
 
@@ -12,7 +19,6 @@ trainModel <- function(trainingData) {
 
     classLabels <- trainingData$preictal  # Only the column preictal
     observations <- trainingData[,!(names(trainingData) %in% c("preictal", "segment"))]  # All columns except preictal and segment
-    
     ## Train the model
     ## Penalized Logistic Regression
     ## model <- train(x=observations,
