@@ -20,7 +20,7 @@ loadAndPivot <- function(filename) {
   subset <- a[,c("channel_pair", "start_sample", "correlation")]
   melted_subset <- melt(subset, id.vars = c("start_sample", "channel_pair"))
   pivot_subset <- dcast(data = melted_subset, start_sample ~ channel_pair)
-  row.names(pivot_subset) <- paste(row.names(pivot_subset), basename(filename), sep=":")
+  pivot_subset$segment <- basename(filename)
 
   return(pivot_subset)
 }
@@ -75,8 +75,6 @@ loadCorrelationFiles <- function(featureFolder, className,
         
         ## We can't really parallelize rbind, but using plyr makes it much faster
         corrDF <- rbind.fill(corrList)
-        row.names(corrDF) <- unlist(lapply(corrList, row.names))
-        
         saveRDS(corrDF, cachedFile)
         return(corrDF)
     }

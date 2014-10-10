@@ -11,7 +11,7 @@ trainModel <- function(trainingData) {
 
 
     classLabels <- trainingData$preictal  # Only the column preictal
-    observations <- trainingData[,!(names(trainingData) %in% c("preictal"))]  # All columns except preictal
+    observations <- trainingData[,!(names(trainingData) %in% c("preictal", "segment"))]  # All columns except preictal and segment
     
     ## Train the model
     ## Penalized Logistic Regression
@@ -48,11 +48,9 @@ preictalRatio <- function(classifications) {
 assignSegmentProbability <- function(model, testSegments) {
     ## Returns an dataframe with the filenames for the segment features and counds of the assigned classes
     guesses <- predict(model, newdata = testSegments)
-
-    segmentNames <- row.names(testSegments)
-    fileNames <- str_match(segmentNames, ".*:(.*)$")[,-1]
-
-    namedGuesses <- data.frame(preictal=guesses, file=fileNames)
+    
+    segmentNames <- testSegments$segment
+    namedGuesses <- data.frame(preictal=guesses, file=segmentNames)
     moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
     segmentClassification <- dcast(moltenPredictions, file ~ variable,
                                    fun.aggregate=preictalRatio)
