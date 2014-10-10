@@ -3,7 +3,7 @@ library("caret")
 source("correlation_convertion.r")
 source("seizure_modeling.r")
 
-runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8, rebuildModel=FALSE, modelFile=NULL, doDownSample=FALSE) {
+runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, modelFile=NULL, doDownSample=FALSE) {
     ## Runs the whole classification on the featureFolder
     ## Args:
     ##    featureFolder: a folder containing the feature csv files to train on
