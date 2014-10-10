@@ -185,9 +185,18 @@ create_experiment_data <- function(filepath, no.cores = 4, training.perc = .8, r
 
 
 removeCol <- function(df, colname) {
-    return(removeCols(df, c(colname)))
+    removeCols(df, c(colname))
 }
 removeCols <- function(df, colnames) {
     ## Convenience function for removing columns from a dataframe. Returns a new dataframe where the column with names in colnames are removed
-    return(df[, !(names(df) %in% colnames)])
+    df[, !(names(df) %in% colnames)]
+}
+
+getChannelCols <- function(df) {
+    ## Returns vector of logic values where the corresponding column position is TRUE if the column name contains "channel", and false otherwise
+    grepl("channel", names(df))
+}
+getChannelDF <- function(df) {
+    ## Returns the part of the dataframe df which contains the channels
+    df[,getChannelCols(df)]
 }
