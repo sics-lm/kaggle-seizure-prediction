@@ -60,14 +60,53 @@ def fix_segment_names(scores,
     return new_names
 
 
-def write_scores(root, output):
+def normalize_scores(all_scores, pattern=r"([A-Za-z]*_[0-9])*"):
+    """
+    'Normalizes' the scores for the different subjects, so that their score are in the interval [0,1]. This is done on a per-subject basis.
+    The subjects are divided by their prefix, given by the first match group of the regular expression *pattern*.
+    """
+    subject_scores = defaultdict(list)
+    subject_segments = defaultdict(list)
+
+    matcher = re.compile(pattern)
+
+    for segment, score in all_scores.items():
+        match = re.match(matcher, segment)
+        if match:
+            subject = match.group(1)
+            subject_scores[subject].append(score)
+            subject_segments[subject].append(segment)
+
+    normalized_scores = dict()
+    for subject, scores in subject_scores.items():
+        maximum_score = max(scores)
+        if maximum_score > 0:
+            for segment in subject_segments[subject]:
+                normalized_scores[segment] = float(all_scores[segment])/maximum_score
+    return normalized_scores
+                
+
+def get_scores(root, normalize=False):
+    """
+    Gathers all the scores in subdirectories of the folder *root*
+    """
     score_files = find_classification_scores(root)
     collected_scores = collect_scores(score_files)
     fixed_scores = fix_segment_names(collected_scores)
+
+    if normalize:
+        fixed_scores = normalize_scores(fixed_scores)
+
+
+    return fixed_scores
+
+    
+def write_scores(root, output, normalize=False):
+    scores = get_scores(root, normalize=normalize)
     csv_writer = csv.writer(output)
     csv_writer.writerow(['clip', 'preictal'])
-    for segment_name, prob in sorted(fixed_scores.items()):
-        csv_writer.writerow([segment_name, prob])
+    for segment_name, score in sorted(scores.items()):
+        csv_writer.writerow([segment_name, score])
 
 
 if __name__ == '__main__':
@@ -77,6 +116,10 @@ if __name__ == '__main__':
     parser.add_argument("root", help="The root folder to search for classification files")
     parser.add_argument("-o", "--output", 
                         help="The file to write the results to")
+    parser.add_argument("-n", "--normalize", 
+                        help="Normalize the scores on a per-subject basis to the range [0,1]",
+                        action='store_true')
+
     # parser.add_argument("--match", help="A unix shell style expression used to match the files in the subdirectories of root")
     args = parser.parse_args()
 
@@ -86,7 +129,7 @@ if __name__ == '__main__':
         output = open(args.output, 'w')
     
     try:
-        write_scores(args.root, output)
+        write_scores(args.root, output, args.normalize)
 
     finally:
         if args.output:
