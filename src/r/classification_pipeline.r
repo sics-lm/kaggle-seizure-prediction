@@ -32,6 +32,8 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8
     ## Returns:
     ##    A list with (model, confMatrix, segmentClassification) for convenience. segmentClassification is a table of the original feature file names and a score based on how preictal they are. This data is automatically saved to a CSV file during the run of the function.
     ##
+
+    set.seed(1729)
     
     dataSet <- loadDataFrames(featureFolder, rebuildData=rebuildData)
     interictal <- dataSet[[1]]
