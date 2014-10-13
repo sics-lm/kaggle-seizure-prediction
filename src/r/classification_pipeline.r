@@ -44,7 +44,7 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1,
     trainingData <- experimentSplit[[1]]
     testData <- experimentSplit[[2]]
 
-    if (is.null(modelFile)) {
+    if (is.null(modelFile) && !rebuildModel) {
         ## Read the first available model
         modelFiles <- file.path(featureFolder,
                                 list.files(featureFolder,
