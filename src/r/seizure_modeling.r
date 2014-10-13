@@ -132,16 +132,19 @@ preictalRatio <- function(classifications) {
     length(classifications[classifications == "Preictal"]) / n
 }
 
+
 probAverage <- function(classifications) {
     ## Returns the mean of the preictal guesses
     mean(classifications)
 }
 
+
 assignSegmentProbability <- function(model, testSegments, type="prob") {
     ## Returns an dataframe with the filenames for the segment features and counds of the assigned classes
     segmentNames <- testSegments$segment
+    channelDF <- getChannelDF(testSegments)
     if (type=="prob") {
-        guesses <- predict(model, newdata = testSegments, type=type)
+        guesses <- predict(model, newdata = channelDF, type=type)
         namedGuesses <- data.frame(preictal=guesses$Preictal,
                                    file=segmentNames)
         moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
@@ -150,7 +153,7 @@ assignSegmentProbability <- function(model, testSegments, type="prob") {
                                        fun.aggregate=probAverage)
     }
     else {
-        guesses <- predict(model, newdata = testSegments)
+        guesses <- predict(model, newdata = channelDF)
     
         namedGuesses <- data.frame(preictal=guesses, file=segmentNames)
         moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
