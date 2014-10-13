@@ -3,6 +3,20 @@ library("caret")
 source("correlation_convertion.r")
 source("seizure_modeling.r")
 
+runBatchClassification <- function(featureFolderRoot="../../data/cross_correlation", rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, doDownSample=FALSE) {
+    ## Runs the classification on all the subjects of the challenge.
+    for (subject in c("Dog_1", "Dog_2", "Dog_3",
+                      "Dog_4", "Dog_5", "Patient_1",
+                      "Patient_2")) {
+        runClassification(file.path(featureFolderRoot, subject),
+                          rebuildData=rebuildData,
+                          trainingRatio=trainingRatio,
+                          rebuildModel=rebuildModel,
+                          doDownSample=doDownSample)
+    }
+}
+    
+
 runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, modelFile=NULL, doDownSample=FALSE) {
     ## Runs the whole classification on the featureFolder
     ## Args:
