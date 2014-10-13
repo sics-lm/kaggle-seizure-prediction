@@ -106,6 +106,7 @@ loadDataFrames <- function(featureFolder,  no.cores = 4, rebuildData=FALSE) {
 
     cl <- makeCluster(getOption("cl.cores", no.cores))
     clusterEvalQ(cl, library(reshape2))
+    clusterEvalQ(cl, library("stringr"))
     pre.df <- loadCorrelationFiles(featureFolder,
                                    className="preictal",
                                    filePattern=filePattern,
