@@ -30,7 +30,8 @@ standardizeChannels <- function(df, center=TRUE, scale=TRUE) {
     df
 }
 
-trainModel <- function(trainingData) {
+
+trainModel <- function(trainingData, method="glm") {
     ## Creates a model using caret based on the given dataframe
 
     ## Create a resampling control object, "repeatedcv" uses repeated k-fold cross-validation with k=number
@@ -39,25 +40,82 @@ trainModel <- function(trainingData) {
                          summaryFunction = twoClassSummary)
 
 
-    classLabels <- trainingData$Class  # Only the column preictal
+    classLabels <- factor(trainingData$Class)
     observations <- getChannelDF(trainingData)
     
-    ## Train the model
-    ## Penalized Logistic Regression
-    ## model <- train(x=observations,
-    ##                y=classLabels,
-    ##                method="plr",
-    ##                trControl=ctrl,
-    ##                metric="ROC")
-
-    ##Decision Tree classifier
-    classLabels <- factor(classLabels)  # The class labels needs to be factors for the decision tree
     model <- train(x=observations,
                    y=classLabels,
-                   method="glm",
+                   method=method,
                    trControl=ctrl,
                    metric="ROC")
-    return(model)
+    model
+}
+
+
+trainModelBySegment <- function(trainingData,
+                                number=10,
+                                trainingRatio=.8,
+                                method="plr") {
+    ## Creates a model using caret based on the given dataframe
+        trainIndice <- splitBySegment(trainingData,
+                                      trainingRatio,
+                                      number)
+        
+        ctrl <- trainControl(number=number,
+                             index= trainIndice,
+                             classProbs = TRUE,
+                             summaryFunction = twoClassSummary)
+
+        classLabels <- factor(trainingData$Class) 
+        observations <- getChannelDF(trainingData)
+
+        ## Convenient list of models:
+        ##         Penalized Logistic Regression
+        ## method = 'plr'
+        ## Type: Classification
+        ## Tuning Parameters: lambda (L2 Penalty), cp (Complexity Parameter)
+        ##         Quadratic Discriminant Analysis
+        ## method = 'qda'
+        ## Type: Classification
+        ## No Tuning Parameters
+
+        ##         ROC-Based Classifier
+        ## method = 'rocc'
+        ## Type: Classification
+        ## Tuning Parameters: xgenes (#Variables Retained)
+
+        ##         Neural Networks with Feature Extraction
+        ## method = 'pcaNNet'
+        ## Type: Classification, Regression
+        ## Tuning Parameters: size (#Hidden Units), decay (Weight Decay)
+
+        ## Generalized Linear Model
+        ## method = 'glm'
+        ## Type: Regression, Classification
+        ## No Tuning Parameters
+        
+        model <- train(x=observations,
+                       y=classLabels,
+                       method=method,
+                       trControl=ctrl,
+                       metric="ROC")
+
+        model
+}
+
+
+splitBySegment <- function(dataframe, trainingRatio=.8, number=3) {
+    #splits the data according to segment. Returns a list of lists of indices to use for training
+    segmentNames <- unique(dataframe[,c("segment", "Class")])
+    trainIndice <- createDataPartition(segmentNames$Class, p=trainingRatio,times=number)
+    trainSegments <- lapply(trainIndice,
+                            FUN=function(indice) {
+                                segmentNames[indice, ]$segment
+                            })
+    
+    lapply(trainSegments, FUN=function(segments) {
+        which(dataframe$segment %in% segments)
+    })
 }
 
 

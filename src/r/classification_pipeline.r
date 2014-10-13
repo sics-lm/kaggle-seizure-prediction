@@ -3,22 +3,24 @@ library("caret")
 source("correlation_convertion.r")
 source("seizure_modeling.r")
 
-runBatchClassification <- function(featureFolderRoot="../../data/cross_correlation", rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, doDownSample=FALSE) {
+runBatchClassification <- function(featureFolderRoot="../../data/cross_correlation", rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, doDownSample=FALSE, method="glm") {
     ## Runs the classification on all the subjects of the challenge.
     for (subject in c("Dog_1", "Dog_2", "Dog_3",
                       "Dog_4", "Dog_5", "Patient_1",
                       "Patient_2")) {
+
         print(sprintf("Running classification for %s", subject))
         runClassification(file.path(featureFolderRoot, subject),
                           rebuildData=rebuildData,
                           trainingRatio=trainingRatio,
                           rebuildModel=rebuildModel,
-                          doDownSample=doDownSample)
+                          doDownSample=doDownSample,
+                          method=method)
     }
 }
     
 
-runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, modelFile=NULL, doDownSample=FALSE) {
+runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=.8, rebuildModel=FALSE, modelFile=NULL, doDownSample=FALSE, method="glm") {
     ## Runs the whole classification on the featureFolder
     ## Args:
     ##    featureFolder: a folder containing the feature csv files to train on
@@ -64,7 +66,7 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1,
 
     timestamp <- format(Sys.time(), "%Y-%m-%d-%H:%M:%S")
     if (rebuildModel) {
-        model <- trainModel(trainingData)
+        model <- trainModelBySegment(trainingData, method=method)
 
         if (is.null(modelFile)) {
             modelLabel <- model$modelInfo$label
