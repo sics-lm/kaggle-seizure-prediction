@@ -8,6 +8,7 @@ runBatchClassification <- function(featureFolderRoot="../../data/cross_correlati
     for (subject in c("Dog_1", "Dog_2", "Dog_3",
                       "Dog_4", "Dog_5", "Patient_1",
                       "Patient_2")) {
+        print(sprintf("Running classification for %s"), subject)
         runClassification(file.path(featureFolderRoot, subject),
                           rebuildData=rebuildData,
                           trainingRatio=trainingRatio,
