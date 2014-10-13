@@ -79,10 +79,14 @@ def normalize_scores(all_scores, pattern=r"([A-Za-z]*_[0-9])*"):
 
     normalized_scores = dict()
     for subject, scores in subject_scores.items():
-        maximum_score = max(scores)
-        if maximum_score > 0:
+        max_score = max(scores)
+        min_score = min(scores)
+        if max_score > 0:
             for segment in subject_segments[subject]:
-                normalized_scores[segment] = float(all_scores[segment])/maximum_score
+                segment_score = all_scores[segment]
+                segment_score -= min_score
+                segment_score /= float(max_score)
+                normalized_scores[segment] = segment_score
     return normalized_scores
                 
 
