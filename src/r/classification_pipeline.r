@@ -90,7 +90,7 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1,
 
     classProbs <- calculateClassProbs(model, testData)
     confMatrix <- tryCatch(
-        confusionMatrix(data=classProbs, reference = testData$preictal),
+        confusionMatrix(data=classProbs, reference = testData$Class),
         error = function(e) {
             NA
         }
@@ -98,4 +98,3 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1,
 
     list(model, confMatrix, segmentClassification)
 }
-

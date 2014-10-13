@@ -1,6 +1,6 @@
 library(caret)
 library("stringr")  #String regular expressions
-
+source("correlation_convertion.r")
 
 
 ## calculateCombinedMeans <- function(interictal, preictal, test) {
@@ -39,8 +39,9 @@ trainModel <- function(trainingData) {
                          summaryFunction = twoClassSummary)
 
 
-    classLabels <- trainingData$preictal  # Only the column preictal
-    observations <- trainingData[,!(names(trainingData) %in% c("preictal", "segment"))]  # All columns except preictal and segment
+    classLabels <- trainingData$Class  # Only the column preictal
+    observations <- getChannelDF(trainingData)
+    
     ## Train the model
     ## Penalized Logistic Regression
     ## model <- train(x=observations,
@@ -70,17 +71,33 @@ calculateClassProbs <- function(model, testing) {
 preictalRatio <- function(classifications) {
     ## Returns the number of "1" elements in the *classifications* vector
     n <- max(1, length(classifications))
-    length(classifications[classifications == "1"]) / n
+    length(classifications[classifications == "Preictal"]) / n
 }
-    
-assignSegmentProbability <- function(model, testSegments) {
+
+probAverage <- function(classifications) {
+    ## Returns the mean of the preictal guesses
+    mean(classifications)
+}
+
+assignSegmentProbability <- function(model, testSegments, type="prob") {
     ## Returns an dataframe with the filenames for the segment features and counds of the assigned classes
-    guesses <- predict(model, newdata = testSegments)
-    
     segmentNames <- testSegments$segment
-    namedGuesses <- data.frame(preictal=guesses, file=segmentNames)
-    moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
-    segmentClassification <- dcast(moltenPredictions, file ~ variable,
-                                   fun.aggregate=preictalRatio)
+    if (type=="prob") {
+        guesses <- predict(model, newdata = testSegments, type=type)
+        namedGuesses <- data.frame(preictal=guesses$Preictal,
+                                   file=segmentNames)
+        moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
+        segmentClassification <- dcast(moltenPredictions,
+                                       file ~ variable,
+                                       fun.aggregate=probAverage)
+    }
+    else {
+        guesses <- predict(model, newdata = testSegments)
+    
+        namedGuesses <- data.frame(preictal=guesses, file=segmentNames)
+        moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
+        segmentClassification <- dcast(moltenPredictions, file ~ variable,
+                                       fun.aggregate=preictalRatio)
+    }
     segmentClassification
 }

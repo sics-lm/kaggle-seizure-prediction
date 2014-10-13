@@ -112,14 +112,16 @@ loadDataFrames <- function(featureFolder,  no.cores = 4, rebuildData=FALSE) {
                                    filePattern=filePattern,
                                    cl,
                                    rebuildData)
-    pre.df$preictal <- 1
+    pre.df$preictal <- "Preictal"
+    pre.df$Class <- "Preictal"
 
     int.df <- loadCorrelationFiles(featureFolder,
                                    className="interictal",
                                    filePattern=filePattern,
                                    cl,
                                    rebuildData)
-    int.df$preictal <- 0
+    int.df$preictal <- "Interictal"
+    int.df$Class <- "Interictal"
     
     test.df <- loadCorrelationFiles(featureFolder,
                                     className="test",
@@ -146,8 +148,9 @@ splitExperimentData <- function(interictalDF,
     ## A list with two dataframes, the first is the training dataset and the second a test dataset. The dataframes contains the same columns as the input dataframes, with an additional class column called 'preictal' which is 1 if the row is a preictal sample and 0 if it's not
 
     ## Assign class labels
-    interictalDF$preictal = 0
-    preictalDF$preictal = 1
+    ## This is now done in the loadDataFrames function
+    ## interictalDF$preictal = "Preictal"
+    ## preictalDF$preictal = "Interictal"
 
     ## Combine dataframes
     comp.df <- rbind.fill(preictalDF, interictalDF)
@@ -158,12 +161,12 @@ splitExperimentData <- function(interictalDF,
     ## See: http://topepo.github.io/caret/splitting.html
     if (doDownSample) {
         downSampledList <- downSample(comp.df,
-                                      factor(comp.df$preictal),
+                                      factor(comp.df$Class),
                                       list=TRUE)
         comp.df <- downSampledList[[1]]
     }
 
-    train.index <- createDataPartition(comp.df$preictal,
+    train.index <- createDataPartition(comp.df$Class,
                                        p = trainingPerc,
                                        list = FALSE,
                                        times = 1)
