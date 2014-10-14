@@ -134,16 +134,52 @@ loadDataFrames <- function(featureFolder,  no.cores = 4, rebuildData=FALSE) {
 }
 
 
+splitBySegment <- function(dataframe, trainingRatio=.8,
+                           number=3, doDownSample=FALSE) {
+    ## Does a stratied sample of the data according to segment. Returns a list with *number* of lists of indices to use for training
+    ## Args:
+    ##    dataframe: The data frame to split. Should have a 'segment' and a 'Class' column.
+    ##    trainingRatio: the ratio of segments to use for training
+    ##    number: The number of training indices lists to produce
+    ##    doDownSample: Should the training data be sampled from a class-balanced sample of all data
+    ## Returns:
+    ##    A list of lists, where each of the inner list contains the row indices for the training data for the data frame.
+
+    segmentNames <- unique(dataframe[,c("segment", "Class")])
+    if (doDownSample) {
+        ## We downsample the segmentNames to balance the classes
+        downSampledList <- downSample(segmentNames,
+                                      factor(segmentNames$Class),
+                                      list=TRUE)
+        segmentNames <- downSampledList[[1]]
+    }
+    
+    trainIndice <- createDataPartition(segmentNames$Class,
+                                       p=trainingRatio,times=number)
+    trainSegments <- lapply(trainIndice,
+                            FUN=function(indice) {
+                                segmentNames[indice, ]$segment
+                            })
+    
+    lapply(trainSegments, FUN=function(segments) {
+        which(dataframe$segment %in% segments)
+    })
+}
+
+
+
 splitExperimentData <- function(interictalDF,
                                 preictalDF,
                                 trainingPerc = .8,
-                                doDownSample=FALSE) {
+                                doDownSample=FALSE,
+                                doSegmentSplit=FALSE) {
     ## Creates a stratified sample of the concatenation of the given interictal and preictal dataframes. Adds a class label column.
     ## Args:
     ##    interictalDF: dataframe containing interictal samples
     ##    preictalDF: dataframe containing preictal samples
     ##    trainingPerc: percentage of the data to use for training
     ##    doDownSample: Logic flag of whether to downsample the data to equal class distributions
+    ##    doSegmentSplit: Logic flag of whether the data should be split according to segments.
     ## Returns:
     ## A list with two dataframes, the first is the training dataset and the second a test dataset. The dataframes contains the same columns as the input dataframes, with an additional class column called 'preictal' which is 1 if the row is a preictal sample and 0 if it's not
 
@@ -159,18 +195,25 @@ splitExperimentData <- function(interictalDF,
     ## examples in the original data consistent in the test and train data.
     ## Consider using createTimeSlices here as it specifically built for time series data
     ## See: http://topepo.github.io/caret/splitting.html
-    if (doDownSample) {
-        downSampledList <- downSample(comp.df,
-                                      factor(comp.df$Class),
-                                      list=TRUE)
-        comp.df <- downSampledList[[1]]
+    if (doSegmentSplit) {
+        train.index <- splitBySegment(comp.df,
+                                      trainingRatio=trainingPerc,
+                                      number=1,
+                                      doDownSample=doDownSample)[[1]]
     }
+    else {
+        if (doDownSample) {
+            downSampledList <- downSample(comp.df,
+                                          factor(comp.df$Class),
+                                          list=TRUE)
+            comp.df <- downSampledList[[1]]
+        }
 
-    train.index <- createDataPartition(comp.df$Class,
-                                       p = trainingPerc,
-                                       list = FALSE,
-                                       times = 1)
-    
+        train.index <- createDataPartition(comp.df$Class,
+                                           p = trainingPerc,
+                                           list = FALSE,
+                                           times = 1)
+    }
     comp.train <- comp.df[ train.index,]
     comp.test  <- comp.df[-train.index,]
     return(list(comp.train, comp.test))

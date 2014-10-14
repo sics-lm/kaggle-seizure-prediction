@@ -104,21 +104,6 @@ trainModelBySegment <- function(trainingData,
 }
 
 
-splitBySegment <- function(dataframe, trainingRatio=.8, number=3) {
-    #splits the data according to segment. Returns a list of lists of indices to use for training
-    segmentNames <- unique(dataframe[,c("segment", "Class")])
-    trainIndice <- createDataPartition(segmentNames$Class, p=trainingRatio,times=number)
-    trainSegments <- lapply(trainIndice,
-                            FUN=function(indice) {
-                                segmentNames[indice, ]$segment
-                            })
-    
-    lapply(trainSegments, FUN=function(segments) {
-        which(dataframe$segment %in% segments)
-    })
-}
-
-
 calculateClassProbs <- function(model, testing) {
     ## Calculates the class probabilities given the *testing* dataset using the fitted *model*
     plsPreds <- predict(model, newdata = testing)#, type = "prob")
