@@ -265,3 +265,31 @@ def band_wavelet_transform(epochs, start_freq, stop_freq):
         tf_decompositions.append(av_tfd)
 
     return tf_decompositions
+
+
+if __name__ == '__main__':
+    #test()
+    #exit()
+    #fileutils.process_segments(example_segments(), process_segment)
+    #plot_welch_spectra(example_segments(), '../example.pdf')
+    #exit(0)
+
+    import argparse
+    parser = argparse.ArgumentParser(description="Calculates the SPLV phase lock between pairwise channles.")
+
+    parser.add_argument("segments", help="The files to process. This can either be the path to a matlab file holding the segment or a directory holding such files.", nargs='+', metavar="SEGMENT_FILE")
+    parser.add_argument("--csv-directory", help="Directory to write the csv files to, if omitted, the files will be written to the same directory as the segment")
+    parser.add_argument("--window-size", help="What length in seconds the epochs should be.", type=float, default=5.0)
+    parser.add_argument("--feature-length", help="The length of the feature vectors in seconds, will be produced by concatenating the phase lock values from the windows.", type=float, default=60.0)
+    parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
+
+    #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
+
+    args = parser.parse_args()
+
+    feature_extractor.extract(args.segments, 
+                              extract_features_for_segment, 
+                              output_dir=args.csv_directory, 
+                              feature_length_seconds=args.feature_length,
+                              window_size=args.window_size,
+                              workers=args.workers)
