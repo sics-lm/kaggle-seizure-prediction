@@ -94,7 +94,7 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
 
     # Here we define how many windows we will have to concatenate
     # in order to create the features we want
-    frames = feature_length_seconds / window_size
+    frames = int(feature_length_seconds / window_size)
     total_windows = int(segment.get_duration() / window_size)
     n_channels = len(segment.get_channels())
     iters = int(segment.get_duration() / feature_length_seconds)
