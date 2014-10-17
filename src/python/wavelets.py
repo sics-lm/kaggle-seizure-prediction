@@ -39,7 +39,7 @@ def epochs_from_segment(segment, window_size=5.0):
 
     raw = mne.io.RawArray(segment.get_data(), info)
 
-    random_id = int(random.randrange(sys.maxint))
+    random_id = int(random.randrange(sys.maxsize))
     events = make_fixed_length_events(raw, random_id,
                                       window_duration=window_size)
     epochs = mne.Epochs(raw, events, event_id=random_id, tmin=0,
