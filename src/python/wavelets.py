@@ -104,10 +104,10 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
 
     feature_dict = {}
     # Combine the individual frequency bands and windows into features
-    for index, offset in enumerate(xrange(0, total_windows, frames)):
+    for index, offset in enumerate(range(0, total_windows, frames)):
         feature_list = []
-        for array_list in decomposition_dict.itervalues():
-            for i in xrange(frames):
+        for array_list in decomposition_dict.values():
+            for i in range(frames):
                 try:
                     sync_array = array_list[i + offset]
                     index_upper_1 = np.triu_indices(n_channels, 1)
@@ -166,7 +166,7 @@ def segment_wavelet_synchrony(segment, bands=None):
 
     decomposition_dict = {}
 
-    for band_name, (start_freq, stop_freq) in bands.iteritems():
+    for band_name, (start_freq, stop_freq) in bands.items():
         decomposition_dict[band_name] = band_wavelet_synchrony(
             epochs, start_freq, stop_freq)
 
@@ -200,7 +200,7 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
         # Calculate the phase synchrony for all frequencies in the range
         av_phase_sync = np.zeros((n_channels, n_channels),
                                  dtype=np.double)
-        for frequency_idx in xrange(n_frequencies):
+        for frequency_idx in range(n_frequencies):
             freq_tfd = tfd[:, frequency_idx, :]
             freq_phase_diff = np.zeros((n_channels, n_channels),
                                        dtype=np.double)
@@ -258,7 +258,7 @@ def band_wavelet_transform(epochs, start_freq, stop_freq):
 
         # Get the average over all the frequencies in the range
         av_tfd = np.empty((n_channels, n_samples), dtype=np.complex)
-        for frequency_idx in xrange(n_frequencies):
+        for frequency_idx in range(n_frequencies):
             av_tfd += tfd[:, frequency_idx, :]
         av_tfd /= n_frequencies
 
