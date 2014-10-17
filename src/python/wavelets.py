@@ -1,10 +1,12 @@
 import mne
 from mne.time_frequency.tfr import cwt_morlet
 import random
-import segment as sg
 import sys
 import numpy as np
 from itertools import chain
+
+import segment as sg
+import feature_extractor
 
 def epochs_from_segment(segment, window_size=5.0):
     """
