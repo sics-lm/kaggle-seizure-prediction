@@ -30,7 +30,8 @@ standardizeChannels <- function(df, center=TRUE, scale=TRUE) {
     df
 }
 
-trainModel <- function(trainingData) {
+
+trainModel <- function(trainingData, method="glm") {
     ## Creates a model using caret based on the given dataframe
 
     ## Create a resampling control object, "repeatedcv" uses repeated k-fold cross-validation with k=number
@@ -39,25 +40,67 @@ trainModel <- function(trainingData) {
                          summaryFunction = twoClassSummary)
 
 
-    classLabels <- trainingData$Class  # Only the column preictal
+    classLabels <- factor(trainingData$Class)
     observations <- getChannelDF(trainingData)
     
-    ## Train the model
-    ## Penalized Logistic Regression
-    ## model <- train(x=observations,
-    ##                y=classLabels,
-    ##                method="plr",
-    ##                trControl=ctrl,
-    ##                metric="ROC")
-
-    ##Decision Tree classifier
-    classLabels <- factor(classLabels)  # The class labels needs to be factors for the decision tree
     model <- train(x=observations,
                    y=classLabels,
-                   method="glm",
+                   method=method,
                    trControl=ctrl,
                    metric="ROC")
-    return(model)
+    model
+}
+
+
+trainModelBySegment <- function(trainingData,
+                                number=10,
+                                trainingRatio=.8,
+                                method="plr") {
+    ## Creates a model using caret based on the given dataframe
+        trainIndice <- splitBySegment(trainingData,
+                                      trainingRatio,
+                                      number)
+        
+        ctrl <- trainControl(number=number,
+                             index= trainIndice,
+                             classProbs = TRUE,
+                             summaryFunction = twoClassSummary)
+
+        classLabels <- factor(trainingData$Class) 
+        observations <- getChannelDF(trainingData)
+
+        ## Convenient list of models:
+        ##         Penalized Logistic Regression
+        ## method = 'plr'
+        ## Type: Classification
+        ## Tuning Parameters: lambda (L2 Penalty), cp (Complexity Parameter)
+        ##         Quadratic Discriminant Analysis
+        ## method = 'qda'
+        ## Type: Classification
+        ## No Tuning Parameters
+
+        ##         ROC-Based Classifier
+        ## method = 'rocc'
+        ## Type: Classification
+        ## Tuning Parameters: xgenes (#Variables Retained)
+
+        ##         Neural Networks with Feature Extraction
+        ## method = 'pcaNNet'
+        ## Type: Classification, Regression
+        ## Tuning Parameters: size (#Hidden Units), decay (Weight Decay)
+
+        ## Generalized Linear Model
+        ## method = 'glm'
+        ## Type: Regression, Classification
+        ## No Tuning Parameters
+        
+        model <- train(x=observations,
+                       y=classLabels,
+                       method=method,
+                       trControl=ctrl,
+                       metric="ROC")
+
+        model
 }
 
 
@@ -74,16 +117,19 @@ preictalRatio <- function(classifications) {
     length(classifications[classifications == "Preictal"]) / n
 }
 
+
 probAverage <- function(classifications) {
     ## Returns the mean of the preictal guesses
     mean(classifications)
 }
 
+
 assignSegmentProbability <- function(model, testSegments, type="prob") {
     ## Returns an dataframe with the filenames for the segment features and counds of the assigned classes
     segmentNames <- testSegments$segment
+    channelDF <- getChannelDF(testSegments)
     if (type=="prob") {
-        guesses <- predict(model, newdata = testSegments, type=type)
+        guesses <- predict(model, newdata = channelDF, type=type)
         namedGuesses <- data.frame(preictal=guesses$Preictal,
                                    file=segmentNames)
         moltenPredictions <- melt(namedGuesses, id.vars = c("file"))
@@ -92,7 +138,7 @@ assignSegmentProbability <- function(model, testSegments, type="prob") {
                                        fun.aggregate=probAverage)
     }
     else {
-        guesses <- predict(model, newdata = testSegments)
+        guesses <- predict(model, newdata = channelDF)
     
         namedGuesses <- data.frame(preictal=guesses, file=segmentNames)
         moltenPredictions <- melt(namedGuesses, id.vars = c("file"))

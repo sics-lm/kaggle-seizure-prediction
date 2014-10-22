@@ -3,22 +3,31 @@ library("caret")
 source("correlation_convertion.r")
 source("seizure_modeling.r")
 
-runBatchClassification <- function(featureFolderRoot="../../data/cross_correlation", rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, doDownSample=FALSE) {
+runBatchClassification <- function(featureFolderRoot="../../data/cross_correlation", rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, doDownSample=FALSE, method="glm", doSegmentSplit=FALSE) {
     ## Runs the classification on all the subjects of the challenge.
     for (subject in c("Dog_1", "Dog_2", "Dog_3",
                       "Dog_4", "Dog_5", "Patient_1",
                       "Patient_2")) {
+
         print(sprintf("Running classification for %s", subject))
         runClassification(file.path(featureFolderRoot, subject),
                           rebuildData=rebuildData,
                           trainingRatio=trainingRatio,
                           rebuildModel=rebuildModel,
-                          doDownSample=doDownSample)
+                          doDownSample=doDownSample,
+                          method=method)
     }
 }
     
 
-runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1, rebuildModel=FALSE, modelFile=NULL, doDownSample=FALSE) {
+runClassification <- function(featureFolder,
+                              rebuildData=FALSE,
+                              trainingRatio=.8,
+                              rebuildModel=FALSE,
+                              modelFile=NULL,
+                              doDownSample=FALSE,
+                              method="glm",
+                              doSegmentSplit=FALSE) {
     ## Runs the whole classification on the featureFolder
     ## Args:
     ##    featureFolder: a folder containing the feature csv files to train on
@@ -27,9 +36,13 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1,
     ##    modelFile: Name of a model RDS file to use. If NULL and rebuildModel is FALSE, the newest model file in featureFolder will be used. If NULL and rebuildModel is TRUE, a name will be generated based on the model label in caret and the time the model was built. 
     ##    rebuildModel: Logic flag whether to rebuild the model. If FALSE, the latest file with the suffix model_ in the feature folder will be used as the model
     ##    doDownSample: Logic flag of whether to downsample the classes to create equal distributions
+    ##    method: The learning model to use, should be a model recognized by caret's train function
+    ##    doSegmentSplit: Logic flag of whether the data should be sampled by segments
     ## Returns:
     ##    A list with (model, confMatrix, segmentClassification) for convenience. segmentClassification is a table of the original feature file names and a score based on how preictal they are. This data is automatically saved to a CSV file during the run of the function.
     ##
+
+    set.seed(1729)
     
     dataSet <- loadDataFrames(featureFolder, rebuildData=rebuildData)
     interictal <- dataSet[[1]]
@@ -40,7 +53,8 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1,
     experimentSplit <- splitExperimentData(interictal,
                                            preictal,
                                            trainingPerc=trainingRatio,
-                                           doDownSample=doDownSample)
+                                           doDownSample=doDownSample,
+                                           doSegmentSplit=doSegmentSplit)
     trainingData <- experimentSplit[[1]]
     testData <- experimentSplit[[2]]
 
@@ -64,7 +78,13 @@ runClassification <- function(featureFolder, rebuildData=FALSE, trainingRatio=1,
 
     timestamp <- format(Sys.time(), "%Y-%m-%d-%H:%M:%S")
     if (rebuildModel) {
-        model <- trainModel(trainingData)
+        if (doSegmentSplit) {
+            model <- trainModelBySegment(trainingData, method=method)
+        }
+        else {
+            model <- trainModel(trainingData, method=method)
+        }
+
 
         if (is.null(modelFile)) {
             modelLabel <- model$modelInfo$label

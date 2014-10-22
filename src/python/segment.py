@@ -91,9 +91,9 @@ class Segment:
 
 
 def example_preictal():
-    return Segment('../data/Dog_1/Dog_1_preictal_segment_0001.mat')
+    return Segment('../../data/Dog_1/Dog_1_preictal_segment_0001.mat')
 
 
 def example_interictal():
-    return Segment('../data/Dog_1/Dog_1_interictal_segment_0001.mat')
+    return Segment('../../data/Dog_1/Dog_1_interictal_segment_0001.mat')
 
