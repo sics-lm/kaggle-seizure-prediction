@@ -3,6 +3,8 @@ import glob
 import os.path
 import re
 import multiprocessing
+import random
+
 
 channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
 
