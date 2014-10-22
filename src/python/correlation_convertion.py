@@ -50,6 +50,7 @@ def load_correlation_files(feature_folder,
         complete_frame = pd.concat(segment_frames,
                                    keys=segment_names,
                                    names=('segment', 'start_sample'))
+                                   keys=segment_names)
 
         complete_frame.to_pickle(cache_file)
     else:
