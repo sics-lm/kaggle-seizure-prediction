@@ -24,8 +24,8 @@ def split_segment_names(dataframe, split_ratio):
     return list(sorted(part1_names)), list(sorted(part2_names))
 
 
-def do_experiment_split(interictal, preictal,
-                        training_ratio, do_down_sample=True,
+def split_experiment_data(interictal, preictal,
+                        training_ratio, do_downsample=True,
                         downsample_ratio=2.0,
                         do_segment_split=True):
     """
@@ -35,7 +35,7 @@ def do_experiment_split(interictal, preictal,
         *preictal*: A data frame containing the preictal samples.
         *training_ratio*: a value in the range (0,1) which indicates the ratio
                           of samples to use for training.
-        *do_down_sample*: flag of whether to down sample the larger class.
+        *do_downsample*: flag of whether to down sample the larger class.
         *downsample_ratio*: The maximum imbalance ratio to use for down sampling.
         *do_segment_split*: flag of whether to split based on segment names.
     Returns:
@@ -43,8 +43,8 @@ def do_experiment_split(interictal, preictal,
         two seperate and disjunct data frames, such that the first partition
         contains a ratio of *training_ratio* of all the data.
     """
-    if do_down_sample:
-        interictal = down_sample(interictal, preictal, downsample_ratio,
+    if do_downsample:
+        interictal = downsample(interictal, preictal, downsample_ratio,
                                  do_segment_split=do_segment_split)
     dataset = pd.concat((interictal, preictal))
     dataset.sortlevel('segment', inplace=True)
@@ -53,7 +53,7 @@ def do_experiment_split(interictal, preictal,
                          do_segment_split=do_segment_split)
 
 
-def down_sample(df1, df2, max_skew=1.0, do_segment_split=True):
+def downsample(df1, df2, max_skew=1.0, do_segment_split=True):
     """
     Returns a downsampled version of *df1* so that it contains at most
     a ratio of *max_skew* samples of df2.
