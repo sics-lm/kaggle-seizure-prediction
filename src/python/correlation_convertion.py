@@ -47,6 +47,7 @@ def load_correlation_files(feature_folder,
         else:
             print("Reading files serially")
             segment_frames = [load_and_pivot(filename) for filename in files]
+
         complete_frame = pd.concat(segment_frames,
                                    keys=segment_names,
                                    names=('segment', 'start_sample'))
