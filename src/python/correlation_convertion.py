@@ -68,14 +68,14 @@ def load_data_frames(feature_folder, rebuild_data=False,
                                       file_pattern=file_pattern,
                                       rebuild_data=rebuild_data,
                                       processes=processes)
-    preictal['Class'] = "Preictal"
+    preictal['Preictal'] = 1
 
     interictal = load_correlation_files(feature_folder,
                                         class_name="interictal",
                                         file_pattern=file_pattern,
                                         rebuild_data=rebuild_data,
                                         processes=processes)
-    interictal['Class'] = "Interictal"
+    interictal['Preictal'] = 0
 
     test = load_correlation_files(feature_folder,
                                   class_name="test",
@@ -87,4 +87,14 @@ def load_data_frames(feature_folder, rebuild_data=False,
 
 
 def get_channel_df(dataframe):
-    pass
+    """Returns a dataframe with only the channel pairs as columns"""
+    return dataframe.drop('Preictal', axis=1)
+
+
+def get_class(dataframe):
+    return dataframe['Preictal']
+
+
+def get_segments(dataframe):
+    """Returns the segment name part of the index for the dataframe"""
+    return
