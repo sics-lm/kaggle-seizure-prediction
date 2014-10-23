@@ -118,9 +118,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for collecting the classification scores. Will only collect the scores from the newest files.")
 
     parser.add_argument("root", help="The root folder to search for classification files")
-    parser.add_argument("-o", "--output", 
-                        help="The file to write the results to")
-    parser.add_argument("-n", "--normalize", 
+    parser.add_argument("-o", "--output",
+                        help="The file to write the results to. If the supplied path is a directory, a file with a name on the current time will be generated in the folder.")
+    parser.add_argument("-n", "--normalize",
                         help="Normalize the scores on a per-subject basis to the range [0,1]",
                         action='store_true')
 
@@ -130,8 +130,13 @@ if __name__ == '__main__':
     if args.output is None:
         output = sys.stdout
     else:
-        output = open(args.output, 'w')
-    
+        if os.path.isdir(args.output):
+            timestamp = datetime.datetime.now().replace(microsecond=0)
+            submission_file = "submission_{}.csv".format(timestamp)
+            output = open(os.path.join(args.output, submission_file), 'w')
+        else:
+            output = open(args.output, 'w')
+
     try:
         write_scores(args.root, output, args.normalize)
 
