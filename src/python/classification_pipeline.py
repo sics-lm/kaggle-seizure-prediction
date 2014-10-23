@@ -63,11 +63,11 @@ def write_scores(feature_folder, test_data, model, timestamp=None):
 def run_classification(feature_folder, rebuild_data=False,
                        training_ratio=.8, rebuild_model=False, model_file=None,
                        do_downsample=False, method="logistic", do_segment_split=False,
-                       processes=4, csv_directory=None):
+                       processes=4, csv_directory=None, frame_length=1):
     print("Running classification on folder {}".format(feature_folder))
     interictal, preictal, unlabeled = corr_conv.load_data_frames(feature_folder,
                                                                  rebuild_data=rebuild_data,
-                                                                 processes=processes)
+                                                                 processes=processes, frame_length=frame_length)
 
     training_data, test_data = dataset.split_experiment_data(interictal,
                                                              preictal,
@@ -120,6 +120,9 @@ if __name__ == '__main__':
     parser.add_argument("--method", help="What model to use for learning", dest='method', choices=['logistic'], default='logistic')
     parser.add_argument("--processes", help="How many processes should be used for parellelized work.", dest='processes', default=4, type=int)
     parser.add_argument("--csv-directory", help="Which directory the classification CSV files should be written to.", dest='csv_directory')
+    parser.add_argument("--frame-length",
+                        help="The size in windows each frame (feature vector) should be.",
+                        dest='frame_length', default=1, type=int)
 
     args = parser.parse_args()
     print("Starting training with the following arguments: {}".format(vars(args)))
