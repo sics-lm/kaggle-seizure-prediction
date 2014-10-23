@@ -3,10 +3,16 @@ from __future__ import division
 
 import sklearn
 import sklearn.linear_model
+import sklearn.svm
 import sklearn.cross_validation
+from sklearn.grid_search import GridSearchCV
+
 import pandas as pd
+import numpy as np
 
 import correlation_convertion
+import dataset
+
 
 
 def train_model(training_data, method='logistic',
@@ -14,17 +20,32 @@ def train_model(training_data, method='logistic',
                 do_segment_split=True,
                 processes=1):
     """Fits a model given by *method* to the training data."""
+    cv = dataset.SegmentCrossValidator(training_data, cross_validation.StratifiedKFold)
+    #cv = sklearn.cross_validation.StratifiedKFold(training_data['Preictal'])
 
+    common_kwargs = dict( cv=cv, scoring='roc_auc', n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
     if method == 'logistic':
         regr = sklearn.linear_model.LogisticRegression(C=1e5)
+        param_grid = {'C': np.linspace(1e4, 1e5, 10) }
+        scores = ['roc_auc']
+        clf = GridSearchCV(estimator=regr, param_grid=param_grid, **common_kwargs)
+
+    elif method == 'svm':
+        regr = sklearn.svm.SVC(C=1)
+        param_grid =  [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4], 'C': [1, 10, 100, 1000]},
+                       {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
+        scores = ['roc_auc']
+        clf = GridSearchCV(estimator=regr, param_grid=param_grid, **common_kwargs)
+
     #if method == 'linear':
     else:
-        regr = sklearn.linear_model.LinearRegression()
+        clf = sklearn.linear_model.LinearRegression()
 
-    training_data_x = training_data.drop('Class', axis=1)
-    training_data_y = training_data['Class']
 
-    regr.fit(training_data_x, training_data_y)
+    training_data_x = training_data.drop('Preictal', axis=1)
+    training_data_y = training_data['Preictal']
+
+    clf.fit(training_data_x, training_data_y)
 
     return regr
 
@@ -46,4 +67,4 @@ def assign_segment_scores(test_data, regr):
                                   index=test_data.index,
                                   columns=('preictal',))
     segment_groups = df_predictions.groupby(level='segment')
-    return segment_groups.aggregate(preictal_ratio)
+    return segment_groups.aggregate(mean)
