@@ -20,6 +20,8 @@ def train_model(training_data, method='logistic',
                 do_segment_split=True,
                 processes=1):
     """Fits a model given by *method* to the training data."""
+    print("Training a {} model".format(method))
+
     k_fold_kwargs = dict(n_folds=10, random_state=1729)
     if do_segment_split:
         cv = dataset.SegmentCrossValidator(training_data, cross_validation.StratifiedKFold, **k_fold_kwargs)
