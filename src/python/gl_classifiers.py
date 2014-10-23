@@ -8,6 +8,7 @@ from classification_pipeline import get_latest_model
 from time import strftime, localtime
 import random
 import sys
+import array
 
 
 # def run_batch_classification(feature_folder_root="../../data/wavelets",
@@ -36,6 +37,11 @@ def load_feature_files(feature_folder,
 
         complete_sframe = gl.SFrame.read_csv(
             glob_pattern, header=False, column_type_hints=float)
+
+        col_names = complete_sframe.column_names()
+
+        complete_sframe = complete_sframe.pack_columns(
+            col_names, dtype=array.array)
 
         complete_sframe.save(cache_file)
     else:
@@ -74,25 +80,28 @@ def split_experiment_data(complete, training_ratio=0.8, do_downsample=True, down
     interictal_samples = train_interictal.shape[0]
     preictal_samples = train_preictal.shape[0]
 
-    # Get approximatelly downsample_ratio * preictal_samples from the
-    # interictal_samples sframe
+    if do_downsample:
+        # Get approximatelly downsample_ratio * preictal_samples from the
+        # interictal_samples sframe
 
-    desired_interictal = downsample_ratio * preictal_samples
-    interictal_ratio = desired_interictal / float(interictal_samples)
+        desired_interictal = downsample_ratio * preictal_samples
+        interictal_ratio = desired_interictal / float(interictal_samples)
 
-    if seed == None:
-        seed = int(random.randrange(0, int(sys.maxint/10e10)))
+        if seed == None:
+            seed = int(random.randrange(0, int(sys.maxint/10e10)))
 
-    downsampled_interictal = train_interictal.sample(
-        interictal_ratio, seed=seed)
+        downsampled_interictal = train_interictal.sample(
+            interictal_ratio, seed=seed)
 
-    downsampled_complete = downsampled_interictal.append(train_preictal)
-    # OK to re-use seed
-    print("Original interictal samples: %d" % interictal_samples)
-    print("Original preictal samples: %d" % preictal_samples)
-    print("Desired interictal samples: %d" % desired_interictal)
-    print("Interictal samples after downsampling: %d" % downsampled_interictal.shape[0])
-    return downsampled_complete.random_split(training_ratio, seed=seed)
+        complete = downsampled_interictal.append(train_preictal)
+        # OK to re-use seed?
+        print("Original interictal samples: %d" % interictal_samples)
+        print("Original preictal samples: %d" % preictal_samples)
+        print("Desired interictal samples: %d" % desired_interictal)
+        print("Interictal samples after downsampling: %d"
+              % downsampled_interictal.shape[0])
+
+    return complete.random_split(training_ratio, seed=seed)
 
 def train_model(data, method):
     target = 'preictal'
