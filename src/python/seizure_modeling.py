@@ -31,7 +31,7 @@ def train_model(training_data, method='logistic',
     common_kwargs = dict( cv=cv, scoring='roc_auc', n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
     if method == 'logistic':
         regr = sklearn.linear_model.LogisticRegression(C=1e5)
-        param_grid = {'C': np.linspace(1e4, 1e5, 10) }
+        param_grid = {'C': np.linspace(0, 1e5, 20) }
         scores = ['roc_auc']
         clf = GridSearchCV(estimator=regr, param_grid=param_grid, **common_kwargs)
 
