@@ -6,6 +6,7 @@ import os.path
 import fnmatch
 import re
 import sys
+import datetime
 
 from collections import defaultdict
 
@@ -16,11 +17,14 @@ def collect_scores(score_files, only_newest=True):
         ctime=os.path.getctime(f)
         with open(f) as csv_file:
             csv_reader = csv.DictReader(csv_file)
-            for line in csv_reader:
-                filename = line["file"]
-                value= float(line["preictal"])
-                results[filename][ctime]=value
-    
+            try:
+                for line in csv_reader:
+                    filename = line["file"]
+                    value= float(line["preictal"])
+                    results[filename][ctime]=value
+            except KeyError as e:
+                print('The file {} is missing a column: {}'.format(f, e))
+
     if only_newest:
         newest_results = dict()
         for filename, time_values in results.items():
