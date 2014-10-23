@@ -60,19 +60,22 @@ def write_scores(feature_folder, test_data, model, timestamp=None):
 
 
 
-def run_classification(feature_folder, rebuild_data=False, training_ratio=.8, rebuild_model=False, model_file=None, do_downsample=False, method="logistic", do_segment_split=False, processes=4):
+def run_classification(feature_folder, rebuild_data=False,
+                       training_ratio=.8, rebuild_model=False, model_file=None,
+                       do_downsample=False, method="logistic", do_segment_split=False,
+                       processes=4, csv_directory=None):
     print("Running classification on folder {}".format(feature_folder))
     interictal, preictal, unlabeled = corr_conv.load_data_frames(feature_folder,
-                                                            rebuild_data=rebuild_data,
-                                                            processes=processes)
+                                                                 rebuild_data=rebuild_data,
+                                                                 processes=processes)
 
     training_data, test_data = dataset.split_experiment_data(interictal,
                                                              preictal,
                                                              training_ratio=training_ratio,
-                                                               do_downsample=do_downsample,
-                                                               do_segment_split=do_segment_split)
+                                                             do_downsample=do_downsample,
+                                                             do_segment_split=do_segment_split)
 
-    if model_file is None or not rebuildModel:
+    if model_file is None or not rebuild_model:
         model_file = get_latest_model(feature_folder)
         if model_file is None:
             rebuild_model = True
@@ -104,10 +107,20 @@ if __name__ == '__main__':
     parser.add_argument("--rebuild-data", action='store_true', help="Should the dataframes be re-read from the csv feature files", dest='rebuild_data')
     parser.add_argument("--training-ratio", type=float, default=0.8, help="What ratio of the data should be used for training", dest='training_ratio')
     parser.add_argument("--rebuild-model", action='store_true', help="Should the model be rebuild, or should a cached version (if available) be used.", dest='rebuild_model')
-    parser.add_argument("--do-downsample", action='store_true', help="should class imbalance be solved by downsampling the majority class", dest='do_downsample')
-    parser.add_argument("--do-segment-split", help="Should the training data sampling be done on a per segment basis.", dest='do_segment_split')
+    parser.add_argument("--no-downsample",
+                        action='store_false',
+                        default=True,
+                        help="Disable downsampling of the majority class",
+                        dest='do_downsample')
+    parser.add_argument("--no-segment-split",
+                        action='store_false',
+                        help="Disable splitting data by segment.",
+                        dest='do_segment_split',
+                        default=True)
     parser.add_argument("--method", help="What model to use for learning", dest='method', choices=['logistic'], default='logistic')
-    parser.add_argument("--processes", help="How many processes should be used for parellelized work.", dest='processes', default=4)
+    parser.add_argument("--processes", help="How many processes should be used for parellelized work.", dest='processes', default=4, type=int)
+    parser.add_argument("--csv-directory", help="Which directory the classification CSV files should be written to.", dest='csv_directory')
 
     args = parser.parse_args()
+    print("Starting training with the following arguments: {}".format(vars(args)))
     run_batch_classification(**vars(args))
