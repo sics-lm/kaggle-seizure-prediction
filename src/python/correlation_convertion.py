@@ -5,7 +5,7 @@ import os.path
 import re
 import multiprocessing
 import random
-
+from functools import partial
 
 channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
 
@@ -66,7 +66,8 @@ def load_correlation_files(feature_folder,
             print("Reading files in parallel")
             pool = multiprocessing.Pool(processes)
             try:
-                segment_frames = pool.map(load_and_pivot, files)
+                partial_load_and_pivot = partial(load_and_pivot, frame_length=frame_length)
+                segment_frames = pool.map(partial_load_and_pivot, files)
             finally:
                 pool.close()
         else:
