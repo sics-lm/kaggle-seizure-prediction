@@ -4,7 +4,7 @@ from __future__ import division
 import sklearn
 import sklearn.linear_model
 import sklearn.svm
-import sklearn.cross_validation
+from sklearn import cross_validation
 from sklearn.grid_search import GridSearchCV
 
 import pandas as pd
@@ -20,8 +20,11 @@ def train_model(training_data, method='logistic',
                 do_segment_split=True,
                 processes=1):
     """Fits a model given by *method* to the training data."""
-    cv = dataset.SegmentCrossValidator(training_data, cross_validation.StratifiedKFold)
-    #cv = sklearn.cross_validation.StratifiedKFold(training_data['Preictal'])
+    k_fold_kwargs = dict(n_folds=10, random_state=1729)
+    if do_segment_split:
+        cv = dataset.SegmentCrossValidator(training_data, cross_validation.StratifiedKFold, **k_fold_kwargs)
+    else:
+        cv = sklearn.cross_validation.StratifiedKFold(training_data['Preictal'], **k_fold_kwargs)
 
     common_kwargs = dict( cv=cv, scoring='roc_auc', n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
     if method == 'logistic':
