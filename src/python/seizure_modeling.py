@@ -47,7 +47,7 @@ def train_model(training_data, method='logistic',
 
     clf.fit(training_data_x, training_data_y)
 
-    return regr
+    return clf
 
 
 def preictal_ratio(predictions):
@@ -67,4 +67,4 @@ def assign_segment_scores(test_data, regr):
                                   index=test_data.index,
                                   columns=('preictal',))
     segment_groups = df_predictions.groupby(level='segment')
-    return segment_groups.aggregate(mean)
+    return segment_groups.mean()
