@@ -9,7 +9,7 @@ from sklearn import cross_validation
 
 class SegmentCrossValidator:
     """Wrapper for the scikit_learn CV generators to generate folds on a segment basis."""
-    def __init__(self, dataframe, base_cv=None):
+    def __init__(self, dataframe, base_cv=None, **cv_kwargs):
         # We create a copy of the dataframe with a new last level index which is an enumeration of the rows (like proper indices)
         self.dataframe = dataframe.reset_index('start_sample', drop=True)
         self.dataframe['i'] = np.arange(len(dataframe))
@@ -22,9 +22,9 @@ class SegmentCrossValidator:
         self.segments = self.all_segments.groupby(level='segment').first()
 
         if base_cv == None:
-            self.cv = cross_validation.StratifiedKFold(self.segments)
+            self.cv = cross_validation.StratifiedKFold(self.segments, **cv_kwargs)
         else:
-            self.cv = base_cv(self.segments)
+            self.cv = base_cv(self.segments, **cv_kwargs)
 
 
     def __iter__(self):
