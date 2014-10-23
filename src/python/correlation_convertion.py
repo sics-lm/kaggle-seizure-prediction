@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import glob
 import os.path
 import re
@@ -17,13 +18,35 @@ def convert_channel_name(name):
         return name
 
 
-def load_and_pivot(filename):
+def load_and_pivot(filename, frame_length=1):
+    """
+    Loads the given csv. Will return a data frame with the channel
+    pairs as columns. *frame_length* determines how many windows from
+    the csv file will be collected into every row of the data
+    frame.
+    """
     with open(filename) as fp:
         dataframe = pd.read_csv(fp, sep="\t")
         channel_i = dataframe['channel_i'].map(convert_channel_name)
         channel_j = dataframe['channel_j'].map(convert_channel_name)
         dataframe['channels'] = channel_i.str.cat(channel_j, sep=":")
-        return dataframe.pivot('start_sample', 'channels', 'correlation')
+        pivoted = dataframe.pivot('start_sample', 'channels', 'correlation')
+
+        if frame_length == 1:
+            return pivoted
+        else:
+            df_length = len(pivoted)
+            # Make sure the length of the frame is divisible by frame_length
+            if df_length % frame_length != 0:
+                raise(ValueError("The length {} of the dataframe in {} is not divisible by the frame length {}".format(df_length,
+                                                                                                                       filename,
+                                                                                                                       frame_lenght)))
+            row_ranges = [np.arange(i, df_length, frame_length) for i in range(frame_length)]
+            frames = [pivoted.iloc[row_range] for row_range in row_ranges]
+
+            for frame in frames:
+                frame.index = np.arange(df_length/frame_length)
+            return pd.concat(frames, axis=1)
 
 
 def load_correlation_files(feature_folder,
