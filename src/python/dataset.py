@@ -2,6 +2,53 @@
 import random
 
 import pandas as pd
+import numpy as np
+import sklearn
+from sklearn import cross_validation
+
+
+class SegmentCrossValidator:
+    """Wrapper for the scikit_learn CV generators to generate folds on a segment basis."""
+    def __init__(self, dataframe, base_cv=None):
+        # We create a copy of the dataframe with a new last level index which is an enumeration of the rows (like proper indices)
+        self.dataframe = dataframe.reset_index('start_sample', drop=True)
+        self.dataframe['i'] = np.arange(len(dataframe))
+        self.dataframe.set_index('i', append=True, inplace=True)
+
+        #We create a new series with only the class label
+        self.all_segments = self.dataframe['Preictal']
+
+        #Now create a series with only the segments as rows. This is what we will pass into the wrapped cross validation generator
+        self.segments = self.all_segments.groupby(level='segment').first()
+
+        if base_cv == None:
+            self.cv = cross_validation.StratifiedKFold(self.segments)
+        else:
+            self.cv = base_cv(self.segments)
+
+
+    def __iter__(self):
+        """
+        Return a generator object which returns a pair of indices for every iteration.
+        """
+        for training_indices, test_indices in self.cv:
+            #The indices returned from self.cv are relative to the segment name data series, we pick out the segment names they belong to
+            training_segments = list(self.segments[training_indices].index)
+            test_segments = list(self.segments[test_indices].index)
+
+            # Now that we have the segment names, we pick out the rows in the properly indexed
+            all_training_indices = self.all_segments.loc[training_segments]
+            all_test_indices = self.all_segments.loc[test_segments]
+
+            #Now pick out the values for only the 'i' level index of the rows which matched the segment names
+            original_df_training_indices = all_training_indices.index.get_level_values('i')
+            original_df_test_indices = all_test_indices.index.get_level_values('i')
+
+            yield original_df_training_indices, original_df_test_indices
+
+
+    def __len__(self):
+        return len(self.cv)
 
 
 def split_segment_names(dataframe, split_ratio):

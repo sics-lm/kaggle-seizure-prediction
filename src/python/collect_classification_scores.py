@@ -32,7 +32,7 @@ def collect_scores(score_files, only_newest=True):
             newest_results[filename] = value
         return newest_results
     else:
-        return { filename: list(time_values.values()) 
+        return { filename: list(time_values.values())
                  for filename, time_values in sorted(results.items()) }
 
 
@@ -46,9 +46,9 @@ def find_classification_scores(root, score_pattern="*classification*.csv"):
         matches = fnmatch.filter(filenames, score_pattern)
         matched_files.extend([os.path.join(dirpath, f) for f in matches])
     return matched_files
-            
 
-def fix_segment_names(scores, 
+
+def fix_segment_names(scores,
                       segment_match=r"(.*)_cross_correlation.*\.csv",
                       suffix=".mat"):
     """
@@ -92,7 +92,7 @@ def normalize_scores(all_scores, pattern=r"([A-Za-z]*_[0-9])*"):
                 segment_score /= float(max_score)
                 normalized_scores[segment] = segment_score
     return normalized_scores
-                
+
 
 def get_scores(root, normalize=False):
     """
@@ -108,7 +108,7 @@ def get_scores(root, normalize=False):
 
     return fixed_scores
 
-    
+
 def write_scores(root, output, normalize=False):
     scores = get_scores(root, normalize=normalize)
     csv_writer = csv.writer(output)
