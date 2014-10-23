@@ -6,6 +6,7 @@ import pickle
 
 import sklearn
 from sklearn import cross_validation
+import pandas as pd
 
 import correlation_convertion as corr_conv
 import dataset
@@ -13,10 +14,20 @@ import seizure_modeling
 
 
 def run_batch_classification(feature_folder_root="../../data/cross_correlation", **kwargs):
+    all_scores = []
     for subject in ("Dog_1", "Dog_2", "Dog_3",
                       "Dog_4", "Dog_5", "Patient_1",
                       "Patient_2"):
-        run_classification(os.path.join(feature_folder_root, subject), **kwargs)
+        segment_scores = run_classification(os.path.join(feature_folder_root, subject), **kwargs)
+        all_scores.append(segment_scores)
+
+    #df_scores = pd.concat(all_scores, axis=0)
+    #df_scores.sort()
+    #timestamp = datetime.datetime.now().replace(microsecond=0)
+    #submission_file = "submission_{}.csv".format(timestamp)
+    #submission_path = os.path.join(feature_folder_root, submission_file)
+
+    #df_scores.to_csv(submission_path, index_label='clip')
 
 
 def get_latest_model(feature_folder, model_pattern="model*.pickle"):
@@ -31,9 +42,27 @@ def get_latest_model(feature_folder, model_pattern="model*.pickle"):
         return None
 
 
+def write_scores(feature_folder, test_data, model, timestamp=None):
+    """
+    Writes a score file to *feature_folder*, using the scores given by
+    *model* on *test_data*. If *timestamp* is supplied, it will be
+    used for the file, otherwise a new timestamp will be generated.
+    Returns the data frame of the calculated segment scores.
+    """
+    if timestamp is None:
+        timestamp = datetime.datetime.now().replace(microsecond=0)
+
+    segment_scores = seizure_modeling.assign_segment_scores(test_data, model)
+    score_file = "classification_{}.csv".format(timestamp)
+    score_path = os.path.join(feature_folder, score_file)
+    segment_scores.to_csv(score_path, index_label='file')
+    return segment_scores
+
+
+
 def run_classification(feature_folder, rebuild_data=False, training_ratio=.8, rebuild_model=False, model_file=None, do_downsample=False, method="logistic", do_segment_split=False, processes=4):
     print("Running classification on folder {}".format(feature_folder))
-    interictal, preictal, test = corr_conv.load_data_frames(feature_folder,
+    interictal, preictal, unlabeled = corr_conv.load_data_frames(feature_folder,
                                                             rebuild_data=rebuild_data,
                                                             processes=processes)
 
@@ -65,8 +94,8 @@ def run_classification(feature_folder, rebuild_data=False, training_ratio=.8, re
         with open(model_file, 'wb') as fp:
             pickle.dump(model, fp)
 
-
-
+    scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp)
+    return scores
 
 if __name__ == '__main__':
     import argparse
