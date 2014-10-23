@@ -1,8 +1,10 @@
 """Module for doing the training of the models."""
+from __future__ import division
 
 import sklearn
 import sklearn.linear_model
 import sklearn.cross_validation
+import pandas as pd
 
 import correlation_convertion
 
@@ -27,6 +29,21 @@ def train_model(training_data, method='logistic',
     return regr
 
 
+def preictal_ratio(predictions):
+    """Returns the ratio of 'Preictal' occurances in the dataframe *predictions*"""
+    is_interictal = predictions == 'Preictal'  # A dataframe with Bools in the class column
+    return is_interictal.sum() / is_interictal.count()
+
+
 def assign_segment_scores(test_data, regr):
+    """
+    Returns a data frame with the segments of *test_data* as indices
+    and the ratio of preictal guesses as a 'Preictal' column
+    """
+
     predictions = regr.predict(test_data)
-    test_data['Guess'] = predictions
+    df_predictions = pd.DataFrame(predictions,
+                                  index=test_data.index,
+                                  columns=('preictal',))
+    segment_groups = df_predictions.groupby(level='segment')
+    return segment_groups.aggregate(preictal_ratio)
