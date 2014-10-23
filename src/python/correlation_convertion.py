@@ -53,7 +53,8 @@ def load_correlation_files(feature_folder,
                            class_name,
                            file_pattern="5.0s.csv",
                            rebuild_data=False,
-                           processes=1):
+                           processes=1,
+                           frame_length=1):
     cache_file = os.path.join(feature_folder, '{}_cache.pickle'.format(class_name))
 
     if rebuild_data or not os.path.exists(cache_file):
@@ -72,7 +73,7 @@ def load_correlation_files(feature_folder,
                 pool.close()
         else:
             print("Reading files serially")
-            segment_frames = [load_and_pivot(filename) for filename in files]
+            segment_frames = [load_and_pivot(filename, frame_length=frame_length) for filename in files]
 
         complete_frame = pd.concat(segment_frames,
                                    names=('segment', 'start_sample'),
@@ -85,27 +86,31 @@ def load_correlation_files(feature_folder,
 
 
 def load_data_frames(feature_folder, rebuild_data=False,
-                     processes=4, file_pattern="5.0s.csv"):
+                     processes=4, file_pattern="5.0s.csv",
+                     frame_length=1):
 
     preictal = load_correlation_files(feature_folder,
                                       class_name="preictal",
                                       file_pattern=file_pattern,
                                       rebuild_data=rebuild_data,
-                                      processes=processes)
+                                      processes=processes,
+                                      frame_length=frame_length)
     preictal['Preictal'] = 1
 
     interictal = load_correlation_files(feature_folder,
                                         class_name="interictal",
                                         file_pattern=file_pattern,
                                         rebuild_data=rebuild_data,
-                                        processes=processes)
+                                        processes=processes,
+                                        frame_length=frame_length)
     interictal['Preictal'] = 0
 
     test = load_correlation_files(feature_folder,
                                   class_name="test",
                                   file_pattern=file_pattern,
                                   rebuild_data=rebuild_data,
-                                  processes=processes)
+                                  processes=processes,
+                                  frame_length=frame_length)
 
     return interictal, preictal, test
 
