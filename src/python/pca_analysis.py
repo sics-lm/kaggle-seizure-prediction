@@ -23,8 +23,18 @@ def run_pca_analysis(feature_folder):
     complete = downsampled_interictal.drop(
         'Preictal', axis=1).append(preictal.drop('Preictal', axis=1))
 
-    pca_transform(complete, interictal_samples, preictal_samples)
+    fig,pca = pca_transform(complete, interictal_samples, preictal_samples)
 
+    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
+    pca_name = "pca_analysis_{}".format(timestamp)
+    fig_path = os.path.join(feature_folder, pca_name+".pdf")
+    pca_obj_path = os.path.join(feature_folder, pca_name + '.pickle')
+
+    fig.savefig(fig_path)
+    with open(pca_obj_path, 'wb') as fp:
+        pickle.dump(pca, fp)
+
+    return fig,pca
 
 def run_xcorr_pca_analysis(feature_folder, frame_length=1):
     interictal, preictal, _ = correlation_convertion.load_data_frames(feature_folder, frame_length=frame_length)
