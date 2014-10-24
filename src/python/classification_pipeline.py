@@ -1,8 +1,12 @@
 """Module for running the classification pipeline in python"""
 import glob
+import os
 import os.path
 import datetime
 import pickle
+import re
+import logging
+import sys
 
 import sklearn
 from sklearn import cross_validation
@@ -13,11 +17,27 @@ import dataset
 import seizure_modeling
 
 
-def run_batch_classification(feature_folder_root="../../data/cross_correlation", **kwargs):
+def prep_subject(subject):
+    """Converts the string subject to it's canonical version, for example 'dog1'=>'Dog_1'."""
+    pattern = r"([A-Za-z]*).*([0-9])"
+    def canonize(matchobj):
+        subject_type = matchobj.group(1).capitalize()
+        if subject_type not in ("Dog", "Patient"):
+            raise ValueError("Unknown subject: {}".format(subject_type))
+
+        subject_number = matchobj.group(2)
+        return "{}_{}".format(subject_type.capitalize(), subject_number)
+    return re.sub(pattern, canonize, subject)
+
+
+def run_batch_classification(feature_folder_root="../../data/cross_correlation",
+                             subjects=("Dog_1", "Dog_2", "Dog_3",
+                                       "Dog_4", "Dog_5", "Patient_1",
+                                       "Patient_2"), **kwargs):
+
+    subjects = [prep_subject(subject) for subject in subjects]
     all_scores = []
-    for subject in ("Dog_1", "Dog_2", "Dog_3",
-                      "Dog_4", "Dog_5", "Patient_1",
-                      "Patient_2"):
+    for subject in subjects:
         segment_scores = run_classification(os.path.join(feature_folder_root, subject), **kwargs)
         all_scores.append(segment_scores)
 
@@ -60,11 +80,19 @@ def write_scores(feature_folder, test_data, model, timestamp=None):
 
 
 
-def run_classification(feature_folder, rebuild_data=False,
-                       training_ratio=.8, rebuild_model=False, model_file=None,
-                       do_downsample=False, method="logistic", do_segment_split=False,
-                       processes=4, csv_directory=None, frame_length=1):
-    print("Running classification on folder {}".format(feature_folder))
+def run_classification(feature_folder,
+                       rebuild_data=False,
+                       training_ratio=.8,
+                       rebuild_model=False,
+                       model_file=None,
+                       do_downsample=False,
+                       downsample_ratio=2.0,
+                       method="logistic",
+                       do_segment_split=False,
+                       processes=4,
+                       csv_directory=None,
+                       frame_length=1):
+    logging.info("Running classification on folder {}".format(feature_folder))
     interictal, preictal, unlabeled = corr_conv.load_data_frames(feature_folder,
                                                                  rebuild_data=rebuild_data,
                                                                  processes=processes, frame_length=frame_length)
@@ -82,6 +110,7 @@ def run_classification(feature_folder, rebuild_data=False,
         model = seizure_modeling.train_model(interictal, preictal,
                                              method=method,
                                              do_downsample=do_downsample,
+                                             downsample_ratio=downsample_ratio,
                                              do_segment_split=do_segment_split,
                                              processes=processes)
         if model_file is None:
@@ -93,32 +122,101 @@ def run_classification(feature_folder, rebuild_data=False,
             pickle.dump(model, fp)
 
     scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp)
+    logging.info("Finnished with classification on folder {}".format(feature_folder))
+
     return scores
+
+
+def setup_logging(args):
+    log_dir = args['log_dir']
+    del args['log_dir']
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
+    log_file = "classification_log-method:{}-frame_length:{}-time:{}.txt".format(args['method'], args['frame_length'], timestamp)
+    log_path = os.path.join(log_dir, log_file)
+
+
+    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+    rootLogger = logging.getLogger()
+
+    fileHandler = logging.FileHandler(log_path)
+    fileHandler.setFormatter(logFormatter)
+
+    std_handler = logging.StreamHandler(sys.stdout)
+    std_handler.setFormatter(logFormatter)
+
+    logging.basicConfig(level='INFO', handlers=(fileHandler, std_handler))
+
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="""Script for running the classification pipeline""")
-    parser.add_argument("feature_folder_root", help="""The folder containing the features collected in subject subfolders""", default="../../data/cross_correlation")
-    parser.add_argument("--rebuild-data", action='store_true', help="Should the dataframes be re-read from the csv feature files", dest='rebuild_data')
-    parser.add_argument("--training-ratio", type=float, default=0.8, help="What ratio of the data should be used for training", dest='training_ratio')
-    parser.add_argument("--rebuild-model", action='store_true', help="Should the model be rebuild, or should a cached version (if available) be used.", dest='rebuild_model')
+
+    parser.add_argument("feature_folder_root",
+                        help="""The folder containing the features collected in subject subfolders""",
+                        default="../../data/cross_correlation")
+    parser.add_argument("--subjects",
+                        help="""What subjects to work on. Either the exact name of the folder
+                                (such as 'Dog_1' or a shorthand like 'dog1')""",
+                        nargs='+',
+                        default=["Dog_1", "Dog_2", "Dog_3",
+                                 "Dog_4", "Dog_5", "Patient_1",
+                                 "Patient_2"])
+
+    parser.add_argument("--rebuild-data",
+                        action='store_true',
+                        help="Should the dataframes be re-read from the csv feature files",
+                        dest='rebuild_data')
+    parser.add_argument("--training-ratio",
+                        type=float,
+                        default=0.8,
+                        help="What ratio of the data should be used for training",
+                        dest='training_ratio')
+    parser.add_argument("--rebuild-model",
+                        action='store_true',
+                        help="Should the model be rebuild, or should a cached version (if available) be used.",
+                        dest='rebuild_model')
     parser.add_argument("--no-downsample",
                         action='store_false',
                         default=True,
                         help="Disable downsampling of the majority class",
                         dest='do_downsample')
+    parser.add_argument("--downsample-ratio",
+                        default=2.0,
+                        type=float,
+                        help="The raio of majority class to minority class after downsampling.",
+                        dest='downsample_ratio')
     parser.add_argument("--no-segment-split",
                         action='store_false',
                         help="Disable splitting data by segment.",
                         dest='do_segment_split',
                         default=True)
-    parser.add_argument("--method", help="What model to use for learning", dest='method', choices=['logistic'], default='logistic')
-    parser.add_argument("--processes", help="How many processes should be used for parellelized work.", dest='processes', default=4, type=int)
-    parser.add_argument("--csv-directory", help="Which directory the classification CSV files should be written to.", dest='csv_directory')
+    parser.add_argument("--method",
+                        help="What method to use for learning",
+                        dest='method', choices=['logistic', 'svm', 'sgd'],
+                        default='logistic')
+    parser.add_argument("--processes",
+                        help="How many processes should be used for parellelized work.",
+                        dest='processes',
+                        default=4,
+                        type=int)
+    parser.add_argument("--csv-directory",
+                        help="Which directory the classification CSV files should be written to.",
+                        dest='csv_directory')
     parser.add_argument("--frame-length",
                         help="The size in windows each frame (feature vector) should be.",
                         dest='frame_length', default=1, type=int)
+    parser.add_argument("--log-dir",
+                        help="Directory for writing classification log files.",
+                        default='../../clasification_logs',
+                        dest='log_dir')
 
-    args = parser.parse_args()
-    print("Starting training with the following arguments: {}".format(vars(args)))
-    run_batch_classification(**vars(args))
+
+    args_dict = vars(parser.parse_args())
+    ## Setup loging stuff, this removes 'log_dir' from the dictionary
+    setup_logging(args_dict)
+
+    logging.info("Starting training with the following arguments: {}".format(args_dict))
+
+    run_batch_classification(**args_dict)

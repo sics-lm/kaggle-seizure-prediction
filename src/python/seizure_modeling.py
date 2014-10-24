@@ -1,13 +1,16 @@
 """Module for doing the training of the models."""
 from __future__ import division
 
+import logging
+
 import sklearn
 import sklearn.linear_model
 import sklearn.svm
+import sklearn.ensemble
+import sklearn.metrics
 
 from sklearn import cross_validation
 from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import classification_report, confusion_matrix
 
 import pandas as pd
 import numpy as np
@@ -21,19 +24,29 @@ def get_model(method, training_data_x, training_data_y):
     """
     Returns a dictionary with the model and cross-validation parameter grid for the model named *method*.
     """
+    param_grid=dict()
     min_c = sklearn.svm.l1_min_c(training_data_x, training_data_y, loss='log')
 
     if method == 'logistic':
-        clf = sklearn.linear_model.LogisticRegression(C=1)
+        clf = sklearn.linear_model.LogisticRegression(C=1, random_state=1729)
         param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2'] }
 
     elif method == 'svm':
-        clf = sklearn.svm.SVC(C=1)
-        param_grid =  [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4], 'C': np.linspace(min_c, 1000, 4)},
-                       {'kernel': ['linear'], 'C': np.linspace(min_c, 1000, 4)}]
+        clf = sklearn.svm.SVC(probability=True, class_weight='auto')
+        param_grid =  [{'kernel': ['rbf'], 'gamma': [0, 1e-1, 1e-2, 1e-3],
+                        'C': np.linspace(min_c, 1000, 3)}]
+
+    elif method == 'sgd':
+        clf = sklearn.linear_model.SGDClassifier()
+        param_grid = [{'loss' : ['hinge', 'log'],
+                       'penalty' : ['l1', 'l2', 'elasticnet'],
+                       'alpha' : [0.0001, 0.001, 0.01, 0.1]}]
+
+    elif method == 'random-forest':
+        clf = sklearn.ensemble.RandomForestClassifier()
 
     else:
-        raise ValueError("Unknown classifier: {}".format(method))
+        raise NotImplementedError("Method {} is not supported".format(method))
 
     return dict(estimator=clf, param_grid=param_grid)
 
@@ -54,12 +67,14 @@ def train_model(interictal,
                 method='logistic',
                 training_ratio=0.8,
                 do_downsample=True,
+                downsample_ratio=2.0,
                 do_segment_split=True,
                 processes=1):
     training_data, test_data = dataset.split_experiment_data(interictal,
                                                              preictal,
                                                              training_ratio=training_ratio,
                                                              do_downsample=do_downsample,
+                                                             downsample_ratio=downsample_ratio,
                                                              do_segment_split=do_segment_split)
     test_data_x = test_data.drop('Preictal', axis=1)
     test_data_y = test_data['Preictal']
@@ -69,7 +84,8 @@ def train_model(interictal,
                        do_segment_split=do_segment_split,
                        processes=processes)
 
-    print_report(clf, test_data_x, test_data_y)
+    report = get_report(clf, test_data_x, test_data_y)
+    logging.info(report)
     return clf
 
 
@@ -87,32 +103,44 @@ def fit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=2.
                                                       do_segment_split=do_segment_split)
 
 
-def print_report(clf, test_data_x, test_data_y):
+def get_report(clf, test_data_x, test_data_y):
     """
-    Prints a report of how the classifier *clf* does on the test data.
+    Returns a string with a report of how the classifier *clf* does on the test data.
     """
-
-    print("Best parameters set found on development set:")
-    print()
-    print(clf.best_estimator_)
-    print()
-    print("Grid scores on development set:")
-    print()
-    for params, mean_score, scores in clf.grid_scores_:
-        print("%0.3f (+/-%0.03f) for %r"
-              % (mean_score, scores.std() / 2, params))
-    print()
-
-    print("Detailed classification report:")
-    print()
-    print("The model is trained on the full development set.")
-    print("The scores are computed on the full evaluation set.")
-    print()
     test_data_y_pred = clf.predict(test_data_x)
-    print(classification_report(test_data_y, test_data_y_pred))
-    print()
-    print_cm(confusion_matrix(test_data_y, test_data_y_pred),
-             labels=['Interictal', 'Preictal'])
+
+    report_lines = [
+        "Classification report:",
+        "Best parameters set found on development set:",
+        "",
+        str(clf.best_estimator_),
+        "",
+        grid_scores(clf),
+        "Detailed classification report:",
+        ""
+        "The model is trained on the full development set.",
+        "The scores are computed on the full evaluation set.",
+        "",
+        sklearn.metrics.classification_report(test_data_y, test_data_y_pred),
+        "",
+        cm_report(sklearn.metrics.confusion_matrix(test_data_y, test_data_y_pred),
+                  labels=['Interictal', 'Preictal']),
+        "",
+    ]
+    report = '\n'.join(report_lines)
+    return report
+
+
+def grid_scores(clf):
+    """Returns a string with the grid scores"""
+    score_lines = [ "Grid scores on development set:",
+                    "",
+                ]
+    for params, mean_score, scores in clf.grid_scores_:
+        score_lines.append("{:0.3f} (+/-{:0.03f}) for {}".format(mean_score, scores.std()/2, params))
+
+    score_lines.append("")
+    return '\n'.join(score_lines)
 
 
 def select_model(training_data, method='logistic',
@@ -120,15 +148,16 @@ def select_model(training_data, method='logistic',
                 do_segment_split=True,
                 processes=1):
     """Fits a model given by *method* to the training data."""
-    print("Training a {} model".format(method))
+    logging.info("Training a {} model".format(method))
 
     training_data_x = training_data.drop('Preictal', axis=1)
     training_data_y = training_data['Preictal']
 
     cv = get_cv_generator(training_data, do_segment_split=do_segment_split)
 
+    scorer = sklearn.metrics.make_scorer(sklearn.metrics.roc_auc_score, average='weighted')
     model_dict = get_model(method, training_data_x, training_data_y)
-    common_cv_kwargs = dict(cv=cv, scoring='roc_auc', n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
+    common_cv_kwargs = dict(cv=cv, scoring=scorer, n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
 
     cv_kwargs = dict(common_cv_kwargs)
     cv_kwargs.update(model_dict)
@@ -159,18 +188,33 @@ def assign_segment_scores(test_data, regr):
     return segment_groups.mean()
 
 
-def print_cm(cm, labels):
-    """pretty print for confusion matrixes"""
+def cm_report(cm, labels, sep='\t'):
+    """Returns a pretty print for the confusion matrix"""
     columnwidth = max([len(x) for x in labels])
-    print("Colums show what the true values(rows) were classified as.")
-    # Print header
-    print(" " * columnwidth, end="\t")
-    for label in labels:
-        print("%{0}s".format(columnwidth) % label, end="\t")
-    print()
+    cm_lines = ["Colums show what the true values(rows) were classified as."]
+
+    #The following is used to output each cell of the table. By passing a keyword argument 'format' to the string format function, the format of the output value can be set
+    cell = "{:{format}}"
+    names_format = "<{}".format(columnwidth)  # The names are left-justified
+    col_format = ">{}".format(columnwidth)  # The columns are right formatted
+
+    # Create the header string
+    header_cells = [cell.format(label,format=col_format) for label in [""]+labels]
+    header = sep.join(header_cells)
+    cm_lines.append(header)
+
     # Print rows
-    for i, label1 in enumerate(labels):
-        print("%{0}s".format(columnwidth) % label1, end="\t")
-        for j in range(len(labels)):
-            print("%{0}d".format(columnwidth) % cm[i, j], end="\t")
-        print()
+    for i, label in enumerate(labels):
+        row = []
+        # This will be the label for the row
+        row_label = cell.format(label, format=names_format)
+        row.append(row_label)
+
+        # The matrix cells are created as a list of strings
+        cells = [cell.format(cm[i,j], format=col_format) for j in range(len(labels))]
+        row.extend(cells)
+
+        row_string = sep.join(row)
+        cm_lines.append(row_string)
+
+    return '\n'.join(cm_lines)
