@@ -1,6 +1,8 @@
 """Module for doing the training of the models."""
 from __future__ import division
 
+import logging
+
 import sklearn
 import sklearn.linear_model
 import sklearn.svm
@@ -80,7 +82,8 @@ def train_model(interictal,
                        do_segment_split=do_segment_split,
                        processes=processes)
 
-    print_report(clf, test_data_x, test_data_y)
+    report = get_report(clf, test_data_x, test_data_y)
+    logging.info(report)
     return clf
 
 
@@ -98,40 +101,52 @@ def fit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=2.
                                                       do_segment_split=do_segment_split)
 
 
-def print_report(clf, test_data_x, test_data_y):
+def get_report(clf, test_data_x, test_data_y):
     """
-    Prints a report of how the classifier *clf* does on the test data.
+    Returns a string with a report of how the classifier *clf* does on the test data.
     """
-
-    print("Best parameters set found on development set:")
-    print()
-    print(clf.best_estimator_)
-    print()
-    print("Grid scores on development set:")
-    print()
-    for params, mean_score, scores in clf.grid_scores_:
-        print("%0.3f (+/-%0.03f) for %r"
-              % (mean_score, scores.std() / 2, params))
-    print()
-
-    print("Detailed classification report:")
-    print()
-    print("The model is trained on the full development set.")
-    print("The scores are computed on the full evaluation set.")
-    print()
     test_data_y_pred = clf.predict(test_data_x)
-    print(classification_report(test_data_y, test_data_y_pred))
-    print()
-    print_cm(confusion_matrix(test_data_y, test_data_y_pred),
-             labels=['Interictal', 'Preictal'])
-    print()
+
+    report_lines = [
+        "Classification report:",
+        "Best parameters set found on development set:",
+        "",
+        str(clf.best_estimator_),
+        "",
+        grid_scores(clf),
+        "Detailed classification report:",
+        ""
+        "The model is trained on the full development set.",
+        "The scores are computed on the full evaluation set.",
+        "",
+        classification_report(test_data_y, test_data_y_pred),
+        "",
+        cm_report(confusion_matrix(test_data_y, test_data_y_pred),
+                  labels=['Interictal', 'Preictal']),
+        "",
+    ]
+    report = '\n'.join(report_lines)
+    return report
+
+
+def grid_scores(clf):
+    """Returns a string with the grid scores"""
+    score_lines = [ "Grid scores on development set:",
+                    "",
+                ]
+    for params, mean_score, scores in clf.grid_scores_:
+        score_lines.append("{:0.3f} (+/-{:0.03f}) for {}".format(mean_score, scores.std()/2, params))
+
+    score_lines.append("")
+    return '\n'.join(score_lines)
+
 
 def select_model(training_data, method='logistic',
                 training_ratio=0.8,
                 do_segment_split=True,
                 processes=1):
     """Fits a model given by *method* to the training data."""
-    print("Training a {} model".format(method))
+    logging.info("Training a {} model".format(method))
 
     training_data_x = training_data.drop('Preictal', axis=1)
     training_data_y = training_data['Preictal']
@@ -170,18 +185,28 @@ def assign_segment_scores(test_data, regr):
     return segment_groups.mean()
 
 
-def print_cm(cm, labels):
-    """pretty print for confusion matrixes"""
+def cm_report(cm, labels, sep='\t'):
+    """Returns a pretty print for the confusion matrix"""
     columnwidth = max([len(x) for x in labels])
-    print("Colums show what the true values(rows) were classified as.")
-    # Print header
-    print(" " * columnwidth, end="\t")
-    for label in labels:
-        print("%{0}s".format(columnwidth) % label, end="\t")
-    print()
+    cm_lines = ["Colums show what the true values(rows) were classified as."]
+
+    #The following produces a string like '{:10} if width=10'
+    cell = "{:{format}}"
+    names_format = "<{}".format(columnwidth)  # The names are right-justified
+    col_format = ">{}".format(columnwidth)  # The columns are right formatted
+
+    # Create the header string
+    header_cells = [cell.format(label,format=col_format) for label in [""]+labels]
+    header = sep.join(header_cells)
+    cm_lines.append(header)
+
     # Print rows
-    for i, label1 in enumerate(labels):
-        print("%{0}s".format(columnwidth) % label1, end="\t")
-        for j in range(len(labels)):
-            print("%{0}d".format(columnwidth) % cm[i, j], end="\t")
-        print()
+    for i, label in enumerate(labels):
+        row_name = cell.format(label, format=names_format)
+
+        cells = [cell.format(cm[i,j], format=col_format) for j in range(len(labels))]
+
+        row = sep.join([row_name]+cells)
+        cm_lines.append(row)
+
+    return '\n'.join(cm_lines)
