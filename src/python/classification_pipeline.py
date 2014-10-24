@@ -69,12 +69,6 @@ def run_classification(feature_folder, rebuild_data=False,
                                                                  rebuild_data=rebuild_data,
                                                                  processes=processes, frame_length=frame_length)
 
-    training_data, test_data = dataset.split_experiment_data(interictal,
-                                                             preictal,
-                                                             training_ratio=training_ratio,
-                                                             do_downsample=do_downsample,
-                                                             do_segment_split=do_segment_split)
-
     if model_file is None or not rebuild_model:
         model_file = get_latest_model(feature_folder)
         if model_file is None:
@@ -85,8 +79,9 @@ def run_classification(feature_folder, rebuild_data=False,
 
     timestamp = datetime.datetime.now().replace(microsecond=0)
     if rebuild_model:
-        model = seizure_modeling.train_model(training_data,
+        model = seizure_modeling.train_model(interictal, preictal,
                                              method=method,
+                                             do_downsample=do_downsample,
                                              do_segment_split=do_segment_split,
                                              processes=processes)
         if model_file is None:
