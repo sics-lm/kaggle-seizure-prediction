@@ -112,7 +112,7 @@ if __name__ == '__main__':
                         help="Disable splitting data by segment.",
                         dest='do_segment_split',
                         default=True)
-    parser.add_argument("--method", help="What model to use for learning", dest='method', choices=['logistic'], default='logistic')
+    parser.add_argument("--method", help="What method to use for learning", dest='method', choices=['logistic', 'svm', 'sgd'], default='logistic')
     parser.add_argument("--processes", help="How many processes should be used for parellelized work.", dest='processes', default=4, type=int)
     parser.add_argument("--csv-directory", help="Which directory the classification CSV files should be written to.", dest='csv_directory')
     parser.add_argument("--frame-length",

@@ -4,6 +4,7 @@ from __future__ import division
 import sklearn
 import sklearn.linear_model
 import sklearn.svm
+import sklearn.ensemble
 
 from sklearn import cross_validation
 from sklearn.grid_search import GridSearchCV
@@ -21,6 +22,7 @@ def get_model(method, training_data_x, training_data_y):
     """
     Returns a dictionary with the model and cross-validation parameter grid for the model named *method*.
     """
+    param_grid=dict()
     min_c = sklearn.svm.l1_min_c(training_data_x, training_data_y, loss='log')
 
     if method == 'logistic':
@@ -28,12 +30,21 @@ def get_model(method, training_data_x, training_data_y):
         param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2'] }
 
     elif method == 'svm':
-        clf = sklearn.svm.SVC(C=1)
-        param_grid =  [{'kernel': ['rbf'], 'gamma': [1e-3, 1e-4], 'C': np.linspace(min_c, 1000, 4)},
-                       {'kernel': ['linear'], 'C': np.linspace(min_c, 1000, 4)}]
+        clf = sklearn.svm.SVC(probability=True, class_weight='auto')
+        param_grid =  [{'kernel': ['rbf'], 'gamma': [0, 1e-1, 1e-2, 1e-3],
+                        'C': np.linspace(min_c, 1000, 3)}]
+
+    elif method == 'sgd':
+        clf = sklearn.linear_model.SGDClassifier()
+        param_grid = [{'loss' : ['hinge', 'log'],
+                       'penalty' : ['l1', 'l2', 'elasticnet'],
+                       'alpha' : [0.0001, 0.001, 0.01, 0.1]}]
+
+    elif method == 'random-forest':
+        clf = sklearn.ensemble.RandomForestClassifier()
 
     else:
-        raise ValueError("Unknown classifier: {}".format(method))
+        raise NotImplementedError("Method {} is not supported".format(method))
 
     return dict(estimator=clf, param_grid=param_grid)
 
