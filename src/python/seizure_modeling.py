@@ -67,12 +67,14 @@ def train_model(interictal,
                 method='logistic',
                 training_ratio=0.8,
                 do_downsample=True,
+                downsample_ratio=2.0,
                 do_segment_split=True,
                 processes=1):
     training_data, test_data = dataset.split_experiment_data(interictal,
                                                              preictal,
                                                              training_ratio=training_ratio,
                                                              do_downsample=do_downsample,
+                                                             downsample_ratio=downsample_ratio,
                                                              do_segment_split=do_segment_split)
     test_data_x = test_data.drop('Preictal', axis=1)
     test_data_y = test_data['Preictal']
