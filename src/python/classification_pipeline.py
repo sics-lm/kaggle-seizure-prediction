@@ -105,7 +105,7 @@ def run_classification(feature_folder,
             with open(model_file, 'rb') as fp:
                 model = pickle.load(fp, encoding='bytes')
 
-    timestamp = datetime.datetime.now().replace(microsecond=0)
+    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     if rebuild_model:
         model = seizure_modeling.train_model(interictal, preictal,
                                              method=method,
