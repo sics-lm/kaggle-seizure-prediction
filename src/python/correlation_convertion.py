@@ -87,7 +87,8 @@ def load_correlation_files(feature_folder,
 
 def load_data_frames(feature_folder, rebuild_data=False,
                      processes=4, file_pattern="5.0s.csv",
-                     frame_length=1):
+                     frame_length=1,
+                     do_standardize=True):
 
     preictal = load_correlation_files(feature_folder,
                                       class_name="preictal",
@@ -95,7 +96,6 @@ def load_data_frames(feature_folder, rebuild_data=False,
                                       rebuild_data=rebuild_data,
                                       processes=processes,
                                       frame_length=frame_length)
-    preictal['Preictal'] = 1
 
     interictal = load_correlation_files(feature_folder,
                                         class_name="interictal",
@@ -103,7 +103,6 @@ def load_data_frames(feature_folder, rebuild_data=False,
                                         rebuild_data=rebuild_data,
                                         processes=processes,
                                         frame_length=frame_length)
-    interictal['Preictal'] = 0
 
     test = load_correlation_files(feature_folder,
                                   class_name="test",
@@ -112,6 +111,17 @@ def load_data_frames(feature_folder, rebuild_data=False,
                                   processes=processes,
                                   frame_length=frame_length)
 
+    if do_standardize:
+        all_samples = pd.concat([interictal, preictal, test])
+        means = all_samples.mean(skipna=False)
+        stds =  all_samples.std(skipna=False)
+        interictal = (interictal - means) / stds
+        preictal = (preictal - means) / stds
+        test = (test - means) / stds
+
+
+    preictal['Preictal'] = 1
+    interictal['Preictal'] = 0
     return interictal, preictal, test
 
 
