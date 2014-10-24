@@ -55,7 +55,7 @@ def load_correlation_files(feature_folder,
                            rebuild_data=False,
                            processes=1,
                            frame_length=1):
-    cache_file = os.path.join(feature_folder, '{}_cache.pickle'.format(class_name))
+    cache_file = os.path.join(feature_folder, '{}_frame_length_{}_cache.pickle'.format(class_name, frame_length))
 
     if rebuild_data or not os.path.exists(cache_file):
         print("Rebuilding {} data".format(class_name))
