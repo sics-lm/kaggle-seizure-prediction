@@ -124,7 +124,7 @@ def print_report(clf, test_data_x, test_data_y):
     print()
     print_cm(confusion_matrix(test_data_y, test_data_y_pred),
              labels=['Interictal', 'Preictal'])
-
+    print()
 
 def select_model(training_data, method='logistic',
                 training_ratio=0.8,
