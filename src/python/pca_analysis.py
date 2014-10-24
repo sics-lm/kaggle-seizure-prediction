@@ -1,4 +1,8 @@
 from wavelet_classification import load_data_frames, random_split
+
+import correlation_convertion
+import dataset
+
 from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
@@ -18,11 +22,25 @@ def run_pca_analysis(feature_folder):
     pca_transform(complete, interictal_samples, preictal_samples)
 
 
+def run_xcorr_pca_analysis(feature_folder, frame_length=1):
+    interictal, preictal, _ = correlation_convertion.load_data_frames(feature_folder, frame_length=frame_length)
+
+    preictal_samples = preictal.shape[0]
+
+    downsampled_interictal = dataset.downsample(interictal, preictal, downsample_ratio=2.0)
+
+    interictal_samples = downsampled_interictal.shape[0]
+
+    complete = downsampled_interictal.drop('Preictal', axis=1).append(preictal.drop('Preictal', axis=1))
+
+    return pca_transform(complete, interictal_samples, preictal_samples)
+
 def pca_transform(feature_matrix, interictal_samples, preictal_samples):
 
     pca = PCA(n_components=2)
     trans_pca = pca.fit_transform(feature_matrix)
 
+    fig = plt.figure()
     plt.plot(trans_pca[0:interictal_samples,0],
              trans_pca[0:interictal_samples,1], 'o', markersize=7,
              color='blue', label='Interictal')
@@ -36,4 +54,4 @@ def pca_transform(feature_matrix, interictal_samples, preictal_samples):
     plt.legend()
     plt.title('Transformed samples with class labels from matplotlib.mlab.PCA()')
 
-    plt.show()
+    return fig, pca
