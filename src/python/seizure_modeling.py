@@ -26,7 +26,7 @@ def get_model(method, training_data_x, training_data_y):
     min_c = sklearn.svm.l1_min_c(training_data_x, training_data_y, loss='log')
 
     if method == 'logistic':
-        clf = sklearn.linear_model.LogisticRegression(C=1)
+        clf = sklearn.linear_model.LogisticRegression(C=1, random_state=1729)
         param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2'] }
 
     elif method == 'svm':
