@@ -7,10 +7,10 @@ import sklearn
 import sklearn.linear_model
 import sklearn.svm
 import sklearn.ensemble
+import sklearn.metrics
 
 from sklearn import cross_validation
 from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import classification_report, confusion_matrix
 
 import pandas as pd
 import numpy as np
@@ -119,9 +119,9 @@ def get_report(clf, test_data_x, test_data_y):
         "The model is trained on the full development set.",
         "The scores are computed on the full evaluation set.",
         "",
-        classification_report(test_data_y, test_data_y_pred),
+        sklearn.metrics.classification_report(test_data_y, test_data_y_pred),
         "",
-        cm_report(confusion_matrix(test_data_y, test_data_y_pred),
+        cm_report(sklearn.metrics.confusion_matrix(test_data_y, test_data_y_pred),
                   labels=['Interictal', 'Preictal']),
         "",
     ]
@@ -153,8 +153,9 @@ def select_model(training_data, method='logistic',
 
     cv = get_cv_generator(training_data, do_segment_split=do_segment_split)
 
+    scorer = sklearn.metrics.make_scorer(sklearn.metrics.roc_auc_score, average='weighted')
     model_dict = get_model(method, training_data_x, training_data_y)
-    common_cv_kwargs = dict(cv=cv, scoring='roc_auc', n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
+    common_cv_kwargs = dict(cv=cv, scoring=scorer, n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
 
     cv_kwargs = dict(common_cv_kwargs)
     cv_kwargs.update(model_dict)
