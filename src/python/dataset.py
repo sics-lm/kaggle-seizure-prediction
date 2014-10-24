@@ -72,9 +72,9 @@ def split_segment_names(dataframe, split_ratio):
 
 
 def split_experiment_data(interictal, preictal,
-                        training_ratio, do_downsample=True,
-                        downsample_ratio=2.0,
-                        do_segment_split=True):
+                          training_ratio, do_downsample=True,
+                          downsample_ratio=2.0,
+                          do_segment_split=True):
     """
     Creates a split of the data into two seperate data frames.
     Args:
@@ -90,14 +90,38 @@ def split_experiment_data(interictal, preictal,
         two seperate and disjunct data frames, such that the first partition
         contains a ratio of *training_ratio* of all the data.
     """
-    if do_downsample:
-        interictal = downsample(interictal, preictal, downsample_ratio,
-                                 do_segment_split=do_segment_split)
-    dataset = pd.concat((interictal, preictal))
-    dataset.sortlevel('segment', inplace=True)
+    dataset = merge_interictal_preictal(interictal, preictal,
+                                        do_downsample=do_downsample,
+                                        downsample_ratio=downsample_ratio,
+                                        do_segment_split=do_segment_split)
     return split_dataset(dataset,
                          training_ratio=training_ratio,
                          do_segment_split=do_segment_split)
+
+
+def merge_interictal_preictal(interictal, preictal,
+                              do_downsample=True,
+                              downsample_ratio=2.0,
+                              do_segment_split=True):
+    """
+    Merges the interictal and preictal data frames to a single data frame. Also sorts the multilevel index.
+
+    Args:
+        *interictal*: A data frame containing the interictal samples.
+        *preictal*: A data frame containing the preictal samples.
+        *do_downsample*: flag of whether to down sample the larger class.
+        *downsample_ratio*: The maximum imbalance ratio to use for down sampling.
+        *do_segment_split*: flag of whether to split based on segment names.
+    Returns:
+        A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
+    """
+    if do_downsample:
+        interictal = downsample(interictal, preictal,
+                                downsample_ratio,
+                                do_segment_split=do_segment_split)
+    dataset = pd.concat((interictal, preictal))
+    dataset.sortlevel('segment', inplace=True)
+    return dataset
 
 
 def downsample(df1, df2, max_skew=1.0, do_segment_split=True):
