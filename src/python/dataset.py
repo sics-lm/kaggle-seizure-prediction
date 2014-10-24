@@ -124,31 +124,31 @@ def merge_interictal_preictal(interictal, preictal,
     return dataset
 
 
-def downsample(df1, df2, max_skew=1.0, do_segment_split=True):
+def downsample(df1, df2, downsample_ratio=1.0, do_segment_split=True):
     """
     Returns a downsampled version of *df1* so that it contains at most
-    a ratio of *max_skew* samples of df2.
+    a ratio of *downsample_ratio* samples of df2.
     Args:
         *df1*: The dataframe which should be downsampled.
         *df2*: The dataframe of the smaller class, its length will be the target
                for the downsampling.
-        *max_skew*: The size difference ratio between the downsampled *df1*
+        *downsample_ratio*: The size difference ratio between the downsampled *df1*
                     and *df2*
         *do_segment_split*: Whether the downsampling should be done per segment.
     Returns:
-        A slice of df1 containing len(df2)*max_skew number of samples.
+        A slice of df1 containing len(df2)*downsample_ratio number of samples.
     """
     if do_segment_split:
         df1_segments = set(df1.index.get_level_values('segment'))
         df2_segments = set(df2.index.get_level_values('segment'))
 
-        n_samples = int(len(df2_segments)*max_skew)
+        n_samples = int(len(df2_segments)*downsample_ratio)
         n_samples = min(n_samples, len(df1_segments))
 
         sample_segments = random.sample(set(df1_segments), n_samples)
         return df1.loc[sample_segments]
     else:
-        n_samples = int(len(df2)*max_skew)
+        n_samples = int(len(df2)*downsample_ratio)
         n_samples = min(n_samples, len(df1))
 
         sample_indices = random.sample(range(len(df1)), n_samples)
