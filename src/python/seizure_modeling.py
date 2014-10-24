@@ -190,9 +190,9 @@ def cm_report(cm, labels, sep='\t'):
     columnwidth = max([len(x) for x in labels])
     cm_lines = ["Colums show what the true values(rows) were classified as."]
 
-    #The following produces a string like '{:10} if width=10'
+    #The following is used to output each cell of the table. By passing a keyword argument 'format' to the string format function, the format of the output value can be set
     cell = "{:{format}}"
-    names_format = "<{}".format(columnwidth)  # The names are right-justified
+    names_format = "<{}".format(columnwidth)  # The names are left-justified
     col_format = ">{}".format(columnwidth)  # The columns are right formatted
 
     # Create the header string
@@ -202,11 +202,16 @@ def cm_report(cm, labels, sep='\t'):
 
     # Print rows
     for i, label in enumerate(labels):
-        row_name = cell.format(label, format=names_format)
+        row = []
+        # This will be the label for the row
+        row_label = cell.format(label, format=names_format)
+        row.append(row_label)
 
+        # The matrix cells are created as a list of strings
         cells = [cell.format(cm[i,j], format=col_format) for j in range(len(labels))]
+        row.extend(cells)
 
-        row = sep.join([row_name]+cells)
-        cm_lines.append(row)
+        row_string = sep.join(row)
+        cm_lines.append(row_string)
 
     return '\n'.join(cm_lines)
