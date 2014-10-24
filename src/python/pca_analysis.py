@@ -1,3 +1,7 @@
+import os.path
+import pickle
+import datetime
+
 from wavelet_classification import load_data_frames, random_split
 
 import correlation_convertion
@@ -33,7 +37,18 @@ def run_xcorr_pca_analysis(feature_folder, frame_length=1):
 
     complete = downsampled_interictal.drop('Preictal', axis=1).append(preictal.drop('Preictal', axis=1))
 
-    return pca_transform(complete, interictal_samples, preictal_samples)
+    fig,pca = pca_transform(complete, interictal_samples, preictal_samples)
+
+    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
+    pca_name = "pca_analysis_frame_length_{}_{}".format(frame_length, timestamp)
+    fig_path = os.path.join(feature_folder, pca_name+".pdf")
+    pca_obj_path = os.path.join(feature_folder, pca_name + '.pickle')
+
+    fig.savefig(fig_path)
+    with open(pca_obj_path, 'wb') as fp:
+        pickle.dump(pca, fp)
+
+    return fig,pca
 
 def pca_transform(feature_matrix, interictal_samples, preictal_samples):
 
