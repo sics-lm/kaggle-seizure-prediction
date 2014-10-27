@@ -12,12 +12,12 @@ import csv
 
 import fileutils
 import segment
+import feature_extractor
 
 csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
 
 def calculate_cross_correlations(s, time_delta_config, channels=None, window_length=None,
-                                 segment_start=None, segment_end=None,
-                                 workers=None, csv_writer=None, all_time_deltas=False):
+                                 segment_start=None, segment_end=None, all_time_deltas=False):
     """Calculates the maximum cross-correlation of all pairs of channels in the segment s.
     *time_delta_config* is a time delta specification dictionary with channel pairs as keys. The special pair
     ('default', 'default') will be used for any channel pair not present in the dictionary.
@@ -39,7 +39,8 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
     if segment_end is None:
         segment_end = s.get_duration()
 
-    jobs = []
+    results = []
+
     for i, channel_i in enumerate(channels[:-1]):
         for channel_j in channels[i+1:]:
             if (channel_i, channel_j) in time_delta_config:
@@ -55,45 +56,31 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                                 max(int(time_delta_step*frequency), 1))
 
             if window_length is not None:
-                for window_start in np.arange(segment_start, segment_end, window_length):
-                    window_end = window_start + window_length
-                    window_i = s.get_channel_data(channel_i, window_start, window_end)
-                    window_j = s.get_channel_data(channel_j, window_start, window_end)
-                    if len(window_i) > 2:
-                        #We skip strange boundry cases where the slice is too small to be useful
-                        jobs.append((channel_i, channel_j, window_start, window_end, window_i, window_j, time_delta_range, all_time_deltas))
+                windows = [(window_start, window_start + window_length)
+                           for window_start
+                           in np.arange(segment_start, segment_end, window_length)]
             else:
-                segment_i = s.get_channel_data(channel_i, segment_start, segment_end)
-                segment_j = s.get_channel_data(channel_j, segment_start, segment_end)
-                if len(segment_i) > 2:
-                    #We skip strange boundry cases where the slice is too small to be useful
-                    jobs.append((channel_i, channel_j, segment_start, segment_end, segment_i, segment_j, time_delta_range, all_time_deltas))
-    if workers > 1:
-        try:
-            pool = multiprocessing.Pool(processes=workers)
-            for result in pool.imap_unordered(worker_function, jobs):
-                channel_i, channel_j, window_start, window_end, time_deltas = result
-                #time_deltas is a list of (delta_t, correlation) values, if all_time_deltass is False, it will be the maximum correlation
-                for delta_t, correlation in time_deltas:
-                    t_offset = delta_t / float(frequency)
-                    csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
-                                             end_sample=window_end, t_offset=t_offset, correlation=correlation))
-        finally:
-            pool.close()
-    else:
-        for result in map(worker_function, jobs):
-            channel_i, channel_j, window_start, window_end, time_deltas = result
-            #time_deltas is a list of (delta_t, correlation) values, if all_time_deltass is False, it will be the maximum correlation
-            for delta_t, correlation in time_deltas:
-                t_offset = delta_t / float(frequency)  # Python 2 will return an int if both these are int
-                csv_writer.writerow(dict(channel_i=channel_i, channel_j=channel_j, start_sample=window_start,
-                                         end_sample=window_end, t_offset=t_offset, correlation=correlation))
+                windows = [(segment_start, segment_end)]
 
+            for window_start, window_end in windows:
+                window_i = s.get_channel_data(channel_i, window_start, window_end)
+                window_j = s.get_channel_data(channel_j, window_start, window_end)
 
-def worker_function(data):
-    channel_i, channel_j, window_start, window_end, window_i, window_j, sample_delta, all_time_deltas = data
-    time_deltas = maximum_crosscorelation(window_i, window_j, sample_delta, all_time_deltas=all_time_deltas)
-    return channel_i, channel_j, window_start, window_end, time_deltas
+                #We skip strange boundry cases where the slice is too small to be useful
+                if len(window_i) > 2:
+                    time_deltas = maximum_crosscorelation(window_i, window_j, time_delta_range, all_time_deltas)
+                    #time_deltas is a list of (delta_t, correlation) values, if all_time_deltas is False, it will be the maximum correlation
+                    for delta_t, correlation in time_deltas:
+                        t_offset = delta_t / float(frequency)
+                        result = dict(channel_i=channel_i,
+                                      channel_j=channel_j,
+                                      start_sample=window_start,
+                                      end_sample=window_end,
+                                      t_offset=t_offset,
+                                      correlation=correlation)
+                        results.append(result)
+    return results
+
 
 def corr(x,y, t):
     """
@@ -161,7 +148,6 @@ def maximum_crosscorelation(x, y, time_delta_range, all_time_deltas=False):
         return [(best_t, current_max)]
 
 
-
 def example_segments():
     segments = ['../data/Dog_1/Dog_1_preictal_segment_0001.mat', '../data/Dog_1/Dog_1_interictal_segment_0001.mat']
     return segments
@@ -226,6 +212,11 @@ def get_csv_name(f, csv_directory, window_length=None, time_delta_config=None):
     return csv_name + '.csv'
 
 
+def csv_naming_function(segment_path, output_dir, *args, window_length=None, time_delta_config=None, **kwargs):
+    """Wrapper for get_csv_name for use as a feature_extrator naming function."""
+    return get_csv_name(segment_path, output_dir, window_length, time_delta_config)
+
+
 def setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config_file):
     """Returns a timedelta specification"""
     time_delta_config = dict()
@@ -264,7 +255,6 @@ if __name__ == '__main__':
     parser.add_argument("--segment-start", help="If this argument is supplied, only the segment after this time will be used.", type=float)
     parser.add_argument("--segment-end", help="If this argument is supplied, only the segment before this time will be used.", type=float)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
-
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
@@ -272,19 +262,17 @@ if __name__ == '__main__':
     time_delta_config = setup_time_delta(args.time_delta_begin, args.time_delta_end, args.time_delta_step, args.time_delta_config)
 
     channels = None
-    files = filter(lambda x: '.mat' in x, sorted(fileutils.expand_paths(args.segments)))
-    correlations = dict()
-    for f in files:
-        csv_name = get_csv_name(f, args.csv_directory, args.window_length, time_delta_config)
-        with open(csv_name, 'w') as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=csv_fieldnames, delimiter='\t')
-            writer.writeheader()
 
-            correlations[f] = calculate_cross_correlations(segment.Segment(f),
-                                             time_delta_config, window_length=args.window_length,
-                                             channels=channels,
-                                             segment_start=args.segment_start,
-                                             segment_end=args.segment_end,
-                                             csv_writer=writer,
-                                             workers=args.workers,
-                                             all_time_deltas=args.all_time_deltas)
+    feature_extractor.extract(feature_folder=args.segments,
+                              extractor_function=calculate_cross_correlations,
+                              # Arguments for feature_extractor.extract
+                              output_dir=args.csv_directory,
+                              workers=args.workers,
+                              naming_function=csv_naming_function,
+                              # Arguments for calculate_cross_correlations
+                              time_delta_config=time_delta_config,
+                              window_length=args.window_length,
+                              channels=channels,
+                              segment_start=args.segment_start,
+                              segment_end=args.segment_end,
+                              all_time_deltas=args.all_time_deltas)
