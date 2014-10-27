@@ -9,6 +9,7 @@ from collections import defaultdict
 import multiprocessing
 import os.path
 import csv
+import re
 
 import fileutils
 import segment
@@ -16,8 +17,18 @@ import feature_extractor
 
 csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
 
+channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
+def convert_channel_name(name):
+    """Pass"""
+    match = re.match(channel_pattern, name)
+    if match:
+        return match.group(1) or match.group(2)
+    else:
+        return name
+
 def calculate_cross_correlations(s, time_delta_config, channels=None, window_length=None,
-                                 segment_start=None, segment_end=None, all_time_deltas=False):
+                                 segment_start=None, segment_end=None, all_time_deltas=False,
+                                 old_csv_format=False):
     """Calculates the maximum cross-correlation of all pairs of channels in the segment s.
     *time_delta_config* is a time delta specification dictionary with channel pairs as keys. The special pair
     ('default', 'default') will be used for any channel pair not present in the dictionary.
@@ -39,7 +50,7 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
     if segment_end is None:
         segment_end = s.get_duration()
 
-    results = []
+    results = defaultdict(list)
 
     for i, channel_i in enumerate(channels[:-1]):
         for channel_j in channels[i+1:]:
@@ -62,6 +73,7 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
             else:
                 windows = [(segment_start, segment_end)]
 
+
             for window_start, window_end in windows:
                 window_i = s.get_channel_data(channel_i, window_start, window_end)
                 window_j = s.get_channel_data(channel_j, window_start, window_end)
@@ -71,15 +83,46 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
                     time_deltas = maximum_crosscorelation(window_i, window_j, time_delta_range, all_time_deltas)
                     #time_deltas is a list of (delta_t, correlation) values, if all_time_deltas is False, it will be the maximum correlation
                     for delta_t, correlation in time_deltas:
+
                         t_offset = delta_t / float(frequency)
-                        result = dict(channel_i=channel_i,
-                                      channel_j=channel_j,
-                                      start_sample=window_start,
-                                      end_sample=window_end,
-                                      t_offset=t_offset,
-                                      correlation=correlation)
-                        results.append(result)
-    return results
+
+                        results[(channel_i, channel_j)].append( (window_start,
+                                                                 window_end,
+                                                                 t_offset,
+                                                                 correlation) )
+
+    # We should return a list of dictionaries, where the keys of each dictionary are the same and will be the columns of the csv file
+    if old_csv_format:
+        table = []
+        for (channel_i, channel_j), result_tuples in sorted(results.items()):
+            for start_sample, end_sample, t_offset, correlation in sorted(result_tuples):
+                table.append( dict(channel_i=channel_i,
+                                   channel_j=channel_j,
+                                   start_sample=start_sample,
+                                   end_sample=end_sample,
+                                   t_offset=t_offset,
+                                   correlation=correlation) )
+        return table
+    else:
+        start_sample_grouped = defaultdict(lambda: defaultdict(dict))
+
+        # We group the correlations by start_sample and t_offset
+        for (channel_i, channel_j), result_tuples in results.items():
+            channel_i_name = convert_channel_name(channel_i)
+            channel_j_name = convert_channel_name(channel_j)
+            pair_name = channel_i_name + ':' + channel_j_name
+            for start_sample, end_sample, t_offset, correlation in result_tuples:
+                start_sample_grouped[(start_sample, end_sample)][t_offset].update( {pair_name : correlation } )
+
+        table = []
+        for (start_sample, end_sample), t_offsets in sorted(start_sample_grouped.items()):
+            for t_offset, channel_correlations in sorted(t_offsets.items()):
+                row = dict(start_sample=start_sample,
+                           end_sample=end_sample,
+                           t_offset=t_offset)
+                row.update(channel_correlations)
+                table.append(row)
+        return table
 
 
 def corr(x,y, t):
@@ -255,6 +298,8 @@ if __name__ == '__main__':
     parser.add_argument("--segment-start", help="If this argument is supplied, only the segment after this time will be used.", type=float)
     parser.add_argument("--segment-end", help="If this argument is supplied, only the segment before this time will be used.", type=float)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
+    parser.add_argument("--old-csv-format", help="Use the old CSV format where the channel pairs are rows", action='store_true',
+                        dest='old_csv_format')
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
@@ -275,4 +320,5 @@ if __name__ == '__main__':
                               channels=channels,
                               segment_start=args.segment_start,
                               segment_end=args.segment_end,
-                              all_time_deltas=args.all_time_deltas)
+                              all_time_deltas=args.all_time_deltas,
+                              old_csv_format=args.old_csv_format)

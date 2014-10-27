@@ -1,6 +1,7 @@
 import os.path
 import pickle
 import datetime
+import pandas as pd
 
 from wavelet_classification import load_data_frames, random_split
 
@@ -10,20 +11,11 @@ import dataset
 from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
+
 def run_pca_analysis(feature_folder):
-    interictal, preictal, _ = load_data_frames(feature_folder)
+    interictal, preictal, test_data = load_data_frames(feature_folder)
 
-    preictal_samples = preictal.shape[0]
-
-    downsampled_interictal, _ = random_split(
-        interictal, desired_rows=preictal_samples*2, seed=None)
-
-    interictal_samples = downsampled_interictal.shape[0]
-
-    complete = downsampled_interictal.drop(
-        'Preictal', axis=1).append(preictal.drop('Preictal', axis=1))
-
-    fig,pca = pca_transform(complete, interictal_samples, preictal_samples)
+    fig,pca = mould_data(interictal, preictal, test_data)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_{}".format(timestamp)
@@ -36,18 +28,10 @@ def run_pca_analysis(feature_folder):
 
     return fig,pca
 
+
 def run_xcorr_pca_analysis(feature_folder, frame_length=1):
     interictal, preictal, _ = correlation_convertion.load_data_frames(feature_folder, frame_length=frame_length)
-
-    preictal_samples = preictal.shape[0]
-
-    downsampled_interictal = dataset.downsample(interictal, preictal, downsample_ratio=2.0)
-
-    interictal_samples = downsampled_interictal.shape[0]
-
-    complete = downsampled_interictal.drop('Preictal', axis=1).append(preictal.drop('Preictal', axis=1))
-
-    fig,pca = pca_transform(complete, interictal_samples, preictal_samples)
+    fig,pca = mould_data(interictal, preictal, test_data)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_frame_length_{}_{}".format(frame_length, timestamp)
@@ -60,19 +44,43 @@ def run_xcorr_pca_analysis(feature_folder, frame_length=1):
 
     return fig,pca
 
-def pca_transform(feature_matrix, interictal_samples, preictal_samples):
+
+def mould_data(interictal, preictal, test_data, do_downsample=True, n_samples=100):
+    if do_downsample:
+        interictal = dataset.downsample(interictal, n_samples)
+        preictal = dataset.downsample(preictal, n_samples)
+        interictal = dataset.downsample(preictal, n_samples)
+    return pca_transform(interictal, preictal, test_data)
+
+
+def pca_transform(interictal, preictal, test_data, label=None):
+    concat_frames = [interictal.drop('Preictal', axis=1), preictal.drop('Preictal', axis=1), test_data]
+    feature_matrix = pd.concat(concat_frames)
 
     pca = PCA(n_components=2)
     trans_pca = pca.fit_transform(feature_matrix)
 
+    interictal_start = 0
+    interictal_end = len(interictal)
+
+    preictal_start = interictal_end
+    preictal_end = preictal_start + len(preictal)
+
+    test_data_start = preictal_end
+    test_data_end = test_data_start + len(test_data)
+
     fig = plt.figure()
-    plt.plot(trans_pca[0:interictal_samples,0],
-             trans_pca[0:interictal_samples,1], 'o', markersize=7,
+    plt.plot(trans_pca[interictal_start:interictal_end,0],
+             trans_pca[interictal_start:interictal_end,1], 'o', markersize=7,
              color='blue', label='Interictal')
     plt.plot(
-        trans_pca[interictal_samples:interictal_samples+preictal_samples,0],
-        trans_pca[interictal_samples:interictal_samples+preictal_samples,1],
+        trans_pca[preictal_start:preictal_end,0],
+        trans_pca[preictal_start:preictal_end,1],
         '^', markersize=7, color='red', alpha=0.5, label='Preictal')
+    plt.plot(
+        trans_pca[test_data_start:test_data_end,0],
+        trans_pca[test_data_start:test_data_end,1],
+        'x', markersize=7, color='green', alpha=0.5, label='Test')
 
     plt.xlabel('x_values')
     plt.ylabel('y_values')
