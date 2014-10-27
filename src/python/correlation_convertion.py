@@ -18,6 +18,25 @@ def convert_channel_name(name):
         return name
 
 
+def old_load_and_pivot(dataframe, frame_length):
+    """Old version of load and pivot which uses the old, redundant version where channel_i and channel_j are columns"""
+    channel_i = dataframe['channel_i'].map(convert_channel_name)
+    channel_j = dataframe['channel_j'].map(convert_channel_name)
+    dataframe['channels'] = channel_i.str.cat(channel_j, sep=":")
+
+    dataframe.drop(['channel_i', 'channel_j', 'end_sample', 't_offset'], axis=1, inplace=True)
+    max_corrs = dataframe.groupby(['channels', 'start_sample'], as_index=False).max()
+    pivoted = max_corrs.pivot('start_sample', 'channels', 'correlation')
+    return pivoted
+
+
+def new_load_and_pivot(dataframe, frame_length):
+    """New version which assumes the columns where the channel pairs are already columns"""
+    dataframe.drop(['end_sample', 't_offset'], axis=1, inplace=True)
+    max_corrs = dataframe.groupby('start_sample').max()
+    return max_corrs
+
+
 def load_and_pivot(filename, frame_length=1):
     """
     Loads the given csv. Will return a data frame with the channel
@@ -27,10 +46,12 @@ def load_and_pivot(filename, frame_length=1):
     """
     with open(filename) as fp:
         dataframe = pd.read_csv(fp, sep="\t")
-        channel_i = dataframe['channel_i'].map(convert_channel_name)
-        channel_j = dataframe['channel_j'].map(convert_channel_name)
-        dataframe['channels'] = channel_i.str.cat(channel_j, sep=":")
-        pivoted = dataframe.pivot('start_sample', 'channels', 'correlation')
+
+        #Figure out if this file contains the old or new format
+        if 'channel_i' in dataframe.columns:
+            pivoted = old_load_and_pivot(dataframe, frame_length)
+        else:
+            pivoted = new_load_and_pivot(dataframe, frame_length)
 
         if frame_length == 1:
             return pivoted
@@ -39,14 +60,14 @@ def load_and_pivot(filename, frame_length=1):
             # Make sure the length of the frame is divisible by frame_length
             if df_length % frame_length != 0:
                 raise(ValueError("The length {} of the dataframe in {} is not divisible by the frame length {}".format(df_length,
-                                                                                                                       filename,
-                                                                                                                       frame_lenght)))
+                                                                                                                   filename,
+                                                                                                                   frame_lenght)))
             row_ranges = [np.arange(i, df_length, frame_length) for i in range(frame_length)]
             frames = [pivoted.iloc[row_range] for row_range in row_ranges]
 
             for frame in frames:
                 frame.index = np.arange(df_length/frame_length)
-            return pd.concat(frames, axis=1)
+                return pd.concat(frames, axis=1)
 
 
 def load_correlation_files(feature_folder,
