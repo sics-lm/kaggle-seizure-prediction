@@ -116,39 +116,34 @@ def merge_interictal_preictal(interictal, preictal,
         A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
     """
     if do_downsample:
-        interictal = downsample(interictal, preictal,
-                                downsample_ratio,
+        interictal = downsample(interictal, len(preictal) * downsample_ratio,
                                 do_segment_split=do_segment_split)
     dataset = pd.concat((interictal, preictal))
     dataset.sortlevel('segment', inplace=True)
     return dataset
 
 
-def downsample(df1, df2, downsample_ratio=1.0, do_segment_split=True):
+def downsample(df1, n_samples, do_segment_split=True):
     """
     Returns a downsampled version of *df1* so that it contains at most
     a ratio of *downsample_ratio* samples of df2.
     Args:
         *df1*: The dataframe which should be downsampled.
-        *df2*: The dataframe of the smaller class, its length will be the target
-               for the downsampling.
-        *downsample_ratio*: The size difference ratio between the downsampled *df1*
-                    and *df2*
+        *n_samples*: The number of samples to include in the sample.
         *do_segment_split*: Whether the downsampling should be done per segment.
     Returns:
         A slice of df1 containing len(df2)*downsample_ratio number of samples.
     """
     if do_segment_split:
         df1_segments = set(df1.index.get_level_values('segment'))
-        df2_segments = set(df2.index.get_level_values('segment'))
+        samples_per_segment = len(df1)/len(df1_segments)
 
-        n_samples = int(len(df2_segments)*downsample_ratio)
-        n_samples = min(n_samples, len(df1_segments))
+        n_segment_samples = int(n_samples / samples_per_segment)
+        n_segment_samples = min(n_segment_samples, len(df1_segments))
 
-        sample_segments = random.sample(set(df1_segments), n_samples)
+        sample_segments = random.sample(set(df1_segments), n_segment_samples)
         return df1.loc[sample_segments]
     else:
-        n_samples = int(len(df2)*downsample_ratio)
         n_samples = min(n_samples, len(df1))
 
         sample_indices = random.sample(range(len(df1)), n_samples)
