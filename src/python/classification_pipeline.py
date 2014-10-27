@@ -209,7 +209,7 @@ if __name__ == '__main__':
                         dest='frame_length', default=1, type=int)
     parser.add_argument("--log-dir",
                         help="Directory for writing classification log files.",
-                        default='../../clasification_logs',
+                        default='../../classification_logs',
                         dest='log_dir')
 
 
