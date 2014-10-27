@@ -52,7 +52,7 @@ def run_batch_classification(feature_folder_root="../../data/wavelets",
 
 def run_classification(feature_folder, rebuild_data=False, training_ratio=1.0,
                       rebuild_model=False, model_file=None, do_downsample=True,
-                      method="svm", do_segment_split=False, processes=4, seed=None):
+                      method="svm", do_segment_split=False, processes=4, seed=None, **kwargs):
     print("Running classification on folder {}".format(feature_folder))
 
     interictal, preictal, unlabeled = load_data_frames(
@@ -76,7 +76,7 @@ def run_classification(feature_folder, rebuild_data=False, training_ratio=1.0,
         model = find_best_model(
             feature_folder, rebuild_data=False, training_ratio=0.8,
             scores=None, jobs=processes, do_downsample=True,
-            method=method, seed=seed)
+            method=method, seed=seed, **kwargs)
 
         if model_file is None:
             #Create a new filename based on the model method and the
@@ -87,7 +87,7 @@ def run_classification(feature_folder, rebuild_data=False, training_ratio=1.0,
             pickle.dump(model, fp)
 
     scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp)
-    return scores
+    return model, scores
 
 def load_csv(filename):
     return pd.read_table(filename, sep=',', dtype=np.float64, header=None)
@@ -219,14 +219,14 @@ def random_split(dataframe, ratio=None, desired_rows=None, seed=None):
                                 desired_rows, replace=False)
         return dataframe.ix[rows], dataframe.drop(rows)
 
-def create_model(method):
+def create_model(method, **kwargs):
 
     if method == 'svm':
-        clf = SVC(probability=True, class_weight='auto')
+        clf = SVC(kwargs, probability=True, class_weight='auto')
     elif method == 'sgd':
-        clf = SGDClassifier()
+        clf = SGDClassifier(**kwargs)
     elif method == 'random-forest':
-        clf = RandomForestClassifier()
+        clf = RandomForestClassifier(**kwargs)
     else:
         raise NotImplementedError("Method %s is not supported" % method)
 
@@ -237,13 +237,13 @@ def parameters_for_method(method):
         return [{'kernel': ['rbf'], 'gamma': [0, 1e-1, 1e-2, 1e-3],
                  'C': [10, 100, 1000]}]
     elif method == 'sgd':
-        return [{'loss' : ['hinge', 'log'],
+        return [{'loss' : ['modified_huber', 'log'],
                 'penalty' : ['l1', 'l2', 'elasticnet'],
                 'alpha' : [0.0001, 0.001, 0.01, 0.1]}]
 
 
 def run_cross_validation(feature_folder, rebuild_data=False, training_ratio=.8,
-                         jobs=4, do_downsample=True, method="svm", seed=None):
+                         jobs=4, do_downsample=True, method="svm", seed=None, **kwargs):
 
     print("Running cross validation on folder {}".format(feature_folder))
 
@@ -255,7 +255,7 @@ def run_cross_validation(feature_folder, rebuild_data=False, training_ratio=.8,
         interictal, preictal, training_ratio=1.0,
         do_downsample=do_downsample, seed=seed)
 
-    model = create_model(method=method)
+    model = create_model(method=method, **kwargs)
 
     target = "Preictal"
     y = complete_data.pop(target).to_dense()
@@ -276,11 +276,11 @@ def run_cross_validation(feature_folder, rebuild_data=False, training_ratio=.8,
 
     print_scores(scores)
 
-    return scores
+    return model, scores
 
 def find_best_model(feature_folder, rebuild_data=False, training_ratio=0.8,
                     scores=None, jobs=4, do_downsample=True,
-                    method="svm", seed=None):
+                    method="svm", seed=None, **kwargs):
 
     print("Running model search on folder {}".format(feature_folder))
 
@@ -293,7 +293,7 @@ def find_best_model(feature_folder, rebuild_data=False, training_ratio=0.8,
         interictal, preictal, training_ratio=1.0,
         do_downsample=do_downsample, seed=seed)
 
-    model = create_model(method=method)
+    model = create_model(method=method, **kwargs)
     tuned_parameters = parameters_for_method(method)
 
     target = "Preictal"

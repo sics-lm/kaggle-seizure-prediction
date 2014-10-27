@@ -9,6 +9,7 @@ from time import strftime, localtime
 import random
 import sys
 import array
+import numpy as np
 
 
 # def run_batch_classification(feature_folder_root="../../data/wavelets",
@@ -61,8 +62,8 @@ def load_sframes(feature_folder, rebuild_data=False,
         feature_folder, class_name="test", file_pattern=file_pattern,
         rebuild_data=rebuild_data)
 
-    preictal['preictal'] = 1
-    interictal['preictal'] = 0
+    preictal['Preictal'] = 1
+    interictal['Preictal'] = 0
 
     complete = interictal.append(preictal)
 
@@ -71,11 +72,11 @@ def load_sframes(feature_folder, rebuild_data=False,
 def load_single_sframe(filename):
     return gl.SFrame.read_csv(filename, header=False, column_type_hints=float)
 
-def split_experiment_data(complete, training_ratio=0.8, do_downsample=True, downsample_ratio=2.0, seed=None):
+def split_experiment_data(complete, training_ratio=0.8, do_downsample=True, downsample_ratio=1.0, seed=None):
     # Figure how many positive and negative samples we have in the complete
     # training set.
-    train_preictal = complete[complete['preictal'] == 1]
-    train_interictal = complete[complete['preictal'] == 0]
+    train_preictal = complete[complete['Preictal'] == 1]
+    train_interictal = complete[complete['Preictal'] == 0]
 
     interictal_samples = train_interictal.shape[0]
     preictal_samples = train_preictal.shape[0]
@@ -85,13 +86,22 @@ def split_experiment_data(complete, training_ratio=0.8, do_downsample=True, down
         # interictal_samples sframe
 
         desired_interictal = downsample_ratio * preictal_samples
+        # interictal_ratio = np.around(
+        #     desired_interictal / float(interictal_samples), decimals=1)
         interictal_ratio = desired_interictal / float(interictal_samples)
 
-        if seed == None:
-            seed = int(random.randrange(0, int(sys.maxint/10e10)))
-
-        downsampled_interictal = train_interictal.sample(
-            interictal_ratio, seed=seed)
+        try:
+            if seed == None:
+                seed = int(random.randrange(0, 4294967295))
+            downsampled_interictal = train_interictal.sample(
+                interictal_ratio, seed=seed)
+        except OverflowError:
+            print(
+                "WARNING: Had to create seed with lower number due to overflow",
+                file=sys.stderr)
+            seed = int(random.randrange(0, 44967295))
+            downsampled_interictal = train_interictal.sample(
+                interictal_ratio, seed=seed)
 
         complete = downsampled_interictal.append(train_preictal)
         # OK to re-use seed?
@@ -104,22 +114,26 @@ def split_experiment_data(complete, training_ratio=0.8, do_downsample=True, down
     return complete.random_split(training_ratio, seed=seed)
 
 def train_model(data, method):
-    target = 'preictal'
+    target = 'Preictal'
 
     if method == 'svm':
         return gl.svm_classifier.create(data, target)
     elif method == 'boosted-trees':
         return gl.boosted_trees_classifier.create(data, target)
     elif method == 'logistic-regression':
-        return gl.logistic_classifier.create(data, target)
+        return gl.logistic_classifier.create(
+            data, target, l1_penalty=0.0, l2_penalty=0.01,
+            step_size=1.0, solver='lbfgs')
     elif method == 'neural-networks':
         return gl.neuralnet_classifier.create(data, target)
+    else:
+        raise NotImplementedError("Method %s not recognized" % method)
 
 def evaluate_model(model, test_data):
     return model.evaluate(test_data)
 
 def model_search(env, train_path, test_path, method, model_file):
-    target = 'preictal'
+    target = 'Preictal'
 
     if method == 'svm':
         mps(env, svm_classifier.create, train_path, model_file, test_path)
@@ -130,10 +144,24 @@ def model_search(env, train_path, test_path, method, model_file):
     elif method == 'neural-networks':
         mps(env, neuralnet_classifier.create, train_path, model_file, test_path)
 
+def run_evaluation(feature_folder, rebuild_data=False, training_ratio=.8,
+                   do_downsample=True, method="svm"):
+
+    print("Running evaluation on folder {}".format(feature_folder))
+
+    complete, test = load_sframes(feature_folder, rebuild_data=rebuild_data)
+
+    training_data, test_data = split_experiment_data(
+        complete, training_ratio=training_ratio, do_downsample=do_downsample)
+
+    model = train_model(training_data, method)
+
+    return model, evaluate_model(model, test_data)
+
 
 def run_classification(feature_folder, rebuild_data=False, training_ratio=.8,
                        rebuild_model=False, model_file=None,
-                       do_downsample=False, method="svm"):
+                       do_downsample=True, method="svm"):
 
     print("Running classification on folder {}".format(feature_folder))
 

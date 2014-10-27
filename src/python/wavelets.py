@@ -233,51 +233,10 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
 
     return tf_decompositions
 
-def band_wavelet_transform(epochs, start_freq, stop_freq):
-    """
-    Computes the wavelet transform for a specific frequency band,
-    by computing the transform over all freqs in the [start_freq, stop_freq)
-    band and taking the average.
-
-    Args:
-        epochs: The Epochs object for which we compute the wavelet transform.
-        start_freq: The start of the frequency band
-        stop_freq: The end of the frequency band, excluded from the calculation
-
-    Returns:
-        A List containing numpy arrays (n_channels, n_samples), each array
-        corresponds to one epoch/window in the epochs segment.
-    """
-    from warnings import warn
-    warn("Do not use! We average over synchronies and not wavelet coefficients!")
-    freqs = range(start_freq, stop_freq)
-    tf_decompositions = []
-    for epoch in epochs:
-        # Calculate the Wavelet transform for all freqs in the range
-        tfd = cwt_morlet(epoch, epoch.info['sfreq'],
-                         freqs, use_fft=True, n_cycles=2)
-        n_channels, n_frequencies, n_samples = tfd.shape
-
-        # Get the average over all the frequencies in the range
-        av_tfd = np.empty((n_channels, n_samples), dtype=np.complex)
-        for frequency_idx in range(n_frequencies):
-            av_tfd += tfd[:, frequency_idx, :]
-        av_tfd /= n_frequencies
-
-        tf_decompositions.append(av_tfd)
-
-    return tf_decompositions
-
-
 if __name__ == '__main__':
-    #test()
-    #exit()
-    #fileutils.process_segments(example_segments(), process_segment)
-    #plot_welch_spectra(example_segments(), '../example.pdf')
-    #exit(0)
 
     import argparse
-    parser = argparse.ArgumentParser(description="Calculates the SPLV phase lock between pairwise channles.")
+    parser = argparse.ArgumentParser(description="Calculates the SPLV phase lock between pairwise channels.")
 
     parser.add_argument("segments", help="The files to process. This can either be the path to a matlab file holding the segment or a directory holding such files.", nargs='+', metavar="SEGMENT_FILE")
     parser.add_argument("--csv-directory", help="Directory to write the csv files to, if omitted, the files will be written to the same directory as the segment")
@@ -289,9 +248,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    feature_extractor.extract(args.segments, 
-                              extract_features_for_segment, 
-                              output_dir=args.csv_directory, 
+    feature_extractor.extract(args.segments,
+                              extract_features_for_segment,
+                              output_dir=args.csv_directory,
                               feature_length_seconds=args.feature_length,
                               window_size=args.window_size,
                               workers=args.workers)
