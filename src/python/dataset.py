@@ -139,15 +139,20 @@ def downsample(df1, n_samples, do_segment_split=True):
         samples_per_segment = len(df1)/len(df1_segments)
 
         n_segment_samples = int(n_samples / samples_per_segment)
-        n_segment_samples = min(n_segment_samples, len(df1_segments))
+        if n_segment_samples < len(df1_segments):
+            sample_segments = random.sample(set(df1_segments), n_segment_samples)
+            return df1.loc[sample_segments]
+        else:
+            return df1
 
-        sample_segments = random.sample(set(df1_segments), n_segment_samples)
-        return df1.loc[sample_segments]
     else:
         n_samples = min(n_samples, len(df1))
-
-        sample_indices = random.sample(range(len(df1)), n_samples)
-        return df1.iloc[sample_indices]
+        if n_samples < len(df1):
+            print('N_samples: {}'.format(n_samples))
+            sample_indices = random.sample(range(len(df1)), n_samples)
+            return df1.iloc[sample_indices]
+        else:
+            return df1
 
 
 def split_dataset(dataset, training_ratio=.8, do_segment_split=True):
