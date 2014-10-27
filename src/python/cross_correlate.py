@@ -200,7 +200,7 @@ def read_csv_files(correlation_files):
         yield f, read_csv(f)
 
 
-def get_csv_name(f, csv_directory, window_length=None, time_delta_config=None):
+def get_csv_name(f, csv_directory, window_length=None):
     name, ext = os.path.splitext(f)
     if csv_directory is not None:
         basename = os.path.basename(name)
@@ -212,9 +212,9 @@ def get_csv_name(f, csv_directory, window_length=None, time_delta_config=None):
     return csv_name + '.csv'
 
 
-def csv_naming_function(segment_path, output_dir, *args, window_length=None, time_delta_config=None, **kwargs):
+def csv_naming_function(segment_path, output_dir, window_length=None, **kwargs):
     """Wrapper for get_csv_name for use as a feature_extrator naming function."""
-    return get_csv_name(segment_path, output_dir, window_length, time_delta_config)
+    return get_csv_name(segment_path, output_dir, window_length)
 
 
 def setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config_file):

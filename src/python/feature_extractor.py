@@ -7,7 +7,7 @@ import fileutils
 from segment import Segment
 
 
-def extract(feature_folder, extractor_function, *extractor_args, output_dir=None,
+def extract(feature_folder, extractor_function, output_dir=None,
             workers=1, naming_function=None, **extractor_kwargs):
     """ Runs the *extractor_function* on all the segments in
     *feature_folder*. If *output_dir* is specified, the csv files
@@ -21,17 +21,17 @@ def extract(feature_folder, extractor_function, *extractor_args, output_dir=None
         try:
             for segment in segments:
                 pool.apply_async(worker_function, (segment, extractor_function, output_dir,
-                                                   extractor_args, extractor_kwargs, naming_function))
+                                                   extractor_kwargs, naming_function))
         finally:
             pool.close()
             pool.join()
 
     else:
         for segment in segments:
-            worker_function(segment, extractor_function, output_dir, extractor_args, extractor_kwargs, naming_function)
+            worker_function(segment, extractor_function, output_dir, extractor_kwargs, naming_function)
 
 
-def worker_function(segment_path, extractor_function, output_dir, extractor_args, extractor_kwargs, naming_function=None):
+def worker_function(segment_path, extractor_function, output_dir, extractor_kwargs, naming_function=None):
     """Worker function for the feature extractor. Reads the segment
     from *segment_path* and runs uses it as the first argument to
     *extractor_function*"""
@@ -40,13 +40,13 @@ def worker_function(segment_path, extractor_function, output_dir, extractor_args
         output_dir = os.path.dirname(segment_path)
 
     segment = Segment(segment_path)
-    features = extractor_function(segment, *extractor_args, **extractor_kwargs)
+    features = extractor_function(segment, **extractor_kwargs)
 
     basename, ext = os.path.splitext(os.path.basename(segment_path))
     if naming_function is None:
         csv_file = os.path.join(output_dir, "{}_{}.csv".format(basename, extractor_function.__name__))
     else:
-        csv_file = naming_function(segment_path, output_dir, *extractor_args, **extractor_kwargs)
+        csv_file = naming_function(segment_path, output_dir, **extractor_kwargs)
 
     with open(csv_file, 'w') as fp:
         if isinstance(features, dict):
