@@ -12,10 +12,10 @@ from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
 
-def run_pca_analysis(feature_folder):
+def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100):
     interictal, preictal, test_data = load_data_frames(feature_folder)
 
-    fig,pca = mould_data(interictal, preictal, test_data)
+    fig,pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_{}".format(timestamp)
@@ -29,9 +29,12 @@ def run_pca_analysis(feature_folder):
     return fig,pca
 
 
-def run_xcorr_pca_analysis(feature_folder, frame_length=1):
-    interictal, preictal, _ = correlation_convertion.load_data_frames(feature_folder, frame_length=frame_length)
-    fig,pca = mould_data(interictal, preictal, test_data)
+def run_xcorr_pca_analysis(feature_folder,
+                           frame_length=1,
+                           do_downsample=True,
+                           n_samples=100):
+    interictal, preictal, test_data = correlation_convertion.load_data_frames(feature_folder, frame_length=frame_length)
+    fig,pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_frame_length_{}_{}".format(frame_length, timestamp)
@@ -47,9 +50,9 @@ def run_xcorr_pca_analysis(feature_folder, frame_length=1):
 
 def mould_data(interictal, preictal, test_data, do_downsample=True, n_samples=100):
     if do_downsample:
-        interictal = dataset.downsample(interictal, n_samples)
-        preictal = dataset.downsample(preictal, n_samples)
-        interictal = dataset.downsample(preictal, n_samples)
+        interictal = dataset.downsample(interictal, n_samples, do_segment_split=False)
+        preictal = dataset.downsample(preictal, n_samples, do_segment_split=False)
+        test_data = dataset.downsample(test_data, n_samples, do_segment_split=False)
     return pca_transform(interictal, preictal, test_data)
 
 
