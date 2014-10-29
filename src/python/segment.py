@@ -1,9 +1,11 @@
 __author__ = 'erik'
 
 import scipy.io
+import scipy.signal
 import os.path
-#import pandas
+import pandas as pd
 import numpy as np
+
 
 class Segment:
     def __init__(self, mat_filename):
@@ -26,7 +28,7 @@ class Segment:
         except ValueError as e:
             print("Error when loading {}".format(mat_filename))
             raise e
-        #self.dataframe = pandas.DataFrame(self.mat_struct.data.transpose().astype('float32'), columns=self.mat_struct.channels)
+        self.dataframe = pd.DataFrame(self.mat_struct.data.transpose().astype('float32'), columns=self.mat_struct.channels)
 
     def get_name(self):
         return self.name
