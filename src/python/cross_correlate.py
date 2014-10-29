@@ -300,6 +300,10 @@ if __name__ == '__main__':
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
     parser.add_argument("--old-csv-format", help="Use the old CSV format where the channel pairs are rows", action='store_true',
                         dest='old_csv_format')
+    parser.add_argument("--old-segment-format", help="Use the old Segment format where the data is accesses through a numpy array",
+                        action='store_true',
+                        dest='old_segment_format')
+
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
@@ -314,6 +318,7 @@ if __name__ == '__main__':
                               output_dir=args.csv_directory,
                               workers=args.workers,
                               naming_function=csv_naming_function,
+                              old_segment_format=args.old_segment_format,
                               # Arguments for calculate_cross_correlations
                               time_delta_config=time_delta_config,
                               window_length=args.window_length,
@@ -321,4 +326,4 @@ if __name__ == '__main__':
                               segment_start=args.segment_start,
                               segment_end=args.segment_end,
                               all_time_deltas=args.all_time_deltas,
-                              old_csv_format=args.old_csv_format)
+                              old_csv_format=args.old_csv_format,)

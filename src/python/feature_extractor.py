@@ -4,10 +4,12 @@ import csv
 import multiprocessing
 
 import fileutils
-from segment import Segment
+from segment import Segment, DFSegment
+
 
 
 def extract(feature_folder, extractor_function, output_dir=None,
+            old_segment_format=True,
             workers=1, naming_function=None, **extractor_kwargs):
     """ Runs the *extractor_function* on all the segments in
     *feature_folder*. If *output_dir* is specified, the csv files
@@ -20,18 +22,17 @@ def extract(feature_folder, extractor_function, output_dir=None,
         pool = multiprocessing.Pool(workers)
         try:
             for segment in segments:
-                pool.apply_async(worker_function, (segment, extractor_function, output_dir,
-                                                   extractor_kwargs, naming_function))
+                pool.apply_async(worker_function, (segment, extractor_function,  output_dir, old_segment_format, extractor_kwargs, naming_function))
         finally:
             pool.close()
             pool.join()
 
     else:
         for segment in segments:
-            worker_function(segment, extractor_function, output_dir, extractor_kwargs, naming_function)
+            worker_function(segment, extractor_function, output_dir, old_segment_format, extractor_kwargs, naming_function)
 
 
-def worker_function(segment_path, extractor_function, output_dir, extractor_kwargs, naming_function=None):
+def worker_function(segment_path, extractor_function, output_dir, old_segment_format, extractor_kwargs, naming_function=None):
     """Worker function for the feature extractor. Reads the segment
     from *segment_path* and runs uses it as the first argument to
     *extractor_function*"""
@@ -39,7 +40,10 @@ def worker_function(segment_path, extractor_function, output_dir, extractor_kwar
     if output_dir is None:
         output_dir = os.path.dirname(segment_path)
 
-    segment = Segment(segment_path)
+    if old_segment_format:
+        segment = Segment(segment_path)
+    else:
+        segment = DFSegment.from_mat_file(segment_path)
     features = extractor_function(segment, **extractor_kwargs)
 
     basename, ext = os.path.splitext(os.path.basename(segment_path))
