@@ -173,6 +173,26 @@ class DFSegment(object):
         else:
             return DFSegment(new_frequency, resampled_dataframe)
 
+
+    def get_windowed(self, window_length, start_time=None, end_time=None):
+        """Returns an iterator with windows of this segment. If *segment_start* or *segment_end* is supplied, only windows within this
+        interval will be returned."""
+        if start_time is None:
+            start_index = 0
+        else:
+            start_index = int(np.floor(start_time * self.get_sampling_frequency()))
+
+        if end_time is None:
+            end_index = self.get_n_samples()
+        else:
+            end_index = int(np.ceil(end_time * self.get_sampling_frequency()))
+
+        window_sample_length = int(np.floor(window_length * self.get_sampling_frequency()))
+
+        for window_start in np.arange(start_index, end_index-window_sample_length, window_sample_length):
+            yield self.dataframe.iloc[window_start : window_start + window_sample_length]
+
+
     @classmethod
     def from_mat_file(cls, mat_filename):
         try:
@@ -231,4 +251,3 @@ def example_preictal():
 
 def example_interictal():
     return Segment('../../data/Dog_1/Dog_1_interictal_segment_0001.mat')
-
