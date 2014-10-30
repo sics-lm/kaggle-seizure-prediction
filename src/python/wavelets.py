@@ -8,6 +8,20 @@ from itertools import chain
 import segment as sg
 import feature_extractor
 
+
+class EpochShim(object):
+    """A wrapper for our segments which mimicts the interface of mne.Epoch, for the band_wavelet_synchrony function."""
+    def __init__(self, segment, window_size):
+        self.segment = segment
+        self.window_size = window_size
+        #The epoch needs a dictionary attribute with the key 'freq'
+        self.info = dict(sfreq = segment.get_sampling_frequency())
+
+    def __iter__(self):
+        for window in self.segment.get_windowed(self.window_size):
+            yield window.transpose()
+
+
 def epochs_from_segment(segment, window_size=5.0):
     """
     Creates an MNE Epochs object from a Segment object
@@ -21,7 +35,7 @@ def epochs_from_segment(segment, window_size=5.0):
     part of the segment.
     """
 
-    assert isinstance(segment, sg.Segment)
+    assert isinstance(segment, sg.Segment) or isinstance(segment, sg.DFSegment)
 
     ch_names = segment.get_channels().tolist()
     ch_types = ['eeg' for _ in range(len(ch_names))]
@@ -86,7 +100,8 @@ def make_fixed_length_events(raw, event_id, window_duration=5.):
                    event_id * np.ones(n_events, dtype=int)]
     return events
 
-def extract_features_for_segment(segment, feature_length_seconds=60, window_size=5):
+
+def extract_features_for_segment(segment, feature_length_seconds=60, window_size=5, no_epochs=False):
     """
     Creates an SPLV feature dictionary from a Segment object
     Args:
@@ -102,13 +117,13 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
     iters = int(segment.get_duration() / feature_length_seconds)
 
     # Extract the features for individual frequency bands and windows
-    decomposition_dict = segment_wavelet_synchrony(segment)
+    decomposition_dict = segment_wavelet_synchrony(segment, window_size=window_size, no_epochs=no_epochs)
 
     feature_dict = {}
     # Combine the individual frequency bands and windows into features
     for index, offset in enumerate(range(0, total_windows, frames)):
         feature_list = []
-        for array_list in decomposition_dict.values():
+        for band_name, array_list in sorted(decomposition_dict.items()):
             for i in range(frames):
                 try:
                     sync_array = array_list[i + offset]
@@ -145,7 +160,8 @@ def eeg_rhythms():
             "low-beta" : (13, 15), "high-beta" : (14, 30),
             "low-gamma" : (30, 45), "high-gamma" : (65, 101)}
 
-def segment_wavelet_synchrony(segment, bands=None):
+
+def segment_wavelet_synchrony(segment, bands=None, window_size=5.0, no_epochs=False):
     """
     Calculates the wavelet synchrony of a Segment object
 
@@ -154,6 +170,8 @@ def segment_wavelet_synchrony(segment, bands=None):
         create the wavelet transform of.
         bands: A dict containing {band : (start_freq, stop_freq)} String to
         Tuple2 pairs.
+        window_size: The size of the windows.
+        no_epochs: If this is True, the EpochShim will be used instead of an mne.Epoch
 
     Returns:
         A dict containing {band: List[av_sync_array]} String to List of
@@ -164,7 +182,10 @@ def segment_wavelet_synchrony(segment, bands=None):
     if bands is None:
         bands = eeg_rhythms()
 
-    epochs = epochs_from_segment(segment)
+    if no_epochs:
+        epochs = EpochShim(segment, window_size)
+    else:
+        epochs = epochs_from_segment(segment, window_size=window_size)
 
     decomposition_dict = {}
 
@@ -243,14 +264,27 @@ if __name__ == '__main__':
     parser.add_argument("--window-size", help="What length in seconds the epochs should be.", type=float, default=5.0)
     parser.add_argument("--feature-length", help="The length of the feature vectors in seconds, will be produced by concatenating the phase lock values from the windows.", type=float, default=60.0)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
-
+    parser.add_argument("--file-sample-size", help="Optionally take a sample of the files of this size.", type=int, dest='sample_size')
+    parser.add_argument("--no-epochs", help="Don't use mne Epochs when generating the windows, just use the raw windows from the segment.",
+                        action='store_true',
+                        dest='no_epochs',
+                        default=False)
+    parser.add_argument("--old-segment-format", help="Makes the feature extraction use the old segment format",
+                        action='store_true',
+                        default=False,
+                        dest='old_segment_format')
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
 
     feature_extractor.extract(args.segments,
                               extract_features_for_segment,
+                              ## extract kwargs:
                               output_dir=args.csv_directory,
+                              workers=args.workers,
+                              sample_size=args.sample_size,
+                              old_segment_format=args.old_segment_format,
+                              ## Worker kwargs:
                               feature_length_seconds=args.feature_length,
                               window_size=args.window_size,
-                              workers=args.workers)
+                              no_epochs=args.no_epochs)
