@@ -106,6 +106,10 @@ def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix
     class_results.to_csv(csv_path, sep='\t', float_format='%11.4f')
 
 
+def read_stats(stat_file):
+    return pd.read_csv(stat_file, sep='\t', index_col=['metric', 'class', 'segment'])
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="""Script for generating a bunch of statistics about the segments""")
