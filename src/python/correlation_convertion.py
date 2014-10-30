@@ -67,7 +67,7 @@ def load_and_pivot(filename, frame_length=1):
 
             for frame in frames:
                 frame.index = np.arange(df_length/frame_length)
-                return pd.concat(frames, axis=1)
+            return pd.concat(frames, axis=1)
 
 
 def load_correlation_files(feature_folder,
