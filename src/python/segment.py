@@ -135,8 +135,22 @@ class DFSegment(object):
                 end_index = int(np.ceil(end_time * self.get_sampling_frequency()))
             return self.dataframe.ix[start_index:end_index, channel_index]
 
-    def get_data(self):
-        return self.dataframe
+    def get_data(self, start_time=None, end_time=None):
+        if start_time is None and end_time is None:
+            return self.dataframe.transpose()
+        else:
+            if start_time is None:
+                start_index = 0
+            else:
+                #Calculate which index is the first
+                start_index = int(np.floor(start_time * self.get_sampling_frequency()))
+
+            if end_time is None:
+                end_index = self.get_n_samples()
+            else:
+                end_index = int(np.ceil(end_time * self.get_sampling_frequency()))
+            return self.dataframe.iloc[start_index:end_index].transpose()
+
 
     def get_length_sec(self):
         return self.get_duration()
