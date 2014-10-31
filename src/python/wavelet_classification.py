@@ -22,6 +22,7 @@ from sklearn.linear_model import SGDClassifier, LogisticRegression
 from sklearn.metrics import *
 from sklearn.externals import joblib
 
+
 # TODO: Provide singleton random generator
 
 def run_batch_classification(feature_folder_root="../../data/wavelets",
@@ -123,6 +124,11 @@ def load_wavelet_files(feature_folder,
         # Sorting for optimization
         complete_frame.sortlevel(inplace=True)
 
+        if np.count_nonzero(np.isnan(complete_frame)) != 0:
+            print("WARNING: NaN values found, using interpolation",
+                  file=sys.stderr)
+            complete_frame = complete_frame.interpolate(method='linear')
+
         complete_frame.to_pickle(cache_file)
     else:
         complete_frame = pd.read_pickle(cache_file)
@@ -212,9 +218,13 @@ def random_split(dataframe, ratio=None, desired_rows=None, seed=None):
         np.random.seed(seed)
 
     if ratio is not None:
+        if ratio >= 1.0:
+            return dataframe
         msk = np.random.rand(len(dataframe)) < ratio
         return dataframe[msk], dataframe[~msk] #train, test
     else:
+        if dataframe.shape[0] <= desired_rows:
+            return dataframe
         rows = np.random.choice(dataframe.index.values,
                                 desired_rows, replace=False)
         return dataframe.ix[rows], dataframe.drop(rows)
