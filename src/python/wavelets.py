@@ -107,6 +107,16 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
     Args:
         segment: A Segment object containing the EEG segment from which we want
         to extract the features
+        feature_length_seconds: The number of seconds each frame should consist
+        of, should be exactly divisible by window_size.
+        window_size: The length of a window in seconds.
+    Returns:
+        A dict of features, where each keys are the frames indexes in the segment
+        and the values are a List of doubles containing all the feature values
+        for that frame.
+        Ex. For a 10 min segment with feature_length_seconds=60 (sec) we should
+        get 10 frames. The length of the lists then depends on the window_size,
+        number of channels and number of frequency bands we are examining.
     """
 
     # Here we define how many windows we will have to concatenate
@@ -153,8 +163,8 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
 def eeg_rhythms():
     """
     Returns a dict of the EEG rhythm bands as described in
-    [1] Comparing SVM and Convolutional Networks for Epileptic Seizure
-    Prediction from Intracranial EEG
+    [1] "Comparing SVM and Convolutional Networks for Epileptic Seizure
+    Prediction from Intracranial EEG"
     """
     return {"delta" : (1, 4), "theta": (4, 7), "alpha" : (7, 13),
             "low-beta" : (13, 15), "high-beta" : (14, 30),
@@ -232,7 +242,7 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
                     # Get the wavelet coefficients for each channel
                     ch_i_vals = freq_tfd[ch_i, :]
                     ch_j_vals = freq_tfd[ch_j, :]
-                    # Phase difference between two segments is derived
+                    # Phase difference between two channels is derived
                     # from the angle of their wavelet coefficients
                     angles = ((ch_i_vals * ch_j_vals.conjugate()) /
                               (np.absolute(ch_i_vals) * np.absolute(ch_j_vals)))

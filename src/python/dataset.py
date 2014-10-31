@@ -146,12 +146,13 @@ def downsample(df1, n_samples, do_segment_split=True):
             return df1
 
     else:
-        n_samples = min(n_samples, len(df1))
+
         if n_samples < len(df1):
             print('N_samples: {}'.format(n_samples))
             sample_indices = random.sample(range(len(df1)), n_samples)
             return df1.iloc[sample_indices]
         else:
+            print('N_samples: {}'.format(len(df1)))
             return df1
 
 

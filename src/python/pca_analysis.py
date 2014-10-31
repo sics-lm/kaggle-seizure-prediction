@@ -1,7 +1,11 @@
+from __future__ import print_function
+
+import sys
 import os.path
 import pickle
 import datetime
 import pandas as pd
+import numpy as np
 
 from wavelet_classification import load_data_frames, random_split
 
@@ -11,13 +15,19 @@ import dataset
 from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
+def has_nan(df):
+    return np.count_nonzero(np.isnan(df)) != 0
 
 def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100, do_standardize=False):
     interictal, preictal, test_data = load_data_frames(feature_folder)
 
-    fig, pca = mould_data(interictal, preictal, test_data,
-                          do_downsample=do_downsample, n_samples=n_samples,
-                          do_standardize=do_standardize)
+    if has_nan(interictal) or has_nan(preictal) or has_nan(test_data):
+        print("WARNING: NaN values found, quitting!",
+              file=sys.stderr)
+        sys.exit(1)
+
+
+    fig, pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_{}".format(timestamp)
