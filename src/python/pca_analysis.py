@@ -15,9 +15,9 @@ from matplotlib import pyplot as plt
 def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100, do_standardize=False):
     interictal, preictal, test_data = load_data_frames(feature_folder)
 
-    fig,pca = mould_data(interictal, preictal, test_data,
-                         do_downsample=do_downsample, n_samples=n_samples,
-                         do_standardize=do_standardize)
+    fig, pca = mould_data(interictal, preictal, test_data,
+                          do_downsample=do_downsample, n_samples=n_samples,
+                          do_standardize=do_standardize)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_{}".format(timestamp)
@@ -28,7 +28,7 @@ def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100, do_stand
     with open(pca_obj_path, 'wb') as fp:
         pickle.dump(pca, fp)
 
-    return fig,pca
+    return fig, pca
 
 
 def run_xcorr_pca_analysis(feature_folder,
@@ -48,7 +48,7 @@ def run_xcorr_pca_analysis(feature_folder,
     with open(pca_obj_path, 'wb') as fp:
         pickle.dump(pca, fp)
 
-    return fig,pca
+    return fig, pca
 
 
 def mould_data(interictal, preictal, test_data, do_downsample=True, n_samples=100, do_standardize=False):
@@ -78,16 +78,16 @@ def pca_transform(interictal, preictal, test_data, label=None, do_standardize=Fa
     test_data_end = test_data_start + len(test_data)
 
     fig = plt.figure()
-    plt.plot(trans_pca[interictal_start:interictal_end,0],
-             trans_pca[interictal_start:interictal_end,1], 'o', markersize=7,
+    plt.plot(trans_pca[interictal_start:interictal_end, 0],
+             trans_pca[interictal_start:interictal_end, 1], 'o', markersize=7,
              color='blue', label='Interictal')
     plt.plot(
-        trans_pca[preictal_start:preictal_end,0],
-        trans_pca[preictal_start:preictal_end,1],
+        trans_pca[preictal_start:preictal_end, 0],
+        trans_pca[preictal_start:preictal_end, 1],
         '^', markersize=7, color='red', alpha=0.5, label='Preictal')
     plt.plot(
-        trans_pca[test_data_start:test_data_end,0],
-        trans_pca[test_data_start:test_data_end,1],
+        trans_pca[test_data_start:test_data_end, 0],
+        trans_pca[test_data_start:test_data_end, 1],
         'x', markersize=7, color='green', alpha=0.5, label='Test')
 
     plt.xlabel('x_values')
