@@ -12,10 +12,12 @@ from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
 
-def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100):
+def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100, do_standardize=False):
     interictal, preictal, test_data = load_data_frames(feature_folder)
 
-    fig,pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
+    fig,pca = mould_data(interictal, preictal, test_data,
+                         do_downsample=do_downsample, n_samples=n_samples,
+                         do_standardize=do_standardize)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_{}".format(timestamp)
@@ -32,7 +34,8 @@ def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100):
 def run_xcorr_pca_analysis(feature_folder,
                            frame_length=1,
                            do_downsample=True,
-                           n_samples=100):
+                           n_samples=100,
+                           do_standardize=False):
     interictal, preictal, test_data = correlation_convertion.load_data_frames(feature_folder, frame_length=frame_length)
     fig,pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
@@ -48,17 +51,19 @@ def run_xcorr_pca_analysis(feature_folder,
     return fig,pca
 
 
-def mould_data(interictal, preictal, test_data, do_downsample=True, n_samples=100):
+def mould_data(interictal, preictal, test_data, do_downsample=True, n_samples=100, do_standardize=False):
     if do_downsample:
         interictal = dataset.downsample(interictal, n_samples, do_segment_split=False)
         preictal = dataset.downsample(preictal, n_samples, do_segment_split=False)
         test_data = dataset.downsample(test_data, n_samples, do_segment_split=False)
-    return pca_transform(interictal, preictal, test_data)
+    return pca_transform(interictal, preictal, test_data, do_standardize=do_standardize)
 
 
-def pca_transform(interictal, preictal, test_data, label=None):
+def pca_transform(interictal, preictal, test_data, label=None, do_standardize=False):
     concat_frames = [interictal.drop('Preictal', axis=1), preictal.drop('Preictal', axis=1), test_data]
     feature_matrix = pd.concat(concat_frames)
+    if do_standardize:
+        feature_matrix = (feature_matrix - feature_matrix.mean()) / feature_matrix.std()
 
     pca = PCA(n_components=2)
     trans_pca = pca.fit_transform(feature_matrix)
