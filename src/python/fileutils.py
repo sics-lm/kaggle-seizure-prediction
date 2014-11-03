@@ -35,7 +35,7 @@ def expand_folders(feature_folders, canonical_folders=('Dog_1', 'Dog_2', 'Dog_3'
     new_folders = []
     for folder in feature_folders:
         subfolders = set([sf for sf in os.listdir(folder) if os.path.isdir(os.path.join(folder, sf))])
-        print(subfolders)
+
         common_folders = subfolders & canonical_folders
         if common_folders:
             new_folders.extend([os.path.join(folder, common)
