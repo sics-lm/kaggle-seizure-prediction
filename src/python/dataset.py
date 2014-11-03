@@ -10,18 +10,15 @@ from sklearn import cross_validation
 class SegmentCrossValidator:
     """Wrapper for the scikit_learn CV generators to generate folds on a segment basis."""
     def __init__(self, dataframe, base_cv=None, **cv_kwargs):
-        # We create a copy of the dataframe with a new last level index which is an enumeration of the rows (like proper indices)
-        self.dataframe = dataframe.reset_index('start_sample', drop=True)
-        self.dataframe['i'] = np.arange(len(dataframe))
-        self.dataframe.set_index('i', append=True, inplace=True)
-
-        #We create a new series with only the class label
-        self.all_segments = self.dataframe['Preictal']
+        # We create a copy of the dataframe with a new last level
+        # index which is an enumeration of the rows (like proper indices)
+        self.all_segments = pd.DataFrame({'Preictal': dataframe['Preictal'], 'i': np.arange(len(dataframe))})
+        self.all_segments.set_index('i', append=True, inplace=True)
 
         #Now create a series with only the segments as rows. This is what we will pass into the wrapped cross validation generator
-        self.segments = self.all_segments.groupby(level='segment').first()
+        self.segments = self.all_segments['Preictal'].groupby(level='segment').first()
 
-        if base_cv == None:
+        if base_cv is None:
             self.cv = cross_validation.StratifiedKFold(self.segments, **cv_kwargs)
         else:
             self.cv = base_cv(self.segments, **cv_kwargs)
@@ -36,7 +33,7 @@ class SegmentCrossValidator:
             training_segments = list(self.segments[training_indices].index)
             test_segments = list(self.segments[test_indices].index)
 
-            # Now that we have the segment names, we pick out the rows in the properly indexed
+            # Now that we have the segment names, we pick out the rows in the properly indexed dataframe
             all_training_indices = self.all_segments.loc[training_segments]
             all_test_indices = self.all_segments.loc[test_segments]
 
