@@ -25,6 +25,27 @@ def expand_paths(filenames, recursive=True):
     return new_files
 
 
+def expand_folders(feature_folders, canonical_folders=('Dog_1', 'Dog_2', 'Dog_3',
+                                                       'Dog_4', 'Dog_5',
+                                                       'Patient_1',
+                                                       'Patient_2')):
+    """Goes through the list of *feature_folders* and replcaes any directory which contains the canonical subject folders with the path to those folders. Folders not containing any canonical feature folder is left as is.
+    """
+    canonical_folders = set(canonical_folders)
+    new_folders = []
+    for folder in feature_folders:
+        subfolders = set([sf for sf in os.listdir(folder) if os.path.isdir(os.path.join(folder, sf))])
+        print(subfolders)
+        common_folders = subfolders & canonical_folders
+        if common_folders:
+            new_folders.extend([os.path.join(folder, common)
+                                for common
+                                in common_folders])
+        else:
+            new_folders.append(folder)
+    return new_folders
+
+
 def load_modules(module_names):
     """Loads the give list of python files as modules and returns the list of module objects."""
     import imp
