@@ -1,4 +1,7 @@
-__author__ = 'erik'
+"""
+Module for loading and manipulating  EEG segments.
+"""
+
 
 import scipy.io
 import scipy.signal
@@ -8,6 +11,7 @@ import numpy as np
 
 
 class Segment:
+    """Wrapper class for EEG segments backed by a multidimensional numpy array."""
     def __init__(self, mat_filename):
         """Creates a new segment object from the file named *mat_filename*"""
         #First extract the variable name of the struct, there should be exactly one struct in the file
@@ -25,9 +29,9 @@ class Segment:
             self.mat_struct.data = self.mat_struct.data.astype('float64')
 
 
-        except ValueError as e:
+        except ValueError as exception:
             print("Error when loading {}".format(mat_filename))
-            raise e
+            raise exception
         self.dataframe = pd.DataFrame(self.mat_struct.data.transpose().astype('float32'), columns=self.mat_struct.channels)
 
     def get_name(self):
@@ -161,15 +165,57 @@ class DFSegment(object):
     def get_dataframe(self):
         return self.dataframe
 
-    def resample_frequency(self, new_frequency, inplace=False):
-        """Resample the signal to a new frequency. *new_frequency* must be lower than the current frequency."""
-        n_samples = int(len(self.dataframe) * new_frequency/self.sampling_frequency)
-        print("N_samples: {}".format(n_samples))
-        resampled_signal = scipy.signal.resample(self.dataframe, n_samples)
+    def resample_frequency(self, new_frequency, method='resample', inplace=False, **method_kwargs):
+        """
+        Resample the signal to a new frequency.
+        Args:
+            new_frequency: The frequency to downsample to. For
+                           *method* = 'decimate', it should be lower than
+                           the current frequency.
+            method: The method to use for resampling, should be either of
+                    'resample' or 'decimate', corresponding to
+                    *scipy.signal.resample* and *scipy.signal.decimate*
+                    respectively.
+            inplace: Whether the resampled segment values should replace the
+                     current one. If False, a new DFSegment object will be
+                     returned.
+            method_kwargs: Key-word arguments to pass to the resampling method,
+                           see *scipy.signal.resample* and
+                           *scipy.signal.decimate* for details.
+        Returns:
+            A DFSegment with the new frequency. If inplace=True, the calling
+            object will be returned, otherwise a newly constructed segment is
+            returned.
+        """
+
+        if method == 'resample':
+            print("Using scipy.signal.resample")
+            #Use scipy.signal.resample
+            n_samples = int(len(self.dataframe) * new_frequency/self.sampling_frequency)
+            resampled_signal = scipy.signal.resample(self.dataframe, n_samples, **method_kwargs)
+        elif method == 'decimate':
+            print("Using scipy.signal.decimate")
+            #Use scipy.signal.decimate
+            decimation_factor = int(self.sampling_frequency/new_frequency)
+            #Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
+            adjusted_new_frequency = self.sampling_frequency/decimation_factor
+            if adjusted_new_frequency != new_frequency:
+                print("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
+            new_frequency = adjusted_new_frequency
+            resampled_signal = scipy.signal.decimate(self.dataframe,
+                                                     decimation_factor,
+                                                     axis=0,
+                                                     **method_kwargs)
+        else:
+            raise ValueError("Resampling method {} is unknown.".format(method))
+
+        #We should probably reconstruct the index
+        #index = pd.MultiIndex.from_product([[filename], [sequence], np.arange(mat_struct.data.shape[1])], names=['filename', 'sequence', 'index'])
         resampled_dataframe = pd.DataFrame(data=resampled_signal, columns=self.dataframe.columns)
         if inplace:
             self.sampling_frequency = new_frequency
             self.dataframe = resampled_dataframe
+            return self
         else:
             return DFSegment(new_frequency, resampled_dataframe)
 
@@ -212,12 +258,12 @@ class DFSegment(object):
 
             index = pd.MultiIndex.from_product([[filename], [sequence], np.arange(mat_struct.data.shape[1])], names=['filename', 'sequence', 'index'])
             ## Most operations we do on dataframes are optimized for float64
-            dataframe =  pd.DataFrame(data=mat_struct.data.transpose().astype('float64'), columns=mat_struct.channels, index=index)
+            dataframe = pd.DataFrame(data=mat_struct.data.transpose().astype('float64'), columns=mat_struct.channels, index=index)
             return cls(sampling_frequency, dataframe)
 
-        except ValueError as e:
+        except ValueError as exception:
             print("Error when loading {}".format(mat_filename))
-            raise e
+            raise exception
 
     @classmethod
     def from_mat_files(cls, file_names):
