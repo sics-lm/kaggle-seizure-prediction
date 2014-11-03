@@ -137,7 +137,8 @@ def load_wavelet_files(feature_folder,
 
 def load_data_frames(feature_folder, rebuild_data=False,
                      processes=4,
-                     file_pattern="extract_features_for_segment.csv"):
+                     file_pattern="extract_features_for_segment.csv",
+                     frame_length=1):
 
     preictal = load_wavelet_files(feature_folder,
                                   class_name="preictal",

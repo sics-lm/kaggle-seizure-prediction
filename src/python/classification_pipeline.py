@@ -8,46 +8,33 @@ import re
 import logging
 import sys
 
-import sklearn
-from sklearn import cross_validation
 import pandas as pd
 
-import correlation_convertion as corr_conv
+import correlation_convertion
+import wavelet_classification
 import dataset
 import seizure_modeling
+import fileutils
 
-
-def prep_subject(subject):
-    """Converts the string subject to it's canonical version, for example 'dog1'=>'Dog_1'."""
-    pattern = r"([A-Za-z]*).*([0-9])"
-    def canonize(matchobj):
-        subject_type = matchobj.group(1).capitalize()
-        if subject_type not in ("Dog", "Patient"):
-            raise ValueError("Unknown subject: {}".format(subject_type))
-
-        subject_number = matchobj.group(2)
-        return "{}_{}".format(subject_type.capitalize(), subject_number)
-    return re.sub(pattern, canonize, subject)
-
-
-def run_batch_classification(feature_folder_root="../../data/cross_correlation",
-                             subjects=("Dog_1", "Dog_2", "Dog_3",
-                                       "Dog_4", "Dog_5", "Patient_1",
-                                       "Patient_2"), **kwargs):
-
-    subjects = [prep_subject(subject) for subject in subjects]
+def run_batch_classification(feature_folders, **kwargs):
+    """
+    Runs the batch classificatio on the feature folders.
+    Args:
+        feature_folders: Should be a list of folders containing feature files or folders containing the canonical subject folders ['Dog_1', 'Dog_2', 'Dog_3', 'Dog_4', 'Dog_5', 'Patient_1', 'Patient_2']. If the folder contains the subject folders, it will be replaced by them in the list of feature folders. For example feature_folders = ['../../data/cross_correlations', '../../data/maximal_xcorr/Dog_1'] would be expanded to feature_folders = ['../../data/cross_correlations/Dog_1', '../../data/cross_correlations/Dog_2', '../../data/cross_correlations/Dog_3', '../../data/cross_correlations/Dog_4', '../../data/cross_correlations/Dog_5', '../../data/cross_correlations/Patient_1', '../../data/cross_correlations/Patient_2']', '../../data/maximal_xcorr/Dog_1'].
+    """
+    feature_folders = fileutils.expand_folders(feature_folders)
     all_scores = []
-    for subject in subjects:
-        segment_scores = run_classification(os.path.join(feature_folder_root, subject), **kwargs)
+    for subject_folder in feature_folders:
+        segment_scores = run_classification(subject_folder, **kwargs)
         all_scores.append(segment_scores)
 
-    #df_scores = pd.concat(all_scores, axis=0)
-    #df_scores.sort()
-    #timestamp = datetime.datetime.now().replace(microsecond=0)
-    #submission_file = "submission_{}.csv".format(timestamp)
-    #submission_path = os.path.join(feature_folder_root, submission_file)
+    # df_scores = pd.concat(all_scores, axis=0)
+    # df_scores.sort()
+    # timestamp = datetime.datetime.now().replace(microsecond=0)
+    # submission_file = "submission_{}.csv".format(timestamp)
+    # submission_path = os.path.join(feature_folder_root, submission_file)
 
-    #df_scores.to_csv(submission_path, index_label='clip')
+    # df_scores.to_csv(submission_path, index_label='clip')
 
 
 def get_latest_model(feature_folder, model_pattern="model*.pickle"):
@@ -91,11 +78,17 @@ def run_classification(feature_folder,
                        do_segment_split=False,
                        processes=4,
                        csv_directory=None,
+                       feature_type='cross-correlations',
                        frame_length=1):
     logging.info("Running classification on folder {}".format(feature_folder))
-    interictal, preictal, unlabeled = corr_conv.load_data_frames(feature_folder,
-                                                                 rebuild_data=rebuild_data,
-                                                                 processes=processes, frame_length=frame_length)
+    if feature_type == 'wavelets':
+        interictal, preictal, unlabeled = wavelet_classification.load_data_frames(feature_folder,
+                                                                                   rebuild_data=rebuild_data,
+                                                                                   processes=processes, frame_length=frame_length)
+    elif feature_type == 'cross-correlations' or feature_type == 'xcorr':
+        interictal, preictal, unlabeled = correlation_convertion.load_data_frames(feature_folder,
+                                                                                  rebuild_data=rebuild_data,
+                                                                                  processes=processes, frame_length=frame_length)
 
     if model_file is None or not rebuild_model:
         model_file = get_latest_model(feature_folder)
@@ -153,17 +146,14 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="""Script for running the classification pipeline""")
 
-    parser.add_argument("feature_folder_root",
-                        help="""The folder containing the features collected in subject subfolders""",
-                        default="../../data/cross_correlation")
-    parser.add_argument("--subjects",
-                        help="""What subjects to work on. Either the exact name of the folder
-                                (such as 'Dog_1' or a shorthand like 'dog1')""",
-                        nargs='+',
-                        default=["Dog_1", "Dog_2", "Dog_3",
-                                 "Dog_4", "Dog_5", "Patient_1",
-                                 "Patient_2"])
-
+    parser.add_argument("feature_folders",
+                        help="""The folders containing the features""",
+                        nargs='+')
+    parser.add_argument("-t", "--feature-type",
+                        help="""The type of the features""",
+                        choices=["wavelets", "cross-correlations", "xcorr"],
+                        required=True,
+                        dest='feature_type')
     parser.add_argument("--rebuild-data",
                         action='store_true',
                         help="Should the dataframes be re-read from the csv feature files",
