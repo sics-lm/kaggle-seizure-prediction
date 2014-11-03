@@ -62,6 +62,7 @@ def get_cv_generator(training_data, do_segment_split=True):
         cv = dataset.SegmentCrossValidator(training_data, cross_validation.StratifiedKFold, **k_fold_kwargs)
     else:
         cv = sklearn.cross_validation.StratifiedKFold(training_data['Preictal'], **k_fold_kwargs)
+    return cv
 
 
 def train_model(interictal,
