@@ -99,7 +99,7 @@ def load_correlation_files(feature_folder,
         complete_frame = pd.concat(segment_frames,
                                    names=('segment', 'start_sample'),
                                    keys=segment_names)
-
+        complete_frame.sortlevel(inplace=True)
         complete_frame.to_pickle(cache_file)
     else:
         complete_frame = pd.read_pickle(cache_file)
@@ -142,6 +142,8 @@ def load_data_frames(feature_folder, rebuild_data=False,
 
 
     preictal['Preictal'] = 1
+
+
     interictal['Preictal'] = 0
     return interictal, preictal, test
 
