@@ -307,6 +307,10 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true',
                         dest='only_missing_files')
+    parser.add_argument("--resample-frequency", help="The frequency to resample to,",
+                        type=float,
+                        dest='resample_frequency')
+
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
@@ -323,6 +327,7 @@ if __name__ == '__main__':
                               naming_function=csv_naming_function,
                               old_segment_format=args.old_segment_format,
                               only_missing_files=args.only_missing_files,
+                              resample_frequency=args.resample_frequency,
                               # Arguments for calculate_cross_correlations
                               time_delta_config=time_delta_config,
                               window_length=args.window_length,
