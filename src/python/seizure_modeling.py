@@ -106,11 +106,31 @@ def fit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=2.
                                                       do_segment_split=do_segment_split)
 
 
+def predict(clf, test_data, probabilities=True):
+    """
+    Returns an array of predictions for the given *test_data* using the classifier *clf*. If *probabilities* is True and the classifier supports it, the predictions will be Interictal probabilites. Otherwise, the predictions will be 0-1 predictions.
+    """
+    if probabilities and hasattr(clf, 'predict_proba'):
+        predictions = clf.predict_proba(test_data)
+        # The predictions from predict_proba is a k-dimensional array, with k
+        # the number of classes. We want to take the column corresponding to the
+        # class with the label 1
+        if hasattr(clf, 'best_estimator_'):
+            classes = clf.best_estimator_.classes_
+        else:
+            classes = clf.classes_
+        class_index = list(classes).index(1)
+        predictions = predictions[:, class_index]
+    else:
+        predictions = clf.predict(test_data)
+    return predictions
+
+
 def get_report(clf, test_data_x, test_data_y):
     """
     Returns a string with a report of how the classifier *clf* does on the test data.
     """
-    test_data_y_pred = clf.predict(test_data_x)
+    test_data_y_pred = predict(clf, test_data_x, probabilities=False)
 
     report_lines = [
         "Classification report:",
@@ -177,23 +197,12 @@ def preictal_ratio(predictions):
     return is_interictal.sum() / is_interictal.count()
 
 
-def assign_segment_scores(test_data, regr):
+def assign_segment_scores(test_data, clf):
     """
     Returns a data frame with the segments of *test_data* as indices
     and the ratio of preictal guesses as a 'Preictal' column
     """
-    try:
-        predictions = regr.predict_proba(test_data)
-        # The predictions from predict_proba is a k-dimensional array, with k the number of classes. We want to take the column corresponding to the class with the label 1
-        if hasattr(regr, 'best_estimator_'):
-            classes = regr.best_estimator_.classes_
-        else:
-            classes = regr.classes_
-        class_index = list(classes).index(1)
-        predictions = predictions[:, class_index]
-    except AttributeError:
-        predictions = regr.predict(test_data)
-
+    predictions = predict(clf, test_data)
     df_predictions = pd.DataFrame(predictions,
                                   index=test_data.index,
                                   columns=('preictal',))
