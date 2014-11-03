@@ -297,7 +297,7 @@ if __name__ == '__main__':
                               output_dir=args.csv_directory,
                               workers=args.workers,
                               sample_size=args.sample_size,
-                              old_segment_format=args.old_segment_format,
+                              old_segment_format=True,#args.old_segment_format,
                               resample_frequency=args.resample_frequency,
                               ## Worker function kwargs:
                               feature_length_seconds=args.feature_length,

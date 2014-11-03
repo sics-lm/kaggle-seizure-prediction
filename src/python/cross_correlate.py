@@ -325,7 +325,7 @@ if __name__ == '__main__':
                               output_dir=args.csv_directory,
                               workers=args.workers,
                               naming_function=csv_naming_function,
-                              old_segment_format=args.old_segment_format,
+                              old_segment_format=True, #args.old_segment_format,
                               only_missing_files=args.only_missing_files,
                               resample_frequency=args.resample_frequency,
                               # Arguments for calculate_cross_correlations
