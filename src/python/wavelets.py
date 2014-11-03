@@ -283,18 +283,23 @@ if __name__ == '__main__':
                         action='store_true',
                         default=False,
                         dest='old_segment_format')
+    parser.add_argument("--resample-frequency", help="The frequency to resample to,",
+                        type=float,
+                        dest='resample_frequency')
+
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
     args = parser.parse_args()
 
     feature_extractor.extract(args.segments,
                               extract_features_for_segment,
-                              ## extract kwargs:
+                              ## Arguments for feature_extractor.extract
                               output_dir=args.csv_directory,
                               workers=args.workers,
                               sample_size=args.sample_size,
                               old_segment_format=args.old_segment_format,
-                              ## Worker kwargs:
+                              resample_frequency=args.resample_frequency,
+                              ## Worker function kwargs:
                               feature_length_seconds=args.feature_length,
                               window_size=args.window_size,
                               no_epochs=args.no_epochs)
