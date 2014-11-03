@@ -178,3 +178,26 @@ def split_dataset(dataset, training_ratio=.8, do_segment_split=True):
         test_indices = set(range(len(dataset))) - train_indices
 
         return dataset.iloc[list(train_indices)], dataset.iloc[list(test_indices)]
+
+
+def test_k_fold_segment_split():
+    interictal_classes = np.zeros(120)
+    preictal_classes = np.ones(120)
+    classes = np.concatenate((interictal_classes, preictal_classes,))
+    segments = np.arange(12)
+    i = np.arange(240)
+
+    index = pd.MultiIndex.from_product([segments, np.arange(20)], names=('segment', 'start_sample'))
+
+    dataframe = pd.DataFrame({'Preictal': classes, 'i': i}, index=index)
+
+    # With a 6-fold cross validator, we expect each held-out fold to contain exactly 2 segments, one from each class
+    cv = SegmentCrossValidator(dataframe, n_folds = 6)
+    for training_fold, test_fold in cv:
+        print("Training indice: ", training_fold)
+        print("Test indice: ", test_fold)
+
+
+
+if __name__ == '__main__':
+    test_k_fold_segment_split()
