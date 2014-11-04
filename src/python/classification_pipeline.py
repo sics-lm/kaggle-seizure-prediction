@@ -37,18 +37,6 @@ def run_batch_classification(feature_folders, **kwargs):
     # df_scores.to_csv(submission_path, index_label='clip')
 
 
-def get_latest_model(feature_folder, model_pattern="model*.pickle"):
-    model_glob = os.path.join(feature_folder, model_pattern)
-    files = glob.glob(model_glob)
-    times = [(os.path.getctime(model_file),model_file)
-                               for model_file in files]
-    if times:
-        ctime, latest_model = max(times)
-        return latest_model
-    else:
-        return None
-
-
 def write_scores(feature_folder, test_data, model, timestamp=None):
     """
     Writes a score file to *feature_folder*, using the scores given by
@@ -65,6 +53,20 @@ def write_scores(feature_folder, test_data, model, timestamp=None):
     segment_scores.to_csv(score_path, index_label='file')
     return segment_scores
 
+
+def get_latest_model(feature_folder, method, model_pattern="model*{method}*.pickle"):
+    model_glob = os.path.join(feature_folder, model_pattern.format(method=method))
+    files = glob.glob(model_glob)
+    times = [(os.path.getctime(model_file),model_file)
+                               for model_file in files]
+    if times:
+        ctime, latest_model = max(times)
+        print("Latest model is:", latest_model)
+        with open(latest_model, 'rb') as fp:
+            model = pickle.load(fp, encoding='bytes')
+            return model
+    else:
+        return None
 
 
 def run_classification(feature_folder,
@@ -90,13 +92,10 @@ def run_classification(feature_folder,
                                                                                   rebuild_data=rebuild_data,
                                                                                   processes=processes, frame_length=frame_length)
 
-    if model_file is None or not rebuild_model:
-        model_file = get_latest_model(feature_folder)
-        if model_file is None:
+    if model_file is None and not rebuild_model:
+        model = get_latest_model(feature_folder, method)
+        if model is None:
             rebuild_model = True
-        else:
-            with open(model_file, 'rb') as fp:
-                model = pickle.load(fp, encoding='bytes')
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     if rebuild_model:
