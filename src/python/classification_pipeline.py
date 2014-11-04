@@ -81,7 +81,8 @@ def run_classification(feature_folder,
                        processes=4,
                        csv_directory=None,
                        feature_type='cross-correlations',
-                       frame_length=1):
+                       frame_length=1,
+                       do_refit=True):
     logging.info("Running classification on folder {}".format(feature_folder))
     if feature_type == 'wavelets':
         interictal, preictal, unlabeled = wavelet_classification.load_data_frames(feature_folder,
@@ -113,7 +114,15 @@ def run_classification(feature_folder,
         with open(model_file, 'wb') as fp:
             pickle.dump(model, fp)
 
-    scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp)
+    if do_refit:
+        model = seizure_modeling.refit_model(interictal,
+                                             preictal,
+                                             model,
+                                             do_downsample=do_downsample,
+                                             downsample_ratio=downsample_ratio,
+                                             do_segment_split=do_segment_split)
+
+    scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp, csv_directory=csv_directory)
     logging.info("Finnished with classification on folder {}".format(feature_folder))
 
     return scores
@@ -176,6 +185,11 @@ if __name__ == '__main__':
                         type=float,
                         help="The raio of majority class to minority class after downsampling.",
                         dest='downsample_ratio')
+    parser.add_argument("--no-refit",
+                        action='store_false',
+                        default=True,
+                        help="Don't refit the selected model with the held-out data used to produce accurace scores",
+                        dest='do_refit')
     parser.add_argument("--no-segment-split",
                         action='store_false',
                         help="Disable splitting data by segment.",
