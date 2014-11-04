@@ -92,7 +92,7 @@ def train_model(interictal,
     return clf
 
 
-def fit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=2.0, do_segment_split=True):
+def refit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=2.0, do_segment_split=True):
     """
     Fits the classifier *clf* to the given preictal and interictal
     data. If *do_downsample* is true, the majority class will be
@@ -104,6 +104,11 @@ def fit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=2.
                                                       do_downsample=do_downsample,
                                                       downsample_ratio=downsample_ratio,
                                                       do_segment_split=do_segment_split)
+    if hasattr(clf, 'best_estimator_'):
+        return clf.best_estimator_.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
+    else:
+        return clf.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
+
 
 
 def predict(clf, test_data, probabilities=True):
