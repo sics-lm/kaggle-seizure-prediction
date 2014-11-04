@@ -9,13 +9,30 @@ from collections import defaultdict
 
 import numpy as np
 
-CANONICAL_NAMES_FILE = '../../data/segment_names.json'
+CANONICAL_NAMES_FILE = '../../data/test_segment_names.json'
+
+
+def generate_canonical_names(name_file=CANONICAL_NAMES_FILE):
+    import subprocess
+    filenames = subprocess.check_output(['find', '../../data/', '-name', '*test*.mat']).split()
+    decoded = [os.path.basename(name.decode()) for name in filenames]
+    matched_names = [re.match(r"([DP][a-z]*_[1-5]_[a-z]*_segment_[0-9]{4}).*", name) for name in decoded]
+    only_matches = [match.group(1) for match in matched_names if match]
+    only_matches.sort()
+    formatted_names = ["{}.mat".format(name) for name in only_matches]
+    with open(name_file, 'w') as fp:
+        json.dump(formatted_names, fp, indent=4, separators=(',', ': '))
+    return set(formatted_names)
+
 
 def load_canonical_names(name_file=CANONICAL_NAMES_FILE):
     """Loads the canonical names as a set of names"""
-    with open(name_file, 'r') as fp:
-        names = json.load(fp)
-        return set(names)
+    try:
+        with open(name_file, 'r') as fp:
+            names = json.load(fp)
+            return set(names)
+    except FileNotFoundError:
+        return generate_canonical_names(name_file)
 
 
 def get_segment_name(name):
@@ -216,8 +233,9 @@ if __name__ == '__main__':
     parser.add_argument("classification_files",
                         help="""The files containing the classification scores. The score files should be csv:s with two columns, the first with the segment names and the second with the segment scores""",
                         nargs='+')
-    parser.add_argument("--output",
-                        help="The file the submission scores should be written two, the default is stdout")
+    parser.add_argument("--output", "-o",
+                        help="The file the submission scores should be written two, the default is stdout",
+                        dest='output')
     parser.add_argument("-n", "--normalize",
                         help="Enable normalization per subject of the scores.",
                         action='store_true',
