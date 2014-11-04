@@ -15,8 +15,10 @@ import wavelet_classification
 import dataset
 import seizure_modeling
 import fileutils
+import submissions
 
-def run_batch_classification(feature_folders, **kwargs):
+
+def run_batch_classification(feature_folders, submission_file=None, **kwargs):
     """
     Runs the batch classificatio on the feature folders.
     Args:
@@ -26,18 +28,16 @@ def run_batch_classification(feature_folders, **kwargs):
     all_scores = []
     for subject_folder in feature_folders:
         segment_scores = run_classification(subject_folder, **kwargs)
-        all_scores.append(segment_scores)
+        score_dict = segment_scores.to_dict()['preictal']
+        all_scores.append(score_dict)
 
-    # df_scores = pd.concat(all_scores, axis=0)
-    # df_scores.sort()
-    # timestamp = datetime.datetime.now().replace(microsecond=0)
-    # submission_file = "submission_{}.csv".format(timestamp)
-    # submission_path = os.path.join(feature_folder_root, submission_file)
-
-    # df_scores.to_csv(submission_path, index_label='clip')
+    if submission_file is not None:
+        logging.info("Saving submission scores to {}".format(submission_file))
+        with open(submission_file, 'w') as fp:
+            submission_scores = submissions.write_scores(all_scores, output=fp)
 
 
-def write_scores(feature_folder, test_data, model, timestamp=None):
+def write_scores(feature_folder, test_data, model, timestamp=None, csv_directory=None):
     """
     Writes a score file to *feature_folder*, using the scores given by
     *model* on *test_data*. If *timestamp* is supplied, it will be
@@ -49,7 +49,10 @@ def write_scores(feature_folder, test_data, model, timestamp=None):
 
     segment_scores = seizure_modeling.assign_segment_scores(test_data, model)
     score_file = "classification_{}.csv".format(timestamp)
-    score_path = os.path.join(feature_folder, score_file)
+    if csv_directory is None:
+        score_path = os.path.join(feature_folder, score_file)
+    else:
+        score_path = os.path.join(csv_directory, score_file)
     segment_scores.to_csv(score_path, index_label='file')
     return segment_scores
 
@@ -207,6 +210,11 @@ if __name__ == '__main__':
     parser.add_argument("--csv-directory",
                         help="Which directory the classification CSV files should be written to.",
                         dest='csv_directory')
+    parser.add_argument("--submission-file",
+                        help="""If this argument is supplied, a submissions file
+                        with the scores for the the test segments will be produced""",
+                        dest='submission_file')
+
     parser.add_argument("--frame-length",
                         help="The size in windows each frame (feature vector) should be.",
                         dest='frame_length', default=1, type=int)
