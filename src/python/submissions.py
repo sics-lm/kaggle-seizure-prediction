@@ -196,7 +196,7 @@ def read_score_file(filename):
         return {segment_name: float(score) for segment_name, score in csv_file}
 
 
-def collect_scores(filenames):
+def collect_file_scores(filenames):
     """
     Collects the scores from multiple files into a score file. The files will be
     read in sorted order, so scores with the same segment name will use the
@@ -214,16 +214,20 @@ def merge_scores(score_dicts):
     return scores
 
 
-def write_scores(classification_files,
+def write_scores(scores,
                  output=sys.stdout,
                  do_normalize=False,
                  default_score=0):
     """Writes the given classification_files to output in submission format."""
-    scores = collect_scores(classification_files)
     submissions = scores_to_submission(scores, do_normalize=do_normalize, default_score=default_score)
     csv_writer = csv.DictWriter(output, fieldnames=['clip', 'preictal'])
     csv_writer.writeheader()
     csv_writer.writerows(submissions)
+
+
+def submission_from_files(classification_files, **kwargs):
+    scores = collect_file_scores(classification_files)
+    write_scores(scores, **kwargs)
 
 
 if __name__ == '__main__':
@@ -249,11 +253,11 @@ if __name__ == '__main__':
 
     if args.output is not None:
         with open(args.output, 'w') as fp:
-            write_scores(args.classification_files,
-                         output=fp,
-                         do_normalize=False,
-                         default_score=args.default_score)
+            submission_from_files(args.classification_files,
+                                  output=fp,
+                                  do_normalize=False,
+                                  default_score=args.default_score)
     else:
-        write_scores(args.classification_files,
-                     do_normalize=False,
-                     default_score=args.default_score)
+        submission_from_files(args.classification_files,
+                              do_normalize=False,
+                              default_score=args.default_score)
