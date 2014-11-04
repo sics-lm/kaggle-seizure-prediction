@@ -4,11 +4,8 @@ import os
 import os.path
 import datetime
 import pickle
-import re
 import logging
 import sys
-
-import pandas as pd
 
 import correlation_convertion
 import wavelet_classification
@@ -19,10 +16,19 @@ import submissions
 
 
 def run_batch_classification(feature_folders, submission_file=None, **kwargs):
-    """
-    Runs the batch classificatio on the feature folders.
+    """Runs the batch classificatio on the feature folders.
     Args:
-        feature_folders: Should be a list of folders containing feature files or folders containing the canonical subject folders ['Dog_1', 'Dog_2', 'Dog_3', 'Dog_4', 'Dog_5', 'Patient_1', 'Patient_2']. If the folder contains the subject folders, it will be replaced by them in the list of feature folders. For example feature_folders = ['../../data/cross_correlations', '../../data/maximal_xcorr/Dog_1'] would be expanded to feature_folders = ['../../data/cross_correlations/Dog_1', '../../data/cross_correlations/Dog_2', '../../data/cross_correlations/Dog_3', '../../data/cross_correlations/Dog_4', '../../data/cross_correlations/Dog_5', '../../data/cross_correlations/Patient_1', '../../data/cross_correlations/Patient_2']', '../../data/maximal_xcorr/Dog_1'].
+
+        feature_folders: Should be a list of folders containing feature
+                         files or folders containing the canonical subject folders
+                         {'Dog_1', 'Dog_2', 'Dog_3', 'Dog_4', 'Dog_5', 'Patient_1',
+                        'Patient_2'}. If the folder contains any of the subject
+                         folders, it will be replaced by them in the list of feature
+                         folders.
+        submission_file: If this argument is a path, the classification scores
+                         will be written to a csv file with that path.
+    Returns:
+        None.
     """
     feature_folders = fileutils.expand_folders(feature_folders)
     all_scores = []
@@ -34,25 +40,30 @@ def run_batch_classification(feature_folders, submission_file=None, **kwargs):
     if submission_file is not None:
         logging.info("Saving submission scores to {}".format(submission_file))
         with open(submission_file, 'w') as fp:
-            submission_scores = submissions.write_scores(all_scores, output=fp)
+            submissions.write_scores(all_scores, output=fp)
 
 
-def write_scores(feature_folder, test_data, model, timestamp=None, csv_directory=None):
+def write_scores(csv_directory, test_data, model, timestamp=None):
     """
-    Writes a score file to *feature_folder*, using the scores given by
-    *model* on *test_data*. If *timestamp* is supplied, it will be
-    used for the file, otherwise a new timestamp will be generated.
-    Returns the data frame of the calculated segment scores.
+    Writes the model prediction scores for the segments of *test_data* to a csv file.
+    Args:
+        csv_directory: The director to where the classification scores will be written.
+        test_data: The dataframe holding the test data
+        model: The model to use for predicting the preictal probability of the test data.
+        timestamp: If this argument is given, it will be used for naming the
+                   classification file. If it's not given, the current time
+                   will be used as a time stamp for the file.
+    Returns:
+        A dataframe containing the segment preictal probabilities.
     """
+
     if timestamp is None:
         timestamp = datetime.datetime.now().replace(microsecond=0)
 
     segment_scores = seizure_modeling.assign_segment_scores(test_data, model)
     score_file = "classification_{}.csv".format(timestamp)
-    if csv_directory is None:
-        score_path = os.path.join(feature_folder, score_file)
-    else:
-        score_path = os.path.join(csv_directory, score_file)
+    score_path = os.path.join(csv_directory, score_file)
+    logging.info("Writing classification scores to {}.".format(score_path))
     segment_scores.to_csv(score_path, index_label='file')
     return segment_scores
 
@@ -60,12 +71,13 @@ def write_scores(feature_folder, test_data, model, timestamp=None, csv_directory
 def get_latest_model(feature_folder, method, model_pattern="model*{method}*.pickle"):
     model_glob = os.path.join(feature_folder, model_pattern.format(method=method))
     files = glob.glob(model_glob)
-    times = [(os.path.getctime(model_file),model_file)
-                               for model_file in files]
+    times = [(os.path.getctime(model_file), model_file)
+             for model_file in files]
     if times:
-        ctime, latest_model = max(times)
+        _, latest_model = max(times)
         print("Latest model is:", latest_model)
         with open(latest_model, 'rb') as fp:
+            logging.info("Loading classifier from {}.".format(latest_model))
             model = pickle.load(fp, encoding='bytes')
             return model
     else:
@@ -89,8 +101,8 @@ def run_classification(feature_folder,
     logging.info("Running classification on folder {}".format(feature_folder))
     if feature_type == 'wavelets':
         interictal, preictal, unlabeled = wavelet_classification.load_data_frames(feature_folder,
-                                                                                   rebuild_data=rebuild_data,
-                                                                                   processes=processes, frame_length=frame_length)
+                                                                                  rebuild_data=rebuild_data,
+                                                                                  processes=processes, frame_length=frame_length)
     elif feature_type == 'cross-correlations' or feature_type == 'xcorr':
         interictal, preictal, unlabeled = correlation_convertion.load_data_frames(feature_folder,
                                                                                   rebuild_data=rebuild_data,
@@ -101,13 +113,15 @@ def run_classification(feature_folder,
         if model is None:
             rebuild_model = True
 
-    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
+    timestamp = None
     if rebuild_model:
+        timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
         model = seizure_modeling.train_model(interictal, preictal,
                                              method=method,
                                              do_downsample=do_downsample,
                                              downsample_ratio=downsample_ratio,
                                              do_segment_split=do_segment_split,
+                                             training_ratio=training_ratio,
                                              processes=processes)
         if model_file is None:
             #Create a new filename based on the model method and the
@@ -125,7 +139,9 @@ def run_classification(feature_folder,
                                              downsample_ratio=downsample_ratio,
                                              do_segment_split=do_segment_split)
 
-    scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp, csv_directory=csv_directory)
+    if csv_directory is None:
+        csv_directory = feature_folder
+    scores = write_scores(csv_directory, unlabeled, model, timestamp=timestamp)
     logging.info("Finnished with classification on folder {}".format(feature_folder))
 
     return scores
@@ -140,17 +156,15 @@ def setup_logging(args):
     log_file = "classification_log-method:{}-frame_length:{}-time:{}.txt".format(args['method'], args['frame_length'], timestamp)
     log_path = os.path.join(log_dir, log_file)
 
+    log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
 
-    logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-    rootLogger = logging.getLogger()
-
-    fileHandler = logging.FileHandler(log_path)
-    fileHandler.setFormatter(logFormatter)
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setFormatter(log_formatter)
 
     std_handler = logging.StreamHandler(sys.stdout)
-    std_handler.setFormatter(logFormatter)
+    std_handler.setFormatter(log_formatter)
 
-    logging.basicConfig(level='INFO', handlers=(fileHandler, std_handler))
+    logging.basicConfig(level='INFO', handlers=(file_handler, std_handler))
 
 
 if __name__ == '__main__':
