@@ -194,7 +194,13 @@ def select_model(training_data, method='logistic',
 
     scorer = sklearn.metrics.make_scorer(sklearn.metrics.roc_auc_score, average='weighted')
     model_dict = get_model(method, training_data_x, training_data_y)
-    common_cv_kwargs = dict(cv=cv, scoring=scorer, n_jobs=processes, pre_dispatch='2*n_jobs', refit=True)
+    common_cv_kwargs = dict(cv=cv,
+                            scoring=scorer,
+                            n_jobs=processes,
+                            pre_dispatch='2*n_jobs',
+                            refit=True,
+                            verbose=1,
+                            iid=False)
 
     cv_kwargs = dict(common_cv_kwargs)
     cv_kwargs.update(model_dict)
