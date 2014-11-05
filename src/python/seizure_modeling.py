@@ -190,6 +190,7 @@ def select_model(training_data, method='logistic',
     cv_kwargs = dict(common_cv_kwargs)
     cv_kwargs.update(model_dict)
 
+    logging.info("Running grid search using the parameters: {}".format(model_dict))
     clf = GridSearchCV(**cv_kwargs)
     clf.fit(training_data_x, training_data_y)
 
