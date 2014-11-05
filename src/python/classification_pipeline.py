@@ -39,8 +39,11 @@ def run_batch_classification(feature_folders, submission_file=None, **kwargs):
 
     if submission_file is None:
         timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
-        filename = "submission_{method}_{timestamp}".format(timestamp=timestamp,
-                                                            **kwargs)
+        standardized = '_standardized' if kwargs['do_standardize'] is not None else ''
+        filename = ("submission_{method}{standardized}"
+                    "_{timestamp}.csv").format(timestamp=timestamp,
+                                              standardized=standardized,
+                                              **kwargs)
         submission_file = os.path.join('..', '..', 'submissions', filename)
 
     logging.info("Saving submission scores to {}".format(submission_file))
