@@ -38,6 +38,15 @@ def get_model(method, training_data_x, training_data_y):
         param_grid =  [{'kernel': ['rbf'], 'gamma': [0, 1e-1, 1e-2, 1e-3],
                         'C': np.linspace(min_c, 1000, 3)}]
 
+    elif method == 'mirowski-svm':
+        clf = sklearn.svm.SVC(probability=True, class_weight='auto')
+        # Below are the parameters used by Mirowski et.al
+        # param_grid =  [{'kernel': ['rbf'], 'C': [min_c, 2**3, 2**6, 2**9],
+        #                 'gamma': [2**(-13), 2**(-7), 0.5]}]
+        # Fine-tuning based on the paramters found above
+        param_grid =  [{'kernel': ['rbf'], 'C': 64*np.linspace(1/4, 4, 4),
+                        'gamma': 0.0001220703125 * np.linspace(1/4, 4, 4)}]
+
     elif method == 'sgd':
         clf = sklearn.linear_model.SGDClassifier()
         param_grid = [{'loss' : ['hinge', 'log'],
