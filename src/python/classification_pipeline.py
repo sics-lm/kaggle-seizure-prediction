@@ -15,7 +15,7 @@ import fileutils
 import submissions
 
 
-def run_batch_classification(feature_folders, submission_file=None, **kwargs):
+def run_batch_classification(feature_folders, timestamp, submission_file=None, **kwargs):
     """Runs the batch classificatio on the feature folders.
     Args:
 
@@ -38,12 +38,13 @@ def run_batch_classification(feature_folders, submission_file=None, **kwargs):
         all_scores.append(score_dict)
 
     if submission_file is None:
-        timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
-        standardized = '_standardized' if kwargs['do_standardize'] is not None else ''
-        filename = ("submission_{method}{standardized}"
-                    "_{timestamp}.csv").format(timestamp=timestamp,
-                                              standardized=standardized,
-                                              **kwargs)
+        name_components = ["submission"]
+        name_components.append(kwargs['feature_type'])
+        name_components.append(kwargs['method'])
+        if kwargs['do_standardize']:
+            name_components.append("standardized")
+        name_components.append(str(timestamp))
+        filename = '_'.join(name_components) + '.csv'
         submission_file = os.path.join('..', '..', 'submissions', filename)
 
     logging.info("Saving submission scores to {}".format(submission_file))
@@ -163,12 +164,11 @@ def run_classification(feature_folder,
     return scores
 
 
-def setup_logging(args):
+def setup_logging(timestamp, args):
     log_dir = args['log_dir']
     del args['log_dir']
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     log_file = "classification_log-method:{}-frame_length:{}-time:{}.txt".format(args['method'], args['frame_length'], timestamp)
     log_path = os.path.join(log_dir, log_file)
 
@@ -259,9 +259,11 @@ if __name__ == '__main__':
 
 
     args_dict = vars(parser.parse_args())
+
+    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     ## Setup loging stuff, this removes 'log_dir' from the dictionary
-    setup_logging(args_dict)
+    setup_logging(timestamp, args_dict)
 
     logging.info("Starting training with the following arguments: {}".format(args_dict))
 
-    run_batch_classification(**args_dict)
+    run_batch_classification(timestamp=timestamp, **args_dict)
