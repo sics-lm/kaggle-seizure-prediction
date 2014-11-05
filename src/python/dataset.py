@@ -54,6 +54,58 @@ class SegmentCrossValidator:
         return len(self.cv)
 
 
+def mean(*dataframes):
+    """Returns the means of the given dataframe, calculated without
+    concatenating the frame"""
+    lengths = sum([len(dataframe) for dataframe in dataframes])
+    sums = dataframes[0].sum()
+    for dataframe in dataframes[1:]:
+        sums += dataframe.sum()
+    means = sums / lengths
+    return means
+
+
+def scale(*dataframes, center=True, scale=True, inplace=False):
+    """Returns standardized (mean 0, standard deviation 1) versions of the given data frames.
+    Args:
+        dataframes: A variable number of inplace arguments which should be the
+                    dataframes to standardize.
+        center: If True, the columns of the frame will have mean 0.
+        scale:  If True, the columns will have standard deviation of 1.
+        inplace: If True, the dataframes will be standardized inplace, and
+        no new dataframe is created.
+    Returns:
+        A list of the standardized dataframes. If inplace=True, it will be the
+        same dataframes as the argument. If inplace=False, new dataframes will
+        have been created.
+    """
+    ## This can be quite memory intensive, especially if the
+    ## dataframes are big
+    complete_frame = pd.concat(dataframes, axis=0)
+    mean = complete_frame.mean()
+    std = complete_frame.std()
+    mean['Preictal'] = 0  # Don't screw up the class label
+    std['Preictal'] = 1  # Don't change the class label
+
+    if inplace:
+        for dataframe in dataframes:
+            if center:
+                dataframe -= mean
+            if scale:
+                dataframe /= std
+        return dataframes
+    else:
+        new_dataframes = []
+        for dataframe in dataframes:
+            new_dataframe = dataframe
+            if center:
+                new_dataframe = new_dataframe - mean
+            if scale:
+                new_dataframe = new_dataframe / std
+            new_dataframes.append(new_dataframe)
+        return new_dataframes
+
+
 def split_experiment_data(interictal, preictal,
                           training_ratio, do_downsample=True,
                           downsample_ratio=2.0,
