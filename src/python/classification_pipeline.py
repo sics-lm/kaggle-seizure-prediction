@@ -235,7 +235,11 @@ if __name__ == '__main__':
                         default=True)
     parser.add_argument("--method",
                         help="What method to use for learning",
-                        dest='method', choices=['logistic', 'svm', 'sgd'],
+                        dest='method',
+                        choices=['logistic',
+                                 'svm',
+                                 'sgd',
+                                 'random-forest'],
                         default='logistic')
     parser.add_argument("--processes",
                         help="How many processes should be used for parellelized work.",
