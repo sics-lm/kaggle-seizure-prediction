@@ -91,6 +91,7 @@ def run_classification(feature_folder,
                        model_file=None,
                        do_downsample=False,
                        downsample_ratio=2.0,
+                       do_standardize=False,
                        method="logistic",
                        do_segment_split=False,
                        processes=4,
@@ -107,6 +108,12 @@ def run_classification(feature_folder,
         interictal, preictal, unlabeled = correlation_convertion.load_data_frames(feature_folder,
                                                                                   rebuild_data=rebuild_data,
                                                                                   processes=processes, frame_length=frame_length)
+    if do_standardize:
+        logging.info("Standardizing variables.")
+        interictal, preictal, unlabeled = dataset.scale(interictal,
+                                                        preictal,
+                                                        unlabeled,
+                                                        inplace=True)
 
     if model_file is None and not rebuild_model:
         model = get_latest_model(feature_folder, method)
@@ -202,6 +209,11 @@ if __name__ == '__main__':
                         type=float,
                         help="The raio of majority class to minority class after downsampling.",
                         dest='downsample_ratio')
+    parser.add_argument("--standardize",
+                        action='store_true',
+                        help="Standardize the variables",
+                        dest='do_standardize',
+                        default=False)
     parser.add_argument("--no-refit",
                         action='store_false',
                         default=True,
