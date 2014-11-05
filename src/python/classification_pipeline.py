@@ -37,10 +37,15 @@ def run_batch_classification(feature_folders, submission_file=None, **kwargs):
         score_dict = segment_scores.to_dict()['preictal']
         all_scores.append(score_dict)
 
-    if submission_file is not None:
-        logging.info("Saving submission scores to {}".format(submission_file))
-        with open(submission_file, 'w') as fp:
-            submissions.write_scores(all_scores, output=fp)
+    if submission_file is None:
+        timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
+        filename = "submission_{method}_{timestamp}".format(timestamp=timestamp,
+                                                            **kwargs)
+        submission_file = os.path.join('..', '..', 'submissions', filename)
+
+    logging.info("Saving submission scores to {}".format(submission_file))
+    with open(submission_file, 'w') as fp:
+        submissions.write_scores(all_scores, output=fp)
 
 
 def write_scores(csv_directory, test_data, model, timestamp=None):
