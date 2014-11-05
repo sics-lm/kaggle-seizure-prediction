@@ -7,6 +7,12 @@ import sklearn
 from sklearn import cross_validation
 
 
+def first(iterable):
+    """Returns the first element of an iterable"""
+    for element in iterable:
+        return element
+
+
 class SegmentCrossValidator:
     """Wrapper for the scikit_learn CV generators to generate folds on a segment basis."""
     def __init__(self, dataframe, base_cv=None, **cv_kwargs):
@@ -48,26 +54,6 @@ class SegmentCrossValidator:
         return len(self.cv)
 
 
-def split_segment_names(dataframe, split_ratio):
-    """
-    Returns a pair of disjunct lists of segment names, such that the
-    first set contains *split_ratio* of the total segment names.
-    Args:
-        *dataframe*: a pandas dataframe where the index has a level called
-                     'segment' which the split will be done over.
-        *split_ratio*: a value in the interval (0,1) of the ratio of segment
-                       names to put in the first set.
-    Returns:
-        A pair of sorted names lists, where the first contains a ratio of s
-        egment names equal to *split_ratio* times the total number of segments.
-    """
-    segment_names = set(dataframe.index.get_level_values('segment'))
-    n_samples = int(len(segment_names)*split_ratio)
-    part1_names = set(random.sample(segment_names, n_samples))
-    part2_names = segment_names - part1_names
-    return list(sorted(part1_names)), list(sorted(part2_names))
-
-
 def split_experiment_data(interictal, preictal,
                           training_ratio, do_downsample=True,
                           downsample_ratio=2.0,
@@ -94,6 +80,7 @@ def split_experiment_data(interictal, preictal,
     return split_dataset(dataset,
                          training_ratio=training_ratio,
                          do_segment_split=do_segment_split)
+
 
 
 def merge_interictal_preictal(interictal, preictal,
@@ -143,7 +130,6 @@ def downsample(df1, n_samples, do_segment_split=True):
             return df1
 
     else:
-
         if n_samples < len(df1):
             print('N_samples: {}'.format(n_samples))
             sample_indices = random.sample(range(len(df1)), n_samples)
@@ -153,28 +139,35 @@ def downsample(df1, n_samples, do_segment_split=True):
             return df1
 
 
-def split_dataset(dataset, training_ratio=.8, do_segment_split=True):
+def split_dataset(dataframe, training_ratio=.8, do_segment_split=True, shuffle=False):
     """
     Splits the dataset into a training and test partition.
     Args:
-        *dataset*: A data frame to split.
+        *dataframe*: A data frame to split. Should have a 'Preictal' column.
         *training_ratio*: The ratio of the data to use for the first part.
         *do_segment_split*: If True, the split will be done on whole segments.
+        *shuffle*: If true, the split will shuffle the data before splitting.
     Returns:
         A pair of disjunct data frames, where the first frame contain
         *training_ratio* of all the data.
     """
+    ## We'll make the splits based on the sklearn cross validators,
+    ## We calculate the number of folds which correspond to the
+    ## desired training ratio. If *r* is the training ratio and *k*
+    ## the nubmer of folds, we'd like *r* = (*k* - 1)/*k*, that is,
+    ## the ratio should be the same as all the included folds divided
+    ## by the total number of folds. This gives us *k* = 1/(1-*r*)
+    k = int(np.floor(1/(1 - training_ratio)))
 
     if do_segment_split:
-        training_segments, test_segments = split_segment_names(dataset,
-                                                               training_ratio)
-        return dataset.loc[training_segments], dataset.loc[test_segments]
+        # We use the segment based cross validator to get a stratified split.
+        cv = SegmentCrossValidator(dataframe, n_folds=k, shuffle=shuffle)
     else:
-        n_samples = int(len(dataset)*training_ratio)
-        train_indices = set(random.sample(range(len(dataset)), n_samples))
-        test_indices = set(range(len(dataset))) - train_indices
+        # Don't split by segment, but still do a stratified split
+        cv = cross_validation.StratifiedKFold(dataframe['Preictal'], n_folds=k, shuffle=shuffle)
 
-        return dataset.iloc[list(train_indices)], dataset.iloc[list(test_indices)]
+    training_indices, test_indices = first(cv)
+    return dataframe.iloc[training_indices], dataframe.iloc[test_indices]
 
 
 def test_k_fold_segment_split():
