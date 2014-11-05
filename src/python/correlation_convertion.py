@@ -109,7 +109,7 @@ def load_correlation_files(feature_folder,
 def load_data_frames(feature_folder, rebuild_data=False,
                      processes=4, file_pattern="5.0s.csv",
                      frame_length=1,
-                     do_standardize=True):
+                     do_standardize=False):
 
     preictal = load_correlation_files(feature_folder,
                                       class_name="preictal",
