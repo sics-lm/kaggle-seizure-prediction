@@ -144,6 +144,7 @@ def run_classification(feature_folder,
             pickle.dump(model, fp)
 
     if do_refit:
+        logging.info("Refitting model with held-out data.")
         model = seizure_modeling.refit_model(interictal,
                                              preictal,
                                              model,
@@ -245,7 +246,6 @@ if __name__ == '__main__':
                         help="""If this argument is supplied, a submissions file
                         with the scores for the the test segments will be produced""",
                         dest='submission_file')
-
     parser.add_argument("--frame-length",
                         help="The size in windows each frame (feature vector) should be.",
                         dest='frame_length', default=1, type=int)
