@@ -55,6 +55,9 @@ def get_model(method, training_data_x, training_data_y):
 
     elif method == 'random-forest':
         clf = sklearn.ensemble.RandomForestClassifier()
+        param_grid=[{'max_features': ['sqrt', 'log2'],
+                     'n_estimators': [10, 100, 100],
+                     'criterion': ['gini', 'entropy']}]
 
     else:
         raise NotImplementedError("Method {} is not supported".format(method))
