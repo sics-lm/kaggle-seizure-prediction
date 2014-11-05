@@ -170,9 +170,7 @@ def get_report(clf, test_data_x, test_data_y):
 
 def grid_scores(clf):
     """Returns a string with the grid scores"""
-    score_lines = [ "Grid scores on development set:",
-                    "",
-                ]
+    score_lines = ["Grid scores on development set:", ""]
     for params, mean_score, scores in clf.grid_scores_:
         score_lines.append("{:0.3f} (+/-{:0.03f}) for {}".format(mean_score, scores.std()/2, params))
 
