@@ -84,7 +84,10 @@ def train_model(interictal,
                 do_downsample=True,
                 downsample_ratio=2.0,
                 do_segment_split=True,
-                processes=1):
+                processes=1,
+                do_standardize=False,
+                cv_verbosity=2):
+
     training_data, test_data = dataset.split_experiment_data(interictal,
                                                              preictal,
                                                              training_ratio=training_ratio,
@@ -97,7 +100,8 @@ def train_model(interictal,
     clf = select_model(training_data, method=method,
                        training_ratio=training_ratio,
                        do_segment_split=do_segment_split,
-                       processes=processes)
+                       processes=processes,
+                       cv_verbosity=cv_verbosity)
 
     report = get_report(clf, test_data_x, test_data_y)
     logging.info(report)
@@ -182,9 +186,10 @@ def grid_scores(clf):
 
 
 def select_model(training_data, method='logistic',
-                training_ratio=0.8,
-                do_segment_split=True,
-                processes=1):
+                 training_ratio=0.8,
+                 do_segment_split=True,
+                 processes=1,
+                 cv_verbosity=2):
     """Fits a model given by *method* to the training data."""
     logging.info("Training a {} model".format(method))
 
@@ -200,7 +205,7 @@ def select_model(training_data, method='logistic',
                             n_jobs=processes,
                             pre_dispatch='2*n_jobs',
                             refit=True,
-                            verbose=1,
+                            verbose=cv_verbosity,
                             iid=False)
 
     cv_kwargs = dict(common_cv_kwargs)
