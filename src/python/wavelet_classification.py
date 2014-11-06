@@ -109,92 +109,32 @@ def load_csv(filename, frame_length=12, sliding_frames=True):
     #Number of rows in the csv file
     n_rows = from_file_array.shape[0]*12
 
+    # Reshaped array an array which is one windows wide and n_windows long.
     reshaped_array = from_file_array.reshape(n_rows,window_size)
 
     #Extract this function out into its own file and use it also with the cross correlation frames
     if sliding_frames:
-
         return pd.DataFrame(data=dataset.extend_data_with_sliding_frames(reshaped_array, frame_length))
-
     else:
         n_frames = reshaped_array.shape[0]/frame_length
         frame_size = window_size*frame_length
         return pd.DataFrame(data=reshaped_array.reshape(n_frames,frame_size))
 
-def load_wavelet_files(feature_folder,
-                       class_name,
-                       file_pattern="extract_features_for_segment.csv",
-                       rebuild_data=False,
-                       processes=1,
-                       frame_length=12, sliding_frames=True):
-    cache_file = os.path.join(
-        feature_folder, '{}_frame_length_{}_cache.pickle'.format(class_name, frame_length))
 
-    if rebuild_data or not os.path.exists(cache_file):
-        print("Rebuilding {} data".format(class_name))
-        full_pattern = "*{}*{}".format(class_name, file_pattern)
-        glob_pattern = os.path.join(feature_folder, full_pattern)
-        files = glob.glob(glob_pattern)
-        segment_names = [os.path.basename(filename) for filename in files]
-        if processes > 1:
-            print("Reading files in parallel")
-            pool = multiprocessing.Pool(processes)
-            try:
-                partial_load_csv = partial(load_csv, frame_length=frame_length, sliding_frames=sliding_frames)
-                segment_frames = pool.map(partial_load_csv, files)
-            finally:
-                pool.close()
-        else:
-            print("Reading files serially")
-            segment_frames = [load_csv(filename, frame_length=frame_length) for filename in files]
-
-        complete_frame = pd.concat(segment_frames,
-                                   names=('segment', 'frame'),
-                                   keys=segment_names)
-        # Sorting for optimization
-        complete_frame.sortlevel(inplace=True)
-
-        if np.count_nonzero(np.isnan(complete_frame)) != 0:
-            print("WARNING: NaN values found, using interpolation",
-                  file=sys.stderr)
-            complete_frame = complete_frame.interpolate(method='linear')
-
-        complete_frame.to_pickle(cache_file)
-    else:
-        complete_frame = pd.read_pickle(cache_file)
-    return complete_frame
-
-
-def load_data_frames(feature_folder, rebuild_data=False,
+def load_data_frames(feature_folder,
+                     rebuild_data=False,
                      processes=4,
                      file_pattern="extract_features_for_segment.csv",
-                     frame_length=12):
-
-    preictal = load_wavelet_files(feature_folder,
-                                  class_name="preictal",
-                                  file_pattern=file_pattern,
-                                  rebuild_data=rebuild_data,
-                                  processes=processes,
-                                  frame_length=frame_length)
-    preictal['Preictal'] = 1
-
-    interictal = load_wavelet_files(feature_folder,
-                                    class_name="interictal",
-                                    file_pattern=file_pattern,
+                     frame_length=12,
+                     sliding_frames=True):
+    return dataset.load_data_frames(feature_folder,
+                                    load_function=load_csv,
                                     rebuild_data=rebuild_data,
                                     processes=processes,
-                                    frame_length=frame_length)
-    interictal['Preictal'] = 0
+                                    file_pattern=file_pattern,
+                                    frame_length=frame_length,
+                                    sliding_frames=sliding_frames)
 
-    test = load_wavelet_files(feature_folder,
-                              class_name="test",
-                              file_pattern=file_pattern,
-                              rebuild_data=rebuild_data,
-                              processes=processes,
-                              frame_length=frame_length,
-                              sliding_frames=False)
-
-    return interictal, preictal, test
 
 def split_experiment_data(train_interictal, train_preictal, training_ratio=0.8,
                           do_downsample=True, downsample_ratio=1.0, seed=None):
