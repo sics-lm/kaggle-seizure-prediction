@@ -13,6 +13,7 @@ import sys
 import pandas as pd
 import numpy as np
 import multiprocessing
+from functools import partial
 # multiprocessing.set_start_method('spawn')
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import *
@@ -90,16 +91,57 @@ def run_classification(feature_folder, rebuild_data=False, training_ratio=1.0,
     scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp)
     return model, scores
 
-def load_csv(filename):
-    return pd.read_table(filename, sep=',', dtype=np.float64, header=None)
+def extend_data_with_sliding_frames(source_array, frame_length=12):
+
+    n_rows = source_array.shape[0]
+    window_size = source_array.shape[1]
+
+    #Number of frames that we can generate
+    n_sliding_frames = n_rows-(frame_length-1)
+    #The column size of our new frames
+    frame_size = window_size*frame_length
+
+    dest_array = np.zeros((n_sliding_frames, frame_size), dtype=np.float64)
+
+    for i in range(0,n_sliding_frames):
+        dest_array[i] = source_array[i:i+frame_length].reshape(1,frame_size)
+
+    return dest_array
+
+def load_csv(filename, frame_length=12, sliding_frames=True):
+
+    #Read the csvfile with pandas and extract the values into an numpy array
+    from_file_array = pd.read_table(filename, sep=',', dtype=np.float64, header=None).values
+
+    # Assert that the csvfiles contain frames consisting 12 windows.
+    assert_msg = 'file: "{}" does not have a column count divisible by 12 since it is: {}.'
+    assert (from_file_array.shape[1] % 12) == 0, assert_msg.format(filename,from_file_array.shape[1])
+
+    #Number of windows in the csv frame
+    window_size = from_file_array.shape[1] / 12
+    #Number of rows in the csv file
+    n_rows = from_file_array.shape[0]*12
+
+    reshaped_array = from_file_array.reshape(n_rows,window_size)
+
+    #Extract this function out into its own file and use it also with the cross correlation frames
+    if sliding_frames:
+
+        return pd.DataFrame(data=extend_data_with_sliding_frames(reshaped_array, frame_length))
+
+    else:
+        n_frames = reshaped_array.shape[0]/frame_length
+        frame_size = window_size*frame_length
+        return pd.DataFrame(data=reshaped_array.reshape(n_frames,frame_size))
 
 def load_wavelet_files(feature_folder,
                        class_name,
                        file_pattern="extract_features_for_segment.csv",
                        rebuild_data=False,
-                       processes=1):
+                       processes=1,
+                       frame_length=12, sliding_frames=True):
     cache_file = os.path.join(
-        feature_folder, '{}_cache.pickle'.format(class_name))
+        feature_folder, '{}_frame_length_{}_cache.pickle'.format(class_name, frame_length))
 
     if rebuild_data or not os.path.exists(cache_file):
         print("Rebuilding {} data".format(class_name))
@@ -111,12 +153,13 @@ def load_wavelet_files(feature_folder,
             print("Reading files in parallel")
             pool = multiprocessing.Pool(processes)
             try:
-                segment_frames = pool.map(load_csv, files)
+                partial_load_csv = partial(load_csv, frame_length=frame_length, sliding_frames=sliding_frames)
+                segment_frames = pool.map(partial_load_csv, files)
             finally:
                 pool.close()
         else:
             print("Reading files serially")
-            segment_frames = [load_csv(filename) for filename in files]
+            segment_frames = [load_csv(filename, frame_length=frame_length) for filename in files]
 
         complete_frame = pd.concat(segment_frames,
                                    names=('segment', 'frame'),
@@ -138,27 +181,31 @@ def load_wavelet_files(feature_folder,
 def load_data_frames(feature_folder, rebuild_data=False,
                      processes=4,
                      file_pattern="extract_features_for_segment.csv",
-                     frame_length=1):
+                     frame_length=12):
 
     preictal = load_wavelet_files(feature_folder,
                                   class_name="preictal",
                                   file_pattern=file_pattern,
                                   rebuild_data=rebuild_data,
-                                  processes=processes)
+                                  processes=processes,
+                                  frame_length=frame_length)
     preictal['Preictal'] = 1
 
     interictal = load_wavelet_files(feature_folder,
                                     class_name="interictal",
                                     file_pattern=file_pattern,
                                     rebuild_data=rebuild_data,
-                                    processes=processes)
+                                    processes=processes,
+                                    frame_length=frame_length)
     interictal['Preictal'] = 0
 
     test = load_wavelet_files(feature_folder,
                               class_name="test",
                               file_pattern=file_pattern,
                               rebuild_data=rebuild_data,
-                              processes=processes)
+                              processes=processes,
+                              frame_length=frame_length,
+                              sliding_frames=False)
 
     return interictal, preictal, test
 
