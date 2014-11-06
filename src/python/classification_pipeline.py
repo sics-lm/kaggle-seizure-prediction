@@ -19,6 +19,7 @@ def run_batch_classification(feature_folders,
                              timestamp,
                              submission_file=None,
                              frame_length=1,
+                             sliding_frames=False,
                              rebuild_data=False,
                              feature_type='cross-correlation',
                              processes=1,
@@ -42,6 +43,7 @@ def run_batch_classification(feature_folders,
     for feature_dict in load_features(feature_folders,
                                       feature_type=feature_type,
                                       frame_length=frame_length,
+                                      sliding_frames=sliding_frames,
                                       rebuild_data=rebuild_data,
                                       processes=processes):
         kwargs.update(feature_dict)  # Adds the content of feature dict to the keywords for run_classification
@@ -64,7 +66,12 @@ def run_batch_classification(feature_folders,
         submissions.write_scores(all_scores, output=fp)
 
 
-def load_features(feature_folders, feature_type='cross-correlations', frame_length=1, rebuild_data=False, processes=1):
+def load_features(feature_folders,
+                  feature_type='cross-correlations',
+                  frame_length=1,
+                  sliding_frames=False,
+                  rebuild_data=False,
+                  processes=1):
     """
     Loads the features from the list of paths *feature_folder*. Returns an
     iterator of dictionaries, where each dictionary has the keys 'subject_folder',
@@ -83,6 +90,10 @@ def load_features(feature_folders, feature_type='cross-correlations', frame_leng
                       it contains, and the results will be combined column-wise
                       into longer feature vectors.
         frame_length: The desired frame length in windows of the features.
+        sliding_frames: If True, the training feature frames will be generated
+                        by a sliding window, greatly increasing the number of
+                        generated frames.
+        processes: The number of processes to use for parallel processing.
     Returns:
         A generator object which gives a dictionary with features for every call
         to next. The dictionary contains the keys 'subject_folder',
@@ -99,7 +110,8 @@ def load_features(feature_folders, feature_type='cross-correlations', frame_leng
             interictal, preictal, unlabeled = feature_module.load_data_frames(feature_folder,
                                                                               rebuild_data=rebuild_data,
                                                                               processes=processes,
-                                                                              frame_length=frame_length)
+                                                                              frame_length=frame_length,
+                                                                              sliding_frames=sliding_frames)
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
                        unlabeled_data=unlabeled,
@@ -117,21 +129,26 @@ def load_features(feature_folders, feature_type='cross-correlations', frame_leng
                     feature_module = wavelet_classification
                 elif 'corr' in folder_path:
                     feature_module = correlation_convertion
-                dataframes = feature_module.load_data_frames(feature_folder,
+                dataframes = feature_module.load_data_frames(folder_path,
                                                              rebuild_data=rebuild_data,
                                                              processes=processes,
-                                                             frame_length=frame_length)
+                                                             frame_length=frame_length,
+                                                             sliding_frames=sliding_frames)
                 interictal, preictal, unlabeled = dataframes
                 interictal_frames.append(interictal)
                 preictal_frames.append(preictal)
                 unlabeled_frames.append(unlabeled)
 
-            interictal_data = dataset.combine_features(interictal_frames)
-            preictal_data = dataset.combine_features(preictal_frames)
-            unlabeled_data = dataset.combine_features(unlabeled_frames)
+            interictal_data = dataset.combine_features(interictal_frames,
+                                                       labeled=True)
+            preictal_data = dataset.combine_features(preictal_frames,
+                                                     labeled=True)
+            unlabeled_data = dataset.combine_features(unlabeled_frames,
+                                                      labeled=False)
 
             subject_folder = os.path.join('..', '..', 'data', 'combined', subject)
-
+            if not os.path.exists(subject_folder):
+                os.makedirs(subject_folder)
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
                        unlabeled_data=unlabeled,
@@ -286,14 +303,12 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--feature-type",
                         help=("The type of the features for the classification."
                               " 'cross-correlations' and 'xcorr' are synonymns."
-                              " If 'combined' is supplied, the feature folder "
-                              "arguments _must_ be feature root folders. That "
-                              "is, they must contain subject folders. "
-                              "Furthermore, to be able to determine which root "
-                              "folder correspond to which features, the root "
-                              "folder must have the string 'wavelet' in it for "
-                              "the wavelet features and the string 'corr' in"
-                              " it for cross correlation features."),
+                              "If the method is 'combined', the name of the "
+                              "folder wil be used to decide which feature loader"
+                              " to use. The folder must have the string "
+                              "'wavelet' in it for the wavelet features and "
+                              "the string 'corr' in it for cross correlation"
+                              " features."),
                         choices=["wavelets",
                                  "cross-correlations",
                                  "xcorr",
@@ -361,6 +376,13 @@ if __name__ == '__main__':
     parser.add_argument("--frame-length",
                         help="The size in windows each frame (feature vector) should be.",
                         dest='frame_length', default=1, type=int)
+    parser.add_argument("--sliding-frames",
+                        help=("If enabled, frames for the training-data will be"
+                              " extracted by overlapping windows, greatly "
+                              "increasing the number of frames."),
+                        dest='sliding_frames',
+                        default=False,
+                        action='store_true')
     parser.add_argument("--log-dir",
                         help="Directory for writing classification log files.",
                         default='../../classification_logs',

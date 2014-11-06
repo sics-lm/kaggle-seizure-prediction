@@ -269,7 +269,7 @@ def normalize_segment_names(dataframe, inplace=False):
     return dataframe
 
 
-def load_data_frames(feature_folder,
+def load_data_frames(feature_folder, sliding_frames=True,
                      **kwargs):
     """
                      load_function=None,
@@ -282,14 +282,18 @@ def load_data_frames(feature_folder,
 
     preictal = load_feature_files(feature_folder,
                                   class_name="preictal",
+                                  sliding_frames=sliding_frames,
                                   **kwargs)
 
     interictal = load_feature_files(feature_folder,
                                     class_name="interictal",
+                                    sliding_frames=sliding_frames,
                                     **kwargs)
 
     test = load_feature_files(feature_folder,
                               class_name="test",
+                              # Never use sliding frames for the test-data
+                              sliding_frames=False,
                               **kwargs)
     preictal['Preictal'] = 1
     interictal['Preictal'] = 0
