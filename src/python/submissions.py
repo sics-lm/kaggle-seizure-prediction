@@ -1,62 +1,21 @@
 """Module for dealing with submissions"""
 
 import sys
-import os.path
-import re
-import json
 import csv
 from collections import defaultdict
 
 import numpy as np
 
-CANONICAL_NAMES_FILE = '../../data/test_segment_names.json'
+import fileutils
 
 
-def generate_canonical_names(name_file=CANONICAL_NAMES_FILE):
-    import subprocess
-    filenames = subprocess.check_output(['find', '../../data/', '-name', '*test*.mat']).split()
-    decoded = [os.path.basename(name.decode()) for name in filenames]
-    matched_names = [re.match(r"([DP][a-z]*_[1-5]_[a-z]*_segment_[0-9]{4}).*", name) for name in decoded]
-    only_matches = [match.group(1) for match in matched_names if match]
-    only_matches.sort()
-    formatted_names = ["{}.mat".format(name) for name in only_matches]
-    with open(name_file, 'w') as fp:
-        json.dump(formatted_names, fp, indent=4, separators=(',', ': '))
-    return set(formatted_names)
-
-
-def load_canonical_names(name_file=CANONICAL_NAMES_FILE):
-    """Loads the canonical names as a set of names"""
-    try:
-        with open(name_file, 'r') as fp:
-            names = json.load(fp)
-            return set(names)
-    except FileNotFoundError:
-        return generate_canonical_names(name_file)
-
-
-def get_segment_name(name):
-    """Returns the canonical segment name for a string *name*. The canonical
-    segment name is the one identifying the original matlab data file and will
-    be inferred by the prefix of the basename using a regular expression. If the
-    name can't be matched, the argument is returned."""
-
-    pattern = r"([DP][a-z]*_[1-5]_[a-z]*_segment_[0-9]{4}).*"
-    basename = os.path.basename(name)  # Remove any directories from the name
-    match = re.match(pattern, basename)
-    if match is None:
-        return name
-    else:
-        return match.group(1) + '.mat'
-
-
-def scores_to_submission(score_dicts, canonical_names_file=CANONICAL_NAMES_FILE, **kwargs):
+def scores_to_submission(score_dicts, **kwargs):
     """
     Returns a list of dictionaries with 'clip' and 'preictal' keys, suitable
     for writing to a submission file.
     """
     all_scores = merge_scores(score_dicts)
-    canonical_names = load_canonical_names(canonical_names_file)
+    canonical_names = fileutils.load_canonical_names()
     submission = create_submission_rows(all_scores, canonical_names=canonical_names, **kwargs)
     return submission
 
@@ -92,7 +51,7 @@ def create_submission_rows(score_dict,
     clip_scores = dict()
     present_segments = set()
     for name, score in score_dict.items():
-        segment_name = get_segment_name(name)
+        segment_name = fileutils.get_segment_name(name)
         present_segments.add(segment_name)
         clip_scores[segment_name] = score
 
@@ -114,13 +73,6 @@ def create_submission_rows(score_dict,
             in sorted(clip_scores.items())]
 
 
-def get_subject(segment_name):
-    """Returns the subject prefix from the segment name"""
-    subject_pattern = r"(Patient_[12]|Dog_[1-5]).*"
-    subject = re.match(subject_pattern, segment_name).group(1)
-    return subject
-
-
 def old_normalize_scores(clip_scores):
     """
     Normalizes the scores per subject.
@@ -133,7 +85,7 @@ def old_normalize_scores(clip_scores):
 
     new_clip_scores = dict()
     for segment, score in clip_scores.items():
-        subject = get_subject(segment)
+        subject = fileutils.get_subject(segment)
         new_score = old_normalize_score(score, subject_max[subject], subject_min[subject])
         new_clip_scores[segment] = new_score
     return new_clip_scores
@@ -152,7 +104,7 @@ def normalize_scores(clip_scores):
 
     new_clip_scores = dict()
     for segment, score in clip_scores.items():
-        subject = get_subject(segment)
+        subject = fileutils.get_subject(segment)
         new_score = normalize_score(score, subject_means[subject], subject_stds[subject])
         new_clip_scores[segment] = new_score
     return new_clip_scores
@@ -162,7 +114,7 @@ def collect_subject_scores(clip_scores):
     """Returns a dictionary with the subjects as keys and a list with the score for the subject as values"""
     subject_scores = defaultdict(list)
     for segment, score in clip_scores.items():
-        subject = get_subject(segment)
+        subject = fileutils.get_subject(segment)
         subject_scores[subject].append(score)
     return subject_scores
 
@@ -237,7 +189,7 @@ if __name__ == '__main__':
     parser.add_argument("classification_files",
                         help="""The files containing the classification scores. The score files should be csv:s with two columns, the first with the segment names and the second with the segment scores""",
                         nargs='+')
-    parser.add_argument("--output", "-o",
+    parser.add_argument( "-o", "--output",
                         help="The file the submission scores should be written two, the default is stdout",
                         dest='output')
     parser.add_argument("-n", "--normalize",
