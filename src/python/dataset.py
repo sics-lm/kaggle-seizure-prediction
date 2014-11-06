@@ -158,6 +158,11 @@ def merge_interictal_preictal(interictal, preictal,
     Returns:
         A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
     """
+    interictal.sortlevel('segment', inplace=True)
+    preictal.sortlevel('segment', inplace=True)
+    interictal.sortlevel(axis=1,inplace=True)
+    preictal.sortlevel(axis=1,inplace=True)
+
     if do_downsample:
         interictal = downsample(interictal, len(preictal) * downsample_ratio,
                                 do_segment_split=do_segment_split)
