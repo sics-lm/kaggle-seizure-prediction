@@ -368,11 +368,17 @@ def load_feature_files(feature_folder,
         complete_frame = pd.concat(segment_frames,
                                    names=('segment', 'frame'),
                                    keys=segment_names)
-        complete_frame.sortlevel(inplace=True)
+
+        complete_frame.sortlevel('segment', inplace=True)
+        if np.count_nonzero(np.isnan(complete_frame)) != 0:
+            logging.warn("NaN values found, using interpolation")
+            complete_frame = complete_frame.interpolate(method='linear')
+
         complete_frame.to_pickle(cache_file)
         return complete_frame
     else:
         complete_frame = pd.read_pickle(cache_file)
+        complete_frame.sortlevel('segment', inplace=True)
         return complete_frame
 
 
