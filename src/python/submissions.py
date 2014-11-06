@@ -116,7 +116,7 @@ def create_submission_rows(score_dict,
 
 def get_subject(segment_name):
     """Returns the subject prefix from the segment name"""
-    subject_pattern = r"([PD][a-z]*_[1-5])=.*"
+    subject_pattern = r"([PD][a-z]*_[1-5]).*"
     subject = re.match(subject_pattern, segment_name).group(1)
     return subject
 
