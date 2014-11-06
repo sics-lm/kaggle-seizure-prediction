@@ -391,7 +391,7 @@ if __name__ == '__main__':
                         help=("The verbosity level of the Cross-Validation grid"
                               " search. The higher, the more verbose the grid"
                               " search is. 0 disables output."),
-                        default=2,
+                        default=1,
                         type=int,
                         choices=[0,1,2],
                         dest='cv_verbosity')
