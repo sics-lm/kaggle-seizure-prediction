@@ -91,22 +91,6 @@ def run_classification(feature_folder, rebuild_data=False, training_ratio=1.0,
     scores = write_scores(feature_folder, unlabeled, model, timestamp=timestamp)
     return model, scores
 
-def extend_data_with_sliding_frames(source_array, frame_length=12):
-
-    n_rows = source_array.shape[0]
-    window_size = source_array.shape[1]
-
-    #Number of frames that we can generate
-    n_sliding_frames = n_rows-(frame_length-1)
-    #The column size of our new frames
-    frame_size = window_size*frame_length
-
-    dest_array = np.zeros((n_sliding_frames, frame_size), dtype=np.float64)
-
-    for i in range(0,n_sliding_frames):
-        dest_array[i] = source_array[i:i+frame_length].reshape(1,frame_size)
-
-    return dest_array
 
 def load_csv(filename, frame_length=12, sliding_frames=True):
 
@@ -127,7 +111,7 @@ def load_csv(filename, frame_length=12, sliding_frames=True):
     #Extract this function out into its own file and use it also with the cross correlation frames
     if sliding_frames:
 
-        return pd.DataFrame(data=extend_data_with_sliding_frames(reshaped_array, frame_length))
+        return pd.DataFrame(data=dataset.extend_data_with_sliding_frames(reshaped_array, frame_length))
 
     else:
         n_frames = reshaped_array.shape[0]/frame_length

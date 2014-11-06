@@ -262,5 +262,24 @@ def normalize_segment_names(dataframe, inplace=False):
     dataframe.index = pd.MultiIndex.from_tuples(fixed_values, names=dataframe.index.names)
     return dataframe
 
+
+def extend_data_with_sliding_frames(source_array, frame_length=12):
+
+    n_rows = source_array.shape[0]
+    window_size = source_array.shape[1]
+
+    #Number of frames that we can generate
+    n_sliding_frames = n_rows-(frame_length-1)
+    #The column size of our new frames
+    frame_size = window_size*frame_length
+
+    dest_array = np.zeros((n_sliding_frames, frame_size), dtype=np.float64)
+
+    for i in range(0,n_sliding_frames):
+        dest_array[i] = source_array[i:i+frame_length].reshape(1,frame_size)
+
+    return dest_array
+
+
 if __name__ == '__main__':
     test_k_fold_segment_split()
