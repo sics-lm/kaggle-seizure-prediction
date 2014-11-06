@@ -247,14 +247,26 @@ def test_k_fold_segment_split():
         print("Test indice: ", test_fold)
 
 
-def combine_features(dataframes):
+def combine_features(dataframes, labeled=True):
     """
-    Combine the features of the dataframes by segment. The dataframe needs to have a 'segment' level in their index, and the innermost index needs to have the same number of rows per segment.
+    Combine the features of the dataframes by segment. The dataframe needs
+    to have a 'segment' level in their index, and the innermost index needs
+    to have the same number of rows per segment.
     """
+
     for dataframe in dataframes:
         normalize_segment_names(dataframe, inplace=True)
+    if labeled:
+        combined_dataframes = pd.concat([df.drop('Preictal', axis=1)
+                                         for df in dataframes],
+                                        axis=1)
+        combined_dataframes['Preictal'] = dataframes[0]['Preictal']
+    else:
+        combined_dataframes = pd.concat(dataframes,
+                                        axis=1)
 
-    return pd.concat(dataframes, axis=1)
+    combined_dataframes.sortlevel('segment', inplace=True)
+    return combined_dataframes
 
 
 def normalize_segment_names(dataframe, inplace=False):
