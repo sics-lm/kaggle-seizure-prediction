@@ -401,9 +401,11 @@ def reshape_frames(dataframe, frame_length=12):
     column_index = pd.MultiIndex.from_product([range(frame_length),
                                                window_columns],
                                               names=['window', 'feature'])
-    return pd.DataFrame(data=values.reshape(n_frames,
+    reshaped_frame = pd.DataFrame(data=values.reshape(n_frames,
                                             frame_width),
-                        columns=column_index)
+                                  columns=column_index)
+    reshaped_frame.sortlevel(axis=1)
+    return reshaped_frame
 
 
 def create_sliding_frames(dataframe, frame_length=12):
