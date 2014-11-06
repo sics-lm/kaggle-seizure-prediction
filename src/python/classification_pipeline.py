@@ -188,11 +188,31 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Script for running the classification pipeline""")
 
     parser.add_argument("feature_folders",
-                        help="""The folders containing the features""",
+                        help=("The folders containing the features. Multiple"
+                              " paths can be specified. The given path will "
+                              "be checked if it's a feature root folder, which"
+                              " means it's a folder containing the canonical"
+                              " subject directories. If that is the case,"
+                              " it will be expanded into those subject folders."
+                              " If it doesn't contain any canonical sujbect"
+                              " folder, the argument is assumed to contain"
+                              " feature files."),
                         nargs='+')
     parser.add_argument("-t", "--feature-type",
-                        help="""The type of the features""",
-                        choices=["wavelets", "cross-correlations", "xcorr"],
+                        help=("The type of the features for the classification."
+                              " 'cross-correlations' and 'xcorr' are synonymns."
+                              " If 'combined' is supplied, the feature folder "
+                              "arguments _must_ be feature root folders. That "
+                              "is, they must contain subject folders. "
+                              "Furthermore, to be able to determine which root "
+                              "folder correspond to which features, the root "
+                              "folder must have the string 'wavelet' in it for "
+                              "the wavelet features and the string 'corr' in"
+                              " it for cross correlation features."),
+                        choices=["wavelets",
+                                 "cross-correlations",
+                                 "xcorr",
+                                 "combined"],
                         required=True,
                         dest='feature_type')
     parser.add_argument("--rebuild-data",
