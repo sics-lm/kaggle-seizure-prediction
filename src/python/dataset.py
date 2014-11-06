@@ -1,5 +1,11 @@
 """Python module for manipulating datasets."""
 import random
+import os
+import os.path
+import logging
+import glob
+import multiprocessing
+from functools import partial
 
 import pandas as pd
 import numpy as np
@@ -8,11 +14,11 @@ from sklearn import cross_validation
 
 import fileutils
 
+
 def first(iterable):
     """Returns the first element of an iterable"""
     for element in iterable:
         return element
-
 
 class SegmentCrossValidator:
     """Wrapper for the scikit_learn CV generators to generate folds on a segment basis."""
@@ -235,7 +241,7 @@ def test_k_fold_segment_split():
     dataframe = pd.DataFrame({'Preictal': classes, 'i': i}, index=index)
 
     # With a 6-fold cross validator, we expect each held-out fold to contain exactly 2 segments, one from each class
-    cv = SegmentCrossValidator(dataframe, n_folds = 6)
+    cv = SegmentCrossValidator(dataframe, n_folds=6)
     for training_fold, test_fold in cv:
         print("Training indice: ", training_fold)
         print("Test indice: ", test_fold)
@@ -263,8 +269,149 @@ def normalize_segment_names(dataframe, inplace=False):
     return dataframe
 
 
-def extend_data_with_sliding_frames(source_array, frame_length=12):
+def load_data_frames(feature_folder,
+                     **kwargs):
+    """
+                     load_function=None,
+                     rebuild_data=False,
+                     processes=4,
+                     file_pattern="5.0s.csv",
+                     frame_length=1,
+                     sliding_frames=True):
+    """
 
+    preictal = load_feature_files(feature_folder,
+                                  class_name="preictal",
+                                  **kwargs)
+
+    interictal = load_feature_files(feature_folder,
+                                    class_name="interictal",
+                                    **kwargs)
+
+    test = load_feature_files(feature_folder,
+                              class_name="test",
+                              **kwargs)
+    preictal['Preictal'] = 1
+    interictal['Preictal'] = 0
+    return interictal, preictal, test
+
+
+def load_feature_files(feature_folder,
+                       class_name,
+                       load_function,
+                       file_pattern="5.0s.csv",
+                       rebuild_data=False,
+                       processes=1,
+                       frame_length=1,
+                       sliding_frames=True):
+    """
+    Loads all the features from the given feature folder matching the class name and file pattern. It combines them in a pandas dataframe and assigns a multilevel index to the rows based on the filenames the feature rows are taken from.
+    Args:
+        feature_folder: A path to a folder containing feature files to load.
+        class_name: The class name of the files to load, typically {'interictal', 'preictal', 'test'}.
+        load_function: Function to use for loading the feature files.
+        file_pattern: A glob pattern used to select the matching files in the feature folder. Can be used to selectivily load files.
+        rebuild_data: If False, a cached version of the data will be loaded if there is one. If True, the data will always be rebuilt, wich replaces any cached version already present.
+        processes: The number of processes to use for reading the data files in parallel.
+        frame_length: The length in number of windows each feature vector should be.
+        sliding_frames: If True, the feature-vectors will be produced by a sliding frame over all the windows of each feature file.
+    Return:
+        A pandas DataFrame with the feature frames. The frame will have a MultiIndex with the original matlab segment names and the frame number of the feature frames.
+    """
+
+    cache_file_components = [class_name,
+                            'frame_length_{}'.format(frame_length),
+                             'sliding_frames' if sliding_frames else '',
+                             'cache.pickle']
+    cache_file_basename = '_'.join(cache_file_components)
+    cache_file = os.path.join(feature_folder, cache_file_basename)
+
+    if rebuild_data or not os.path.exists(cache_file):
+        logging.info("Rebuilding {} data".format(class_name))
+        full_pattern = "*{}*{}".format(class_name, file_pattern)
+        glob_pattern = os.path.join(feature_folder, full_pattern)
+        files = glob.glob(glob_pattern)
+        segment_names = [fileutils.get_segment_name(filename) for filename in files]
+        if processes > 1:
+            logging.info("Reading files in parallel")
+            pool = multiprocessing.Pool(processes)
+            try:
+                partial_load_and_pivot = partial(load_function,
+                                                 frame_length=frame_length,
+                                                 sliding_frames=sliding_frames)
+                segment_frames = pool.map(partial_load_and_pivot, files)
+            finally:
+                pool.close()
+        else:
+            logging.info("Reading files serially")
+            segment_frames = [load_function(filename,
+                                            frame_length=frame_length,
+                                            sliding_frames=sliding_frames)
+                              for filename in files]
+
+        complete_frame = pd.concat(segment_frames,
+                                   names=('segment', 'frame'),
+                                   keys=segment_names)
+        complete_frame.sortlevel(inplace=True)
+        complete_frame.to_pickle(cache_file)
+        return complete_frame
+    else:
+        complete_frame = pd.read_pickle(cache_file)
+        return complete_frame
+
+
+def reshape_frames(dataframe, frame_length=12):
+    """
+    Returns a new dataframe with the given frame length.
+    Args:
+        dataframe: A pandas DataFrame with one window per row.
+        frame_length: The desired number of windows for each feature frame. Must divide the number of windows in *dataframe* evenly.
+    Returns:
+        A new pandas DataFrame with the desired window frame width. The columns of the new data-frame will be multi-index so that
+        future concatenation of data frames align properly.
+    """
+    # Assert that the length of the data frame is divisible by
+    # frame_length
+    n_windows, window_width = dataframe.shape
+
+    if n_windows % frame_length != 0:
+        raise ValueError("The dataframe has {} windows which"
+                         " is not divisible by the frame"
+                         " length {}".format(n_windows, frame_length))
+    values = dataframe.values
+    n_frames = n_windows / frame_length
+    frame_width = window_width * frame_length
+    window_columns = dataframe.columns
+    column_index = pd.MultiIndex.from_product([range(frame_length),
+                                               window_columns],
+                                              names=['window', 'feature'])
+    return pd.DataFrame(data=values.reshape(n_frames,
+                                            frame_width),
+                        columns=column_index)
+
+
+def create_sliding_frames(dataframe, frame_length=12):
+    """ Wrapper for the extend_data_with_sliding_frames function wich works with numpy arrays. This version does the data-frame conversion for us.
+    """
+    extended_array = extend_data_with_sliding_frames(dataframe.values)
+    # We should preserve the columns of the dataframe, otherwise
+    # concatenating different dataframes along the row-axis will give
+    # wrong results
+    window_columns = dataframe.columns
+    column_index = pd.MultiIndex.from_product([range(frame_length),
+                                               window_columns],
+                                              names=['window', 'feature'])
+    return pd.DataFrame(data=extended_array,
+                        columns=column_index)
+
+
+def extend_data_with_sliding_frames(source_array, frame_length=12):
+    """
+    Creates an array of frames from the given array of windows using a sliding window.
+    Args:
+        source_array: a numpy array with the shape (n_windows, window_length)
+        frame_length: The desired window length of the frames.
+    """
     n_rows = source_array.shape[0]
     window_size = source_array.shape[1]
 
@@ -275,8 +422,8 @@ def extend_data_with_sliding_frames(source_array, frame_length=12):
 
     dest_array = np.zeros((n_sliding_frames, frame_size), dtype=np.float64)
 
-    for i in range(0,n_sliding_frames):
-        dest_array[i] = source_array[i:i+frame_length].reshape(1,frame_size)
+    for i in range(0, n_sliding_frames):
+        dest_array[i] = source_array[i:i+frame_length].reshape(1, frame_size)
 
     return dest_array
 
