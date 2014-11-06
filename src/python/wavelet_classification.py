@@ -6,15 +6,15 @@ except ImportError:
     import pickle
 import glob
 import os.path
-from classification_pipeline import get_latest_model, write_scores
 from time import strftime, localtime
 import random
 import sys
-import pandas as pd
-import numpy as np
 import multiprocessing
 from functools import partial
 # multiprocessing.set_start_method('spawn')
+
+import pandas as pd
+import numpy as np
 from sklearn.grid_search import GridSearchCV
 from sklearn.cross_validation import *
 from sklearn.svm import SVC
@@ -22,6 +22,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier, LogisticRegression
 from sklearn.metrics import *
 from sklearn.externals import joblib
+
+import dataset
+from classification_pipeline import get_latest_model, write_scores
 
 
 # TODO: Provide singleton random generator
