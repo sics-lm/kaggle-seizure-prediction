@@ -240,6 +240,12 @@ def test_k_fold_segment_split():
         print("Test indice: ", test_fold)
 
 
+def combine_features(dataframes):
+    """
+    Combine the features of the dataframes by segment. The dataframe needs to have a 'segment' level in their index, and the innermost index needs to have the same number of rows per segment.
+    """
+    # TODO: This needs to be fixed
+    return pd.concat(dataframes, axis=1)
 
 if __name__ == '__main__':
     test_k_fold_segment_split()
