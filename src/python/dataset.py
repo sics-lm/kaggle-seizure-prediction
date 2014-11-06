@@ -6,6 +6,7 @@ import numpy as np
 import sklearn
 from sklearn import cross_validation
 
+import fileutils
 
 def first(iterable):
     """Returns the first element of an iterable"""
@@ -244,8 +245,22 @@ def combine_features(dataframes):
     """
     Combine the features of the dataframes by segment. The dataframe needs to have a 'segment' level in their index, and the innermost index needs to have the same number of rows per segment.
     """
-    # TODO: This needs to be fixed
+    for dataframe in dataframes:
+        normalize_segment_names(dataframe, inplace=True)
+
     return pd.concat(dataframes, axis=1)
+
+
+def normalize_segment_names(dataframe, inplace=False):
+    """
+    Makes the 'segment' index of the dataframe have names which correspond to the original matlab segment names.
+    """
+    index_values = dataframe.index.get_values()
+    fixed_values = [(fileutils.get_segment_name(filename), frame) for filename, frame in index_values]
+    if not inplace:
+        dataframe = dataframe.copy()
+    dataframe.index = pd.MultiIndex.from_tuples(fixed_values, names=dataframe.index.names)
+    return dataframe
 
 if __name__ == '__main__':
     test_k_fold_segment_split()
