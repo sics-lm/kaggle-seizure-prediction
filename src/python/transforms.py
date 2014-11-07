@@ -6,12 +6,12 @@ from sklearn import preprocessing
 # optional modules for trying out different transforms
 try:
     import pywt
-except ImportError, e:
+except ImportError:
     pass
 
 try:
     from scikits.talkbox.features import mfcc
-except ImportError, e:
+except ImportError:
     pass
 
 

@@ -112,6 +112,7 @@ def worker_function(segment_path, extractor_function, output_dir,
 
     features = extractor_function(segment, **extractor_kwargs)
     write_features(features, segment_path, extractor_function, output_dir, extractor_kwargs, naming_function)
+    print("Segment {} completed".format(segment_path))
 
 
 def write_features(features, segment_path, extractor_function, output_dir, extractor_kwargs, naming_function=None):
