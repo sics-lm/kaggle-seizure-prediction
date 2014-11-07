@@ -332,16 +332,16 @@ def load_feature_files(feature_folder,
                                                        'frame_length_{}'.format(frame_length)],
                                                       dict(sliding_frames=sliding_frames))
     if output_folder is None:
-        if isinstance(output_folder, str):
-            output_folder = feature_folder
-        else:
-            output_folder = first(feature_folder)
+        output_folder = feature_folder
+
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     cache_file = os.path.join(output_folder, cache_file_basename)
 
     if rebuild_data or not os.path.exists(cache_file):
+        logging.info("Rebuilding {} data from {}".format(class_name, feature_folder))
+
         feature_files = find_features_function(feature_folder,
                                                class_name=class_name,
                                                file_pattern=file_pattern)
@@ -353,6 +353,9 @@ def load_feature_files(feature_folder,
                                           processes=processes)
         complete_frame.to_pickle(cache_file)
     else:
+        logging.info("Loading {} data from "
+                     "cache file {}".format(class_name,
+                                            cache_file))
         complete_frame = pd.read_pickle(cache_file)
         complete_frame.sortlevel('segment', inplace=True)
     return complete_frame
@@ -378,7 +381,6 @@ def rebuild_features(feature_file_dicts,
     Return:
         A pandas DataFrame with the feature frames. The frame will have a MultiIndex with the original matlab segment names and the frame number of the feature frames.
     """
-    logging.info("Rebuilding {} data".format(class_name))
     tupled = [(feature['segment'], feature['files']) for feature in feature_file_dicts]
     segment_names, feature_files = zip(*tupled)
 
