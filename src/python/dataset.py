@@ -323,7 +323,8 @@ def load_feature_files(feature_folder,
                        frame_length=12,
                        sliding_frames=False,
                        processes=1,
-                       output_folder=None):
+                       output_folder=None,
+                       file_pattern="*segment*.csv"):
 
     cache_file_basename = fileutils.generate_filename('cache',
                                                       '.pickle',
@@ -341,7 +342,9 @@ def load_feature_files(feature_folder,
     cache_file = os.path.join(output_folder, cache_file_basename)
 
     if rebuild_data or not os.path.exists(cache_file):
-        feature_files = find_features_function(feature_folder, class_name=class_name)
+        feature_files = find_features_function(feature_folder,
+                                               class_name=class_name,
+                                               file_pattern=file_pattern)
         complete_frame = rebuild_features(feature_files,
                                           class_name,
                                           load_function,
