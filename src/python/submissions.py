@@ -22,7 +22,7 @@ def scores_to_submission(score_dicts, **kwargs):
 
 def create_submission_rows(score_dict,
                            do_normalize=True,
-                           old_normalization=True,
+                           old_normalization=False,
                            canonical_names=None,
                            default_score=0.0):
     """
