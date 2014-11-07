@@ -103,7 +103,7 @@ def pca_transform(interictal, preictal, test_data, label=None, do_standardize=Fa
     plt.xlabel('x_values')
     plt.ylabel('y_values')
     plt.legend()
-    plt.title('Transformed samples with class labels from matplotlib.mlab.PCA()')
+    plt.title('Transformed samples with class labels')
 
     return fig, pca
 

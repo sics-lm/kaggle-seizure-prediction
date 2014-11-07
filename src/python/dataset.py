@@ -72,7 +72,7 @@ def mean(*dataframes):
     return means
 
 
-def scale(*dataframes, center=True, scale=True, inplace=False):
+def scale(dataframes, center=True, scale=True, inplace=False):
     """Returns standardized (mean 0, standard deviation 1) versions of the given data frames.
     Args:
         dataframes: A variable number of inplace arguments which should be the
