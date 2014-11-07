@@ -67,7 +67,7 @@ def get_model(method, training_data_x, training_data_y):
     elif method == 'knn':
         clf = sklearn.neighbors.KNeighborsClassifier()
         param_grid = [{'algorithm': ['ball_tree', 'kd_tree', 'brute'],
-                       'n_neighbors' = range(1, 5)}]
+                       'n_neighbors': range(1, 5)}]
 
 
     else:
