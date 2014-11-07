@@ -369,7 +369,7 @@ def rebuild_features(feature_file_dicts,
                      load_function,
                      processes=1,
                      frame_length=1,
-                     sliding_frames=True):
+                     sliding_frames=False):
     """
     Loads all the features from the given feature folder matching the class name and file pattern. It combines them in a pandas dataframe and assigns a multilevel index to the rows based on the filenames the feature rows are taken from.
     Args:
