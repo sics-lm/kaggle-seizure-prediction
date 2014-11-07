@@ -1,4 +1,5 @@
 import mne
+mne.set_log_level(verbose='WARNING')
 from mne.time_frequency.tfr import cwt_morlet
 import random
 import sys
