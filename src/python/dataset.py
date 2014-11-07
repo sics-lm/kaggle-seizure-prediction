@@ -160,8 +160,8 @@ def merge_interictal_preictal(interictal, preictal,
     """
     interictal.sortlevel('segment', inplace=True)
     preictal.sortlevel('segment', inplace=True)
-    interictal.sortlevel(axis=1,inplace=True)
-    preictal.sortlevel(axis=1,inplace=True)
+    interictal.sortlevel(axis=1, inplace=True)
+    preictal.sortlevel(axis=1, inplace=True)
 
     if do_downsample:
         interictal = downsample(interictal, len(preictal) * downsample_ratio,
