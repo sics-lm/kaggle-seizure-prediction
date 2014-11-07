@@ -290,6 +290,7 @@ def normalize_segment_names(dataframe, inplace=False):
 
 
 def load_data_frames(feature_folder,
+                     classes=['interictal', 'preictal', 'test'],
                      sliding_frames=False,
                      **kwargs):
     """
@@ -300,21 +301,32 @@ def load_data_frames(feature_folder,
                      frame_length=1,
                      sliding_frames=True):
     """
-    preictal = load_feature_files(feature_folder,
-                                  class_name="preictal",
-                                  sliding_frames=sliding_frames,
+    if 'preictal' in classes:
+        preictal = load_feature_files(feature_folder,
+                                      class_name="preictal",
+                                      sliding_frames=sliding_frames,
+                                      **kwargs)
+        preictal['Preictal'] = 1
+    else:
+        preictal = pd.DataFrame(np.zeros(0))
+    if 'interictal' in classes:
+        interictal = load_feature_files(feature_folder,
+                                        class_name="interictal",
+                                        sliding_frames=sliding_frames,
+                                        **kwargs)
+        interictal['Preictal'] = 0
+    else:
+        interictal = pd.DataFrame(np.zeros(0))
+
+    if 'test' in classes:
+        test = load_feature_files(feature_folder,
+                                  class_name="test",
+                                  # Never use sliding frames for the test-data
+                                  sliding_frames=False,
                                   **kwargs)
-    interictal = load_feature_files(feature_folder,
-                                    class_name="interictal",
-                                    sliding_frames=sliding_frames,
-                                    **kwargs)
-    test = load_feature_files(feature_folder,
-                              class_name="test",
-                              # Never use sliding frames for the test-data
-                              sliding_frames=False,
-                              **kwargs)
-    preictal['Preictal'] = 1
-    interictal['Preictal'] = 0
+    else:
+        test = pd.DataFrame(np.zeros(0))
+
     return interictal, preictal, test
 
 
