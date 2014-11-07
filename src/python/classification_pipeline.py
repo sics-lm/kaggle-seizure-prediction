@@ -166,9 +166,9 @@ def run_classification(interictal_data,
     logging.info("Running classification on folder {}".format(subject_folder))
     if do_standardize:
         logging.info("Standardizing variables.")
-        interictal_data, preictal_data, unlabeled_data = dataset.scale(interictal_data,
+        interictal_data, preictal_data, unlabeled_data = dataset.scale([interictal_data,
                                                                        preictal_data,
-                                                                       unlabeled_data,
+                                                                       unlabeled_data],
                                                                        inplace=True)
     if model_file is None and not rebuild_model:
         model = get_latest_model(subject_folder, method)
