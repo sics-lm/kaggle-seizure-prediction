@@ -69,7 +69,7 @@ def run_batch_classification(feature_folders,
 
     logging.info("Saving submission scores to {}".format(submission_file))
     with open(submission_file, 'w') as fp:
-        submissions.write_scores(all_scores, output=fp)
+        submissions.write_scores(all_scores, output=fp, do_normalize=True)
 
 
 def load_features(feature_folders,
