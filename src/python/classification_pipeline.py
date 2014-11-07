@@ -24,6 +24,7 @@ def run_batch_classification(feature_folders,
                              rebuild_data=False,
                              feature_type='cross-correlation',
                              processes=1,
+                             csv_directory=None,
                              **kwargs):
     """Runs the batch classificatio on the feature folders.
     Args:
@@ -48,7 +49,7 @@ def run_batch_classification(feature_folders,
                                       rebuild_data=rebuild_data,
                                       processes=processes):
         kwargs.update(feature_dict)  # Adds the content of feature dict to the keywords for run_classification
-        segment_scores = run_classification(processes=processes, **kwargs)
+        segment_scores = run_classification(processes=processes, csv_directory=csv_directory, **kwargs)
         score_dict = segment_scores.to_dict()['preictal']
         all_scores.append(score_dict)
 
@@ -60,7 +61,11 @@ def run_batch_classification(feature_folders,
             name_components.append("standardized")
         name_components.append(str(timestamp))
         filename = '_'.join(name_components) + '.csv'
-        submission_file = os.path.join('..', '..', 'submissions', filename)
+        if csv_directory is not None:
+            submission_file = os.path.join(csv_directory, filename)
+        else:
+            submission_file = os.path.join('..', '..', 'submissions', filename)
+
 
     logging.info("Saving submission scores to {}".format(submission_file))
     with open(submission_file, 'w') as fp:
@@ -202,6 +207,8 @@ def run_classification(interictal_data,
 
     if csv_directory is None:
         csv_directory = subject_folder
+    if not os.path.exists(csv_directory):
+        os.makedirs(csv_directory)
     scores = write_scores(csv_directory, unlabeled_data, model, timestamp=timestamp)
     logging.info("Finnished with classification on folder {}".format(subject_folder))
 
