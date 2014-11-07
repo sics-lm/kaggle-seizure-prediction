@@ -3,6 +3,7 @@
 import os.path
 import re
 import json
+import glob
 from collections import defaultdict
 
 CANONICAL_NAMES_FILE = '../../data/test_segment_names.json'
@@ -119,6 +120,55 @@ def group_folders(feature_folders):
         if subject is not None:
             grouped_folders[subject].append(feature_folder)
     return grouped_folders
+
+
+def generate_filename(suffix, prefix, components, optional_components=None, sep='_'):
+    """
+    Generates a file name starting with *suffix* and ending with *prefix*,
+    with the strings in *components* in-between. The dictionary
+    *optional_components* should contain mappings of component names to bools.
+    The names of optional components will only be included if their value is True.
+    """
+    name_components = [suffix] + components
+    for optional_component, do_include in optional_components.items():
+        if do_include:
+            name_components.append(optional_component)
+    name_components.append(prefix)
+    return sep.join(name_components)
+
+
+def find_feature_files(feature_folder, class_name, file_pattern="*segment*.csv"):
+    """
+    Collects the files from *feature_folder* matching *class_name* and *file_pattern*
+    """
+    full_pattern = "*{}*{}".format(class_name, file_pattern)
+    glob_pattern = os.path.join(feature_folder, full_pattern)
+    files = glob.glob(glob_pattern)
+    return [{'segment' : get_segment_name(filename), 'files': filename}
+            for filename in sorted(files)]
+
+
+def find_grouped_feature_files(feature_folders, class_name, file_pattern="*segment*.csv"):
+    """
+    Collect the feature files in feature_folders which correspond to the same segment.
+    """
+    segments = defaultdict(list)
+    for feature_folder in feature_folders:
+        ## First we locate the files with the canonical segment they
+        ## are derived from, using the usual find_feature_files
+        feature_file_dicts = find_feature_files(feature_folder, class_name, file_pattern=file_pattern)
+
+        ## feature_file_dicts is a list of dictionaries, containing a
+        ## segment name key and a files key, we group this into our
+        ## segments dictionary
+        for feature_file_dict in feature_file_dicts:
+            segment = feature_file_dict['segment']
+            filename = feature_file_dict['files']
+            segments[segment].append(filename)
+
+    return [dict(segment=segment, files=files)
+            for segment, files
+            in sorted(segments.items())]
 
 
 def load_modules(module_names):

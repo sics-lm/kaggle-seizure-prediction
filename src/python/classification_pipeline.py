@@ -9,6 +9,7 @@ import sys
 
 import correlation_convertion
 import wavelet_classification
+import features_combined
 import dataset
 import seizure_modeling
 import fileutils
@@ -120,35 +121,19 @@ def load_features(feature_folders,
     elif feature_type == 'combined':
         combined_folders = fileutils.group_folders(feature_folders)
         for subject, combo_folders in combined_folders.items():
-            interictal_frames = []
-            preictal_frames = []
-            unlabeled_frames = []
-
-            for folder_path in combo_folders:
-                if 'wavelet' in folder_path:
-                    feature_module = wavelet_classification
-                elif 'corr' in folder_path:
-                    feature_module = correlation_convertion
-                dataframes = feature_module.load_data_frames(folder_path,
-                                                             rebuild_data=rebuild_data,
-                                                             processes=processes,
-                                                             frame_length=frame_length,
-                                                             sliding_frames=sliding_frames)
-                interictal, preictal, unlabeled = dataframes
-                interictal_frames.append(interictal)
-                preictal_frames.append(preictal)
-                unlabeled_frames.append(unlabeled)
-
-            interictal_data = dataset.combine_features(interictal_frames,
-                                                       labeled=True)
-            preictal_data = dataset.combine_features(preictal_frames,
-                                                     labeled=True)
-            unlabeled_data = dataset.combine_features(unlabeled_frames,
-                                                      labeled=False)
-
+            ## We create an output folder which is based on the subject name
             subject_folder = os.path.join('..', '..', 'data', 'combined', subject)
             if not os.path.exists(subject_folder):
                 os.makedirs(subject_folder)
+
+            interictal, preictal, unlabeled = dataset.load_data_frames(combo_folders,
+                                                                       load_function=features_combined.load,
+                                                                       find_features_function=fileutils.find_grouped_feature_files,
+                                                                       rebuild_data=rebuild_data,
+                                                                       processes=processes,
+                                                                       frame_length=frame_length,
+                                                                       sliding_frames=sliding_frames,
+                                                                       output_folder=subject_folder)
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
                        unlabeled_data=unlabeled,
@@ -395,7 +380,7 @@ if __name__ == '__main__':
                               " search is. 0 disables output."),
                         default=1,
                         type=int,
-                        choices=[0,1,2],
+                        choices=[0, 1, 2],
                         dest='cv_verbosity')
 
     args_dict = vars(parser.parse_args())

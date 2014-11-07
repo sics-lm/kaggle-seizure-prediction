@@ -69,4 +69,7 @@ def load_data_frames(feature_folder,
     """
     Loads the dataframes for the feature files in *feature_folder*. This function has been deprecated in favor of dataset.load_data_frames.
     """
-    return dataset.load_data_frames(feature_folder, load_function=load_and_pivot, **kwargs)
+    return dataset.load_data_frames(feature_folder,
+                                    load_function=load_and_pivot,
+                                    find_features_function=fileutils.find_feature_files,
+                                    **kwargs)

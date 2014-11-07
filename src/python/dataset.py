@@ -13,7 +13,7 @@ import sklearn
 from sklearn import cross_validation
 
 import fileutils
-
+import features_combined
 
 def first(iterable):
     """Returns the first element of an iterable"""
@@ -286,7 +286,8 @@ def normalize_segment_names(dataframe, inplace=False):
     return dataframe
 
 
-def load_data_frames(feature_folder, sliding_frames=True,
+def load_data_frames(feature_folder,
+                     sliding_frames=False,
                      **kwargs):
     """
                      load_function=None,
@@ -296,17 +297,14 @@ def load_data_frames(feature_folder, sliding_frames=True,
                      frame_length=1,
                      sliding_frames=True):
     """
-
     preictal = load_feature_files(feature_folder,
                                   class_name="preictal",
                                   sliding_frames=sliding_frames,
                                   **kwargs)
-
     interictal = load_feature_files(feature_folder,
                                     class_name="interictal",
                                     sliding_frames=sliding_frames,
                                     **kwargs)
-
     test = load_feature_files(feature_folder,
                               class_name="test",
                               # Never use sliding frames for the test-data
@@ -319,16 +317,54 @@ def load_data_frames(feature_folder, sliding_frames=True,
 
 def load_feature_files(feature_folder,
                        class_name,
-                       load_function,
-                       file_pattern="5.0s.csv",
+                       load_function=features_combined.load,
+                       find_features_function=fileutils.find_grouped_feature_files,
                        rebuild_data=False,
+                       frame_length=12,
+                       sliding_frames=False,
                        processes=1,
-                       frame_length=1,
-                       sliding_frames=True):
+                       output_folder=None):
+
+    cache_file_basename = fileutils.generate_filename('cache',
+                                                      '.pickle',
+                                                      [class_name,
+                                                       'frame_length_{}'.format(frame_length)],
+                                                      dict(sliding_frames=sliding_frames))
+    if output_folder is None:
+        if isinstance(output_folder, str):
+            output_folder = feature_folder
+        else:
+            output_folder = first(feature_folder)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    cache_file = os.path.join(output_folder, cache_file_basename)
+
+    if rebuild_data or not os.path.exists(cache_file):
+        feature_files = find_features_function(feature_folder, class_name=class_name)
+        complete_frame = rebuild_features(feature_files,
+                                          class_name,
+                                          load_function,
+                                          frame_length=frame_length,
+                                          sliding_frames=sliding_frames,
+                                          processes=processes)
+        complete_frame.to_pickle(cache_file)
+    else:
+        complete_frame = pd.read_pickle(cache_file)
+        complete_frame.sortlevel('segment', inplace=True)
+    return complete_frame
+
+
+def rebuild_features(feature_file_dicts,
+                     class_name,
+                     load_function,
+                     processes=1,
+                     frame_length=1,
+                     sliding_frames=True):
     """
     Loads all the features from the given feature folder matching the class name and file pattern. It combines them in a pandas dataframe and assigns a multilevel index to the rows based on the filenames the feature rows are taken from.
     Args:
-        feature_folder: A path to a folder containing feature files to load.
+        feature_file_dicts: A list of dictioneries, where each inner dictionary should have the keys 'segment' and 'files'. Segment should be the name of the segment which is loaded, while 'files' should be the argument to *load_function*, typically a single or multiple filenames.
         class_name: The class name of the files to load, typically {'interictal', 'preictal', 'test'}.
         load_function: Function to use for loading the feature files.
         file_pattern: A glob pattern used to select the matching files in the feature folder. Can be used to selectivily load files.
@@ -339,52 +375,49 @@ def load_feature_files(feature_folder,
     Return:
         A pandas DataFrame with the feature frames. The frame will have a MultiIndex with the original matlab segment names and the frame number of the feature frames.
     """
+    logging.info("Rebuilding {} data".format(class_name))
+    tupled = [(feature['segment'], feature['files']) for feature in feature_file_dicts]
+    segment_names, feature_files = zip(*tupled)
 
-    cache_file_components = [class_name,
-                            'frame_length_{}'.format(frame_length),
-                             'sliding_frames' if sliding_frames else '',
-                             'cache.pickle']
-    cache_file_basename = '_'.join(cache_file_components)
-    cache_file = os.path.join(feature_folder, cache_file_basename)
-
-    if rebuild_data or not os.path.exists(cache_file):
-        logging.info("Rebuilding {} data".format(class_name))
-        full_pattern = "*{}*{}".format(class_name, file_pattern)
-        glob_pattern = os.path.join(feature_folder, full_pattern)
-        files = glob.glob(glob_pattern)
-        segment_names = [fileutils.get_segment_name(filename) for filename in files]
-        if processes > 1:
-            logging.info("Reading files in parallel")
-            pool = multiprocessing.Pool(processes)
-            try:
-                partial_load_and_pivot = partial(load_function,
-                                                 frame_length=frame_length,
-                                                 sliding_frames=sliding_frames)
-                segment_frames = pool.map(partial_load_and_pivot, files)
-            finally:
-                pool.close()
-        else:
-            logging.info("Reading files serially")
-            segment_frames = [load_function(filename,
-                                            frame_length=frame_length,
-                                            sliding_frames=sliding_frames)
-                              for filename in files]
-
-        complete_frame = pd.concat(segment_frames,
-                                   names=('segment', 'frame'),
-                                   keys=segment_names)
-
-        complete_frame.sortlevel('segment', inplace=True)
-        if np.count_nonzero(np.isnan(complete_frame)) != 0:
-            logging.warn("NaN values found, using interpolation")
-            complete_frame = complete_frame.interpolate(method='linear')
-
-        complete_frame.to_pickle(cache_file)
-        return complete_frame
+    if processes > 1:
+        segment_frames = load_files_parallel(feature_files,
+                                             load_function=load_function,
+                                             processes=processes,
+                                             frame_length=frame_length,
+                                             sliding_frames=sliding_frames)
     else:
-        complete_frame = pd.read_pickle(cache_file)
-        complete_frame.sortlevel('segment', inplace=True)
-        return complete_frame
+        segment_frames = load_files_serial(feature_files,
+                                           load_function=load_function,
+                                           frame_length=frame_length,
+                                           sliding_frames=sliding_frames)
+
+    complete_frame = pd.concat(segment_frames,
+                               names=('segment', 'frame'),
+                               keys=segment_names)
+
+    complete_frame.sortlevel('segment', inplace=True)
+    if np.count_nonzero(np.isnan(complete_frame)) != 0:
+        logging.warn("NaN values found, using interpolation")
+        complete_frame = complete_frame.interpolate(method='linear')
+
+    return complete_frame
+
+
+def load_files_parallel(feature_files, load_function, processes, **kwargs):
+    logging.info("Reading files in parallel")
+    pool = multiprocessing.Pool(processes)
+    try:
+        partial_load_and_pivot = partial(load_function, **kwargs)
+        segment_frames = pool.map(partial_load_and_pivot, feature_files)
+    finally:
+        pool.close()
+    return segment_frames
+
+
+def load_files_serial(feature_files, load_function, **kwargs):
+    logging.info("Reading files serially")
+    return [load_function(files, **kwargs)
+            for files in feature_files]
 
 
 def reshape_frames(dataframe, frame_length=12):
@@ -413,7 +446,7 @@ def reshape_frames(dataframe, frame_length=12):
                                                window_columns],
                                               names=['window', 'feature'])
     reshaped_frame = pd.DataFrame(data=values.reshape(n_frames,
-                                            frame_width),
+                                                      frame_width),
                                   columns=column_index)
     reshaped_frame.sortlevel(axis=1)
     return reshaped_frame

@@ -25,6 +25,7 @@ from sklearn.externals import joblib
 
 import dataset
 from classification_pipeline import get_latest_model, write_scores
+import fileutils
 
 
 # TODO: Provide singleton random generator
@@ -129,6 +130,7 @@ def load_data_frames(feature_folder,
                      sliding_frames=True):
     return dataset.load_data_frames(feature_folder,
                                     load_function=load_csv,
+                                    find_features_function=fileutils.find_feature_files,
                                     rebuild_data=rebuild_data,
                                     processes=processes,
                                     file_pattern=file_pattern,
