@@ -168,7 +168,7 @@ def merge_scores(score_dicts):
 
 def write_scores(scores,
                  output=sys.stdout,
-                 do_normalize=False,
+                 do_normalize=True,
                  default_score=0):
     """Writes the given classification_files to output in submission format."""
     submissions = scores_to_submission(scores, do_normalize=do_normalize, default_score=default_score)
@@ -207,9 +207,9 @@ if __name__ == '__main__':
         with open(args.output, 'w') as fp:
             submission_from_files(args.classification_files,
                                   output=fp,
-                                  do_normalize=False,
+                                  do_normalize=args.do_normalize,
                                   default_score=args.default_score)
     else:
         submission_from_files(args.classification_files,
-                              do_normalize=False,
+                              do_normalize=args.do_normalize,
                               default_score=args.default_score)
