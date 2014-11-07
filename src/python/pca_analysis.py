@@ -18,8 +18,15 @@ from matplotlib import pyplot as plt
 def has_nan(df):
     return np.count_nonzero(np.isnan(df)) != 0
 
-def run_pca_analysis(feature_folder, do_downsample=True, n_samples=100, do_standardize=False):
-    interictal, preictal, test_data = load_data_frames(feature_folder)
+def run_pca_analysis(feature_folder,
+                     do_downsample=True,
+                     n_samples=100,
+                     do_standardize=False,
+                     frame_length=12,
+                     sliding_frames=False):
+    interictal, preictal, test_data = load_data_frames(feature_folder,
+                                                       frame_length=frame_length,
+                                                       sliding_frames=sliding_frames)
 
     if has_nan(interictal) or has_nan(preictal) or has_nan(test_data):
         print("WARNING: NaN values found, quitting!",
@@ -45,8 +52,11 @@ def run_xcorr_pca_analysis(feature_folder,
                            frame_length=1,
                            do_downsample=True,
                            n_samples=100,
-                           do_standardize=False):
-    interictal, preictal, test_data = correlation_convertion.load_data_frames(feature_folder, frame_length=frame_length)
+                           do_standardize=False,
+                           sliding_frames=False):
+    interictal, preictal, test_data = correlation_convertion.load_data_frames(feature_folder,
+                                                                              frame_length=frame_length,
+                                                                              sliding_frames=sliding_frames)
     fig,pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
@@ -114,20 +124,24 @@ if __name__ == '__main__':
 
     parser.add_argument("feature_folder",
                         help="""The folder containing the features""",)
+
     # parser.add_argument("--rebuild-data",
     #                     action='store_true',
     #                     help="Should the dataframes be re-read from the csv feature files",
     #                     dest='rebuild_data')
+
     parser.add_argument("--no-downsample",
                         action='store_false',
                         default=True,
                         help="Disable downsampling of the majority class",
                         dest='do_downsample')
+
     parser.add_argument("--n-samples",
                         default=300,
                         type=int,
                         help="The number of samples to take from each dataset when downsampling",
                         dest='n_samples')
+
     parser.add_argument("--do-standardize",
                         default=False,
                         action='store_true',
@@ -139,26 +153,38 @@ if __name__ == '__main__':
     #                     help="Disable splitting data by segment.",
     #                     dest='do_segment_split',
     #                     default=True)
+
     # parser.add_argument("--processes",
     #                     help="How many processes should be used for parellelized work.",
     #                     dest='processes',
     #                     default=4,
     #                     type=int)
+
     parser.add_argument("--frame-length",
                         help="The size in windows each frame (feature vector) should be. Only applicable to --feature-type 'xcorr' at the momen",
                         dest='frame_length',
-                        default=1,
+                        default=12,
                         type=int)
+
+    parser.add_argument("--sliding-frames",
+                        help="Enable oversampling by using a sliding frame over the windows",
+                        dest='sliding_frames',
+                        default=False,
+                        action='store_true')
+
     parser.add_argument("--feature-type", help="What kind of features are being processed.", choices=['wavelets', 'xcorr'],
                         default='wavelets')
 
     args = parser.parse_args()
     if args.feature_type == 'wavelets':
         run_pca_analysis(args.feature_folder, do_downsample=args.do_downsample,
-                         n_samples=args.n_samples, do_standardize=args.do_standardize)
+                         n_samples=args.n_samples, do_standardize=args.do_standardize,
+                         sliding_frames=args.sliding_frames,
+                         frame_length=args.frame_length)
     elif args.feature_type == 'xcorr':
         run_xcorr_pca_analysis(feature_folder=args.feature_folder,
                                frame_length=args.frame_length,
                                do_downsample=args.do_downsample,
                                n_samples=args.n_samples,
-                               do_standardize=args.do_standardize)
+                               do_standardize=args.do_standardize,
+                               sliding_frames=args.sliding_frames)
