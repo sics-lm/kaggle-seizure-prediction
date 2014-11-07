@@ -6,7 +6,6 @@ import sys
 import numpy as np
 from itertools import chain
 
-import segment as sg
 import feature_extractor
 import wavelets as wv
 
