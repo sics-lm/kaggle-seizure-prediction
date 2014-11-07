@@ -59,6 +59,17 @@ def get_model(method, training_data_x, training_data_y):
                        'n_estimators': [10, 100, 100],
                        'criterion': ['gini', 'entropy']}]
 
+    elif method == 'nearest-centroid':
+        clf = sklearn.neighbors.NearestCentroid()
+        param_grid = [{'shrink_threshold': None},
+                      {'shrink_threshold': np.linspace(0, 2, 10)}]
+
+    elif method == 'knn':
+        clf = sklearn.neighbors.KNeighborsClassifier()
+        param_grid = [{'algorithm': ['ball_tree', 'kd_tree', 'brute'],
+                       'n_neighbors' = range(1, 5)}]
+
+
     else:
         raise NotImplementedError("Method {} is not supported".format(method))
 

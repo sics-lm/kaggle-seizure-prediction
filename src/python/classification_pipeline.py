@@ -359,7 +359,9 @@ if __name__ == '__main__':
                         choices=['logistic',
                                  'svm',
                                  'sgd',
-                                 'random-forest'],
+                                 'random-forest',
+                                 'nearest-centroid',
+                                 'knn'],
                         default='logistic')
     parser.add_argument("--processes",
                         help="How many processes should be used for parellelized work.",
