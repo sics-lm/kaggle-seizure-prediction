@@ -94,6 +94,54 @@ class Segment:
     def get_dataframe(self):
         return self.dataframe
 
+    def resample_frequency(self, new_frequency, method='resample', inplace=True, **method_kwargs):
+        """
+        Resample the signal to a new frequency.
+        Args:
+            new_frequency: The frequency to downsample to. For
+                           *method* = 'decimate', it should be lower than
+                           the current frequency.
+            method: The method to use for resampling, should be either of
+                    'resample' or 'decimate', corresponding to
+                    *scipy.signal.resample* and *scipy.signal.decimate*
+                    respectively.
+            inplace: Whether the resampled segment values should replace the
+                     current one. If False, a new DFSegment object will be
+                     returned.
+            method_kwargs: Key-word arguments to pass to the resampling method,
+                           see *scipy.signal.resample* and
+                           *scipy.signal.decimate* for details.
+        Returns:
+            A DFSegment with the new frequency. If inplace=True, the calling
+            object will be returned, otherwise a newly constructed segment is
+            returned.
+        """
+        if not inplace:
+            raise ValueError("Resample on Segment only supports inplace")
+        data = self.mat_struct.data
+        if method == 'resample':
+            print("Using scipy.signal.resample")
+            #Use scipy.signal.resample
+            n_samples = int(self.get_n_samples() * new_frequency/self.mat_struct.sampling_frequency)
+            resampled_signal = scipy.signal.resample(data, n_samples, axis=1, **method_kwargs)
+        elif method == 'decimate':
+            print("Using scipy.signal.decimate")
+            #Use scipy.signal.decimate
+            decimation_factor = int(round(self.mat_struct.sampling_frequency/new_frequency))
+            #Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
+            adjusted_new_frequency = self.mat_struct.sampling_frequency/decimation_factor
+            if adjusted_new_frequency != new_frequency:
+                print("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
+            new_frequency = adjusted_new_frequency
+            resampled_signal = scipy.signal.decimate(data,
+                                                     decimation_factor,
+                                                     axis=1,
+                                                     **method_kwargs)
+        else:
+            raise ValueError("Resampling method {} is unknown.".format(method))
+        self.mat_struct.data = resampled_signal
+        self.mat_struct.sampling_frequency = new_frequency
+
 
 class DFSegment(object):
     def __init__(self, sampling_frequency, dataframe, do_downsample=False, downsample_frequency=200):
