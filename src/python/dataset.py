@@ -368,7 +368,27 @@ def load_feature_files(feature_folder,
                        output_folder=None,
                        file_pattern="*segment*.csv",
                        segment_statistics=None):
-
+    """
+    Loads all the files matching the class name and patter from the given feature folder.
+    :param feature_folder: A folder containing files to load.
+    :param class_name: The name of the class to load, 'interictal', 'preictal' or 'test'.
+    :param load_function: A function which given a feature file or list of files should return a dataframe for that
+                          feature.
+    :param find_features_function: A function which takes a folder or list of folders and returns a list of
+                                   dictionaries. The dictionaries should have the keys 'segment' and 'files'. The
+                                   values of 'files' will be sent to the load function to load the features and the
+                                   value of 'segment' will be used to tag the dataframe.
+    :param rebuild_data: If True, the data will be rebuilt, even if a data cache file exists.
+    :param frame_length: The desired length in windows of the features.
+    :param sliding_frames: If True, the features will be oversampled by using a sliding window approach.
+    :param processes: The number of processes to use for parallel loading of feature files.
+    :param output_folder: The file to save the concatenated feature data frame caches to.
+    :param file_pattern: A pattern wich will be used to select what files to load as features.
+    :param segment_statistics: A segment statistics dataframe obtained from basic_segment_statistics.read_stats, used
+                               to augment the features loaded from feature_folder.
+    :return: A pandas dataframe where all the features loaded from feature folder with the given class are
+             concatenated. The index will have a level called 'segment' with the segment name for the feature frames.
+    """
     cache_file_basename = fileutils.generate_filename('cache',
                                                       '.pickle',
                                                       [class_name,
