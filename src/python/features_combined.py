@@ -3,8 +3,6 @@ Module for dealing with combined features
 """
 import pandas as pd
 
-import wavelet_classification
-import correlation_convertion
 
 
 def load(segment_files, **kwargs):
@@ -14,8 +12,10 @@ def load(segment_files, **kwargs):
     dataframes = []
     for segment_file in segment_files:
         if 'wavelet' in segment_file:
+            import wavelet_classification
             dataframes.append(wavelet_classification.load_csv(segment_file))
         elif 'corr' in segment_file:
+            import correlation_convertion
             dataframes.append(correlation_convertion.load_and_pivot(segment_file))
         else:
             raise NotImplementedError("Don't know which feature loading function to use for {}.".format(segment_file))
