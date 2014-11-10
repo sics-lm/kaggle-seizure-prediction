@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-from scipy.signal import resample, hann
+from scipy.signal import resample, hann, filtfilt, freqz, iirfilter, lfilter, butter
 from sklearn import preprocessing
 
 # optional modules for trying out different transforms
@@ -17,6 +17,51 @@ except ImportError:
 
 # NOTE(mike): All transforms take in data of the shape (NUM_CHANNELS, NUM_FEATURES)
 # Although some have been written work on the last axis and may work on any-dimension data.
+
+class Filter:
+    """
+    Apply pre-processing filters
+    """
+    def __init__(self, sample_rate):
+        self.sample_rate = sample_rate
+        self.nyq = 0.5 * sample_rate
+
+    def apply_ellip_filter(self, data, order, cutoff, btype):
+        ripple = 3
+        attenuation = 50
+        cutoff /= self.nyq
+        b, a = iirfilter(N=order, Wn=cutoff, rp=ripple, rs=attenuation,
+                         btype=btype, ftype='ellip')
+        return lfilter(b, a, data, axis=0)
+
+    def apply_butter_filter(self, data, order, cutoff, btype):
+        ripple = 3
+        attenuation = 50
+        cutoff /= self.nyq
+        b, a = butter(N=order, Wn=cutoff, btype=btype)
+        return lfilter(b, a, data, axis=0)
+
+    def apply(self, data):
+
+        # 49-51Hz 12th order bandstop filter to remove power line noise
+        band_low = 49.0
+        band_high = 51.0
+        data = self.apply_ellip_filter(
+            data, order=12, cutoff=np.array([band_low, band_high]),
+            btype='bandstop')
+
+        # 120Hz 1st order low-pass filter
+        low = 120.0
+        data = self.apply_ellip_filter(
+            data, order=1, cutoff=low, btype='lowpass')
+
+        # 0.5Hz 5th-order high-pass filter to remove dc component
+        high = 0.5
+        data = self.apply_ellip_filter(
+            data, order=5, cutoff=high, btype='highpass')
+
+        return data
+
 
 
 class FFT:
@@ -524,7 +569,7 @@ class TimeFreqCorrelation:
         return np.concatenate((data1, data2), axis=data1.ndim-1)
 
 
-class FFTWithTimeFreqCorrelation:
+class FFTWithTimeFreqCorrelation(object):
     """
     Combines FFT with time and frequency correlation, taking both correlation coefficients and eigenvalues.
     """
@@ -542,3 +587,14 @@ class FFTWithTimeFreqCorrelation:
         data2 = FreqCorrelation(self.start, self.end, self.scale_option, with_fft=True).apply(data)
         assert data1.ndim == data2.ndim
         return np.concatenate((data1, data2), axis=data1.ndim-1)
+
+
+class FilteredFFTWithTFCorrelation(FFTWithTimeFreqCorrelation):
+    """docstring for FilteredFFTWithTFCorrelation"""
+    def __init__(self, start, end, max_hz, scale_option, sample_rate):
+        super(FilteredFFTWithTFCorrelation, self).__init__(start, end, max_hz, scale_option)
+        self.sample_rate = sample_rate
+
+    def apply(self, data):
+        data = Filter(self.sample_rate).apply(data)
+        return super(FilteredFFTWithTFCorrelation, self).apply(data)

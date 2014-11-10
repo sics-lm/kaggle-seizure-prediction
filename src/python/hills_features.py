@@ -10,7 +10,7 @@ import feature_extractor
 import wavelets as wv
 
 from transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
-
+from transforms import FilteredFFTWithTFCorrelation as Filtered_TF_xcorr
 
 def extract_features_for_segment(
     segment, transformation=None,feature_length_seconds=60, window_size=5, **kwargs):
@@ -35,7 +35,9 @@ def extract_features_for_segment(
     """
 
     if transformation is None:
-        transformation = FFT_TF_xcorr(1, 48, 400, 'usf')
+        # transformation = FFT_TF_xcorr(1, 48, 400, 'usf')
+        transformation = Filtered_TF_xcorr(
+            1, 48, 400, 'usf', segment.get_sampling_frequency())
     # TODO: Assert that the function implements
     # else:
 
