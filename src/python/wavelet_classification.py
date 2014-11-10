@@ -127,7 +127,8 @@ def load_data_frames(feature_folder,
                      processes=4,
                      file_pattern="extract_features_for_segment.csv",
                      frame_length=12,
-                     sliding_frames=False):
+                     sliding_frames=False,
+                     segment_statistics=None):
     return dataset.load_data_frames(feature_folder,
                                     load_function=load_csv,
                                     find_features_function=fileutils.find_feature_files,
@@ -135,7 +136,8 @@ def load_data_frames(feature_folder,
                                     processes=processes,
                                     file_pattern=file_pattern,
                                     frame_length=frame_length,
-                                    sliding_frames=sliding_frames)
+                                    sliding_frames=sliding_frames,
+                                    segment_statistics=segment_statistics)
 
 
 def split_experiment_data(train_interictal, train_preictal, training_ratio=0.8,
