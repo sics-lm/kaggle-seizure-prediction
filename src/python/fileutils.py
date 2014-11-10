@@ -122,7 +122,7 @@ def group_folders(feature_folders):
     return grouped_folders
 
 
-def generate_filename(prefix, suffix, components, optional_components=None, sep='_', timestamp=None):
+def generate_filename(prefix, suffix, components, optional_components=None, sep='-', timestamp=None):
     """
     Generates a file name starting with *suffix* and ending with *prefix*,
     with the strings in *components* in-between. The dictionary
@@ -130,9 +130,10 @@ def generate_filename(prefix, suffix, components, optional_components=None, sep=
     The names of optional components will only be included if their value is True.
     """
     name_components = [prefix] + components
-    for optional_component, do_include in optional_components.items():
-        if do_include:
-            name_components.append(optional_component)
+    if optional_components is not None:
+        for optional_component, do_include in optional_components.items():
+            if do_include:
+                name_components.append(optional_component)
     if timestamp is not None:
         name_components.append(timestamp)
     return sep.join(name_components) + suffix
