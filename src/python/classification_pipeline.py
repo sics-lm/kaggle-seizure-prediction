@@ -111,10 +111,10 @@ def load_features(feature_folders,
         to next. The dictionary contains the keys 'subject_folder',
         'interictal_data', 'preictal_data' and 'unlabeled_data'.
     """
-    feature_folders = fileutils.expand_folders(feature_folders)
+    feature_folders = sorted(fileutils.expand_folders(feature_folders))
 
-    if feature_type == 'wavelets' or feature_type == 'cross-correlations' or feature_type == 'xcorr':
-        if feature_type == 'wavelets':
+    if feature_type  in ['wavelets', 'hills', 'cross-correlations', 'xcorr']:
+        if feature_type == 'wavelets' or feature_type == 'hills':
             feature_module = wavelet_classification
         else:
             feature_module = correlation_convertion
@@ -310,6 +310,7 @@ if __name__ == '__main__':
                         choices=["wavelets",
                                  "cross-correlations",
                                  "xcorr",
+                                 "hills",
                                  "combined"],
                         required=True,
                         dest='feature_type')
