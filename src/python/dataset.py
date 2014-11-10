@@ -6,6 +6,7 @@ import logging
 import glob
 import multiprocessing
 from functools import partial
+import logging
 
 import pandas as pd
 import numpy as np
@@ -13,7 +14,8 @@ import sklearn
 from sklearn import cross_validation
 
 import fileutils
-import features_combined
+from features_combined import load as load_combined
+import basic_segment_statistics
 
 def first(iterable):
     """Returns the first element of an iterable"""
@@ -264,10 +266,12 @@ def test_k_fold_segment_split():
     dataframe = pd.DataFrame({'Preictal': classes, 'i': i}, index=index)
 
     # With a 6-fold cross validator, we expect each held-out fold to contain exactly 2 segments, one from each class
-    cv = SegmentCrossValidator(dataframe, n_folds=6)
-    for training_fold, test_fold in cv:
-        print("Training indice: ", training_fold)
-        print("Test indice: ", test_fold)
+    cv1 = SegmentCrossValidator(dataframe, n_folds=6, shuffle=True, random_state=42)
+    cv2 = SegmentCrossValidator(dataframe, n_folds=6, shuffle=True, random_state=42)
+
+    for (training_fold1, test_fold1), (training_fold2, test_fold2) in zip(cv1, cv2):
+        assert np.all(training_fold1 == training_fold1) and np.all(test_fold1 == test_fold2)
+
 
 
 def combine_features(dataframes, labeled=True):
@@ -305,8 +309,9 @@ def normalize_segment_names(dataframe, inplace=False):
 
 
 def load_data_frames(feature_folder,
-                     classes=['interictal', 'preictal', 'test'],
+                     classes=('interictal', 'preictal', 'test'),
                      sliding_frames=False,
+                     segment_statistics=None,
                      **kwargs):
     """
                      load_function=None,
@@ -316,10 +321,15 @@ def load_data_frames(feature_folder,
                      frame_length=1,
                      sliding_frames=True):
     """
+    if segment_statistics is not None:
+        segment_statistics = basic_segment_statistics.read_stats(segment_statistics)
+
+
     if 'preictal' in classes:
         preictal = load_feature_files(feature_folder,
                                       class_name="preictal",
                                       sliding_frames=sliding_frames,
+                                      segment_statistics=segment_statistics,
                                       **kwargs)
         preictal['Preictal'] = 1
     else:
@@ -328,6 +338,7 @@ def load_data_frames(feature_folder,
         interictal = load_feature_files(feature_folder,
                                         class_name="interictal",
                                         sliding_frames=sliding_frames,
+                                        segment_statistics=segment_statistics,
                                         **kwargs)
         interictal['Preictal'] = 0
     else:
@@ -338,6 +349,7 @@ def load_data_frames(feature_folder,
                                   class_name="test",
                                   # Never use sliding frames for the test-data
                                   sliding_frames=False,
+                                  segment_statistics=segment_statistics,
                                   **kwargs)
     else:
         test = pd.DataFrame(np.zeros(0))
@@ -347,14 +359,15 @@ def load_data_frames(feature_folder,
 
 def load_feature_files(feature_folder,
                        class_name,
-                       load_function=features_combined.load,
+                       load_function=load_combined,
                        find_features_function=fileutils.find_grouped_feature_files,
                        rebuild_data=False,
                        frame_length=12,
                        sliding_frames=False,
                        processes=1,
                        output_folder=None,
-                       file_pattern="*segment*.csv"):
+                       file_pattern="*segment*.csv",
+                       segment_statistics=None):
 
     cache_file_basename = fileutils.generate_filename('cache',
                                                       '.pickle',
@@ -432,7 +445,7 @@ def rebuild_features(feature_file_dicts,
 
     complete_frame.sortlevel('segment', inplace=True)
     if np.count_nonzero(np.isnan(complete_frame)) != 0:
-        logging.warn("NaN values found, using interpolation")
+        logging.warning("NaN values found, using interpolation")
         complete_frame = complete_frame.interpolate(method='linear')
 
     return complete_frame
