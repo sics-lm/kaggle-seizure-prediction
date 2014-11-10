@@ -122,19 +122,20 @@ def group_folders(feature_folders):
     return grouped_folders
 
 
-def generate_filename(suffix, prefix, components, optional_components=None, sep='_'):
+def generate_filename(prefix, suffix, components, optional_components=None, sep='_', timestamp=None):
     """
     Generates a file name starting with *suffix* and ending with *prefix*,
     with the strings in *components* in-between. The dictionary
     *optional_components* should contain mappings of component names to bools.
     The names of optional components will only be included if their value is True.
     """
-    name_components = [suffix] + components
+    name_components = [prefix] + components
     for optional_component, do_include in optional_components.items():
         if do_include:
             name_components.append(optional_component)
-    name_components.append(prefix)
-    return sep.join(name_components)
+    if timestamp is not None:
+        name_components.append(timestamp)
+    return sep.join(name_components) + suffix
 
 
 def find_feature_files(feature_folder, class_name, file_pattern="*segment*.csv"):
