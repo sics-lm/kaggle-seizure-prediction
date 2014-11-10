@@ -7,6 +7,8 @@ import pickle
 import logging
 import sys
 
+import numpy as np
+
 import correlation_convertion
 import wavelet_classification
 import features_combined
@@ -18,6 +20,8 @@ import submissions
 
 def run_batch_classification(feature_folders,
                              timestamp,
+                             file_components=None,
+                             optional_file_components=None,
                              submission_file=None,
                              frame_length=1,
                              sliding_frames=False,
@@ -25,6 +29,7 @@ def run_batch_classification(feature_folders,
                              feature_type='cross-correlation',
                              processes=1,
                              csv_directory=None,
+                             segment_statistics=None,
                              **kwargs):
     """Runs the batch classificatio on the feature folders.
     Args:
@@ -47,31 +52,36 @@ def run_batch_classification(feature_folders,
                                       frame_length=frame_length,
                                       sliding_frames=sliding_frames,
                                       rebuild_data=rebuild_data,
-                                      processes=processes):
+                                      processes=processes,
+                                      segment_statistics=segment_statistics):
         kwargs.update(feature_dict)  # Adds the content of feature dict to the keywords for run_classification
-        segment_scores = run_classification(processes=processes, csv_directory=csv_directory, **kwargs)
+        segment_scores = run_classification(processes=processes,
+                                            csv_directory=csv_directory,
+                                            file_components=file_components,
+                                            optional_file_components=optional_file_components,
+                                            **kwargs)
         score_dict = segment_scores.to_dict()['preictal']
         all_scores.append(score_dict)
 
     if submission_file is None:
-        name_components = [feature_type,
-                           kwargs['method'],
-                           'frame_length_{}'.format(frame_length)]
-
-        optional_components = dict(standardized=kwargs['do_standardize'],
-                                   sliding_frames=sliding_frames)
+        if file_components is None:
+            file_components = [feature_type,
+                               kwargs['method'],
+                               'frame_length_{}'.format(frame_length)]
+        if optional_file_components is None:
+            optional_file_components = dict(standardized=kwargs['do_standardize'],
+                                            sliding_frames=sliding_frames)
 
         filename = fileutils.generate_filename('submission',
                                                '.csv',
-                                               name_components,
-                                               optional_components,
+                                               file_components,
+                                               optional_file_components,
                                                timestamp=timestamp)
 
         if csv_directory is not None:
             submission_file = os.path.join(csv_directory, filename)
         else:
             submission_file = os.path.join('..', '..', 'submissions', filename)
-
 
     logging.info("Saving submission scores to {}".format(submission_file))
     with open(submission_file, 'w') as fp:
@@ -83,7 +93,8 @@ def load_features(feature_folders,
                   frame_length=1,
                   sliding_frames=False,
                   rebuild_data=False,
-                  processes=1):
+                  processes=1,
+                  segment_statistics=None):
     """
     Loads the features from the list of paths *feature_folder*. Returns an
     iterator of dictionaries, where each dictionary has the keys 'subject_folder',
@@ -106,6 +117,7 @@ def load_features(feature_folders,
                         by a sliding window, greatly increasing the number of
                         generated frames.
         processes: The number of processes to use for parallel processing.
+        :param segment_statistics: If this filename is supplied, the dataframes will be augmented with features from this file
     Returns:
         A generator object which gives a dictionary with features for every call
         to next. The dictionary contains the keys 'subject_folder',
@@ -113,7 +125,7 @@ def load_features(feature_folders,
     """
     feature_folders = sorted(fileutils.expand_folders(feature_folders))
 
-    if feature_type  in ['wavelets', 'hills', 'cross-correlations', 'xcorr']:
+    if feature_type in ['wavelets', 'hills', 'cross-correlations', 'xcorr']:
         if feature_type == 'wavelets' or feature_type == 'hills':
             feature_module = wavelet_classification
         else:
@@ -123,7 +135,8 @@ def load_features(feature_folders,
                                                                               rebuild_data=rebuild_data,
                                                                               processes=processes,
                                                                               frame_length=frame_length,
-                                                                              sliding_frames=sliding_frames)
+                                                                              sliding_frames=sliding_frames,
+                                                                              segment_statistics=segment_statistics)
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
                        unlabeled_data=unlabeled,
@@ -137,14 +150,16 @@ def load_features(feature_folders,
             if not os.path.exists(subject_folder):
                 os.makedirs(subject_folder)
 
-            interictal, preictal, unlabeled = dataset.load_data_frames(combo_folders,
-                                                                       load_function=features_combined.load,
-                                                                       find_features_function=fileutils.find_grouped_feature_files,
-                                                                       rebuild_data=rebuild_data,
-                                                                       processes=processes,
-                                                                       frame_length=frame_length,
-                                                                       sliding_frames=sliding_frames,
-                                                                       output_folder=subject_folder)
+            dataframes = dataset.load_data_frames(combo_folders,
+                                                  load_function=features_combined.load,
+                                                  find_features_function=fileutils.find_grouped_feature_files,
+                                                  rebuild_data=rebuild_data,
+                                                  processes=processes,
+                                                  frame_length=frame_length,
+                                                  sliding_frames=sliding_frames,
+                                                  output_folder=subject_folder,
+                                                  segment_statistics=segment_statistics)
+            interictal, preictal, unlabeled = dataframes
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
                        unlabeled_data=unlabeled,
@@ -158,6 +173,8 @@ def run_classification(interictal_data,
                        unlabeled_data,
                        subject_folder,
                        training_ratio=.8,
+                       file_components=None,
+                       optional_file_components=None,
                        model_file=None,
                        rebuild_model=False,
                        do_downsample=False,
@@ -168,7 +185,9 @@ def run_classification(interictal_data,
                        processes=4,
                        csv_directory=None,
                        do_refit=True,
-                       cv_verbosity=2):
+                       cv_verbosity=2,
+                       model_params=None,
+                       random_state=None):
     logging.info("Running classification on folder {}".format(subject_folder))
     if do_standardize:
         logging.info("Standardizing variables.")
@@ -193,11 +212,20 @@ def run_classification(interictal_data,
                                              training_ratio=training_ratio,
                                              processes=processes,
                                              do_standardize=do_standardize,
-                                             cv_verbosity=cv_verbosity)
+                                             cv_verbosity=cv_verbosity,
+                                             model_params=model_params,
+                                             random_state=random_state)
         if model_file is None:
             #Create a new filename based on the model method and the
             #date
-            model_basename = "model_{}_{}.pickle".format(method, timestamp)
+            if file_components is None:
+                model_basename = "model_{}_{}.pickle".format(method, timestamp)
+            else:
+                model_basename = fileutils.generate_filename('model',
+                                                             '.pickle',
+                                                             components=file_components,
+                                                             optional_components=optional_file_components,
+                                                             timestamp=timestamp)
             model_file = os.path.join(subject_folder, model_basename)
         with open(model_file, 'wb') as fp:
             pickle.dump(model, fp)
@@ -215,13 +243,13 @@ def run_classification(interictal_data,
         csv_directory = subject_folder
     if not os.path.exists(csv_directory):
         os.makedirs(csv_directory)
-    scores = write_scores(csv_directory, unlabeled_data, model, timestamp=timestamp)
+    scores = write_scores(csv_directory, unlabeled_data, model, file_components=file_components, optional_file_components=optional_file_components, timestamp=timestamp)
     logging.info("Finnished with classification on folder {}".format(subject_folder))
 
     return scores
 
 
-def write_scores(csv_directory, test_data, model, timestamp=None):
+def write_scores(csv_directory, test_data, model, file_components=None, optional_file_components=None, timestamp=None):
     """
     Writes the model prediction scores for the segments of *test_data* to a csv
     file.
@@ -240,7 +268,11 @@ def write_scores(csv_directory, test_data, model, timestamp=None):
         timestamp = datetime.datetime.now().replace(microsecond=0)
 
     segment_scores = seizure_modeling.assign_segment_scores(test_data, model)
-    score_file = "classification_{}.csv".format(timestamp)
+    if file_components is None:
+        score_file = "classification_{}.csv".format(timestamp)
+    else:
+        score_file = fileutils.generate_filename('classification','.csv', components=file_components,
+                                                 optional_components=optional_file_components, timestamp=timestamp)
     score_path = os.path.join(csv_directory, score_file)
     logging.info("Writing classification scores to {}.".format(score_path))
     segment_scores.to_csv(score_path, index_label='file')
@@ -263,13 +295,22 @@ def get_latest_model(feature_folder, method, model_pattern="model*{method}*.pick
         return None
 
 
-
-def setup_logging(timestamp, args):
+def setup_logging(timestamp, file_components, optional_file_components, args):
+    """
+    Sets up the logger for the classification.
+    :param timestamp: The timestamp to apply to the file
+    :param args: a dictionary with the arguments which are used by the classifier. This dict will be modified,
+                 removing items which shouldn't be sent to the classification function.
+    :return: None
+    """
     log_dir = args['log_dir']
     del args['log_dir']
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    log_file = "classification_log-method:{}-frame_length:{}-time:{}.txt".format(args['method'], args['frame_length'], timestamp)
+    log_file = fileutils.generate_filename('clog', '.txt',
+                                           components=file_components,
+                                           optional_components=optional_file_components,
+                                           timestamp=timestamp)
     log_path = os.path.join(log_dir, log_file)
 
     log_formatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
@@ -283,7 +324,26 @@ def setup_logging(timestamp, args):
     logging.basicConfig(level='INFO', handlers=(file_handler, std_handler))
 
 
-if __name__ == '__main__':
+def fix_model_params(model_params_string):
+    model_params = eval(model_params_string)
+    # GridSearchCV expects all the parameters of model_params to have list values,
+    # if any of the values aren't lists, we make them into dicts
+    listified_params = dict()
+    for param, values in model_params.items():
+        if isinstance(values, str):
+            listified_params[param] = [values]
+        else:
+            listified_params[param] = values
+    return listified_params
+
+
+
+
+def get_cli_args():
+    """
+    Returns the command line arguments.
+    :return: A dictionary with the command line argument keys
+    """
     import argparse
     parser = argparse.ArgumentParser(description="""Script for running the classification pipeline""")
 
@@ -396,12 +456,55 @@ if __name__ == '__main__':
                         type=int,
                         choices=[0, 1, 2],
                         dest='cv_verbosity')
-
+    parser.add_argument("--model-params", "--p",
+                        help=("Allows setting model parameters for the method"
+                              " used. This should be a string with a python"
+                              " expression containing a datastructure similar"
+                              " to the grid_param argument to the cross "
+                              "validation grid search, but the values doesn't have to be sequences. ",
+                              "It will be used instead of the default grid_params."),
+                        dest='model_params')
+    parser.add_argument("--segment-statistics-file",
+                        help=("Augment the features with statistics from the supplied segment statistics file"),
+                        dest='segment_statistics')
+    parser.add_argument("--random-state",
+                        help=("Give a start seed for random stuff. Ensures repeatability between runs. If set to 'None', "
+                              "The random functions won't be seeded (using default initialization)"),
+                        dest='random_state',
+                        default='1729')
     args_dict = vars(parser.parse_args())
+
+    ## Since we use 'None' to turn of constant seeding, we use eval here instead of just parsing the argument as an int
+    args_dict['random_state'] = eval(args_dict['random_state'])
+    return args_dict
+
+
+def main():
+    args_dict = get_cli_args()
+
+    if args_dict['random_state'] is not None:
+        np.random.seed(args_dict['random_state'])
+
+
+    file_components = [args_dict['feature_type'],
+                       args_dict['method'],
+                       'frame_length_{}'.format(args_dict['frame_length'])]
+    optional_file_components = {'standardized': args_dict['do_standardize'],
+                                'sliding_frames': args_dict['sliding_frames'],
+                                'segment_split': args_dict['do_segment_split'],
+                                'downsampled': args_dict['do_downsample']}
+
+    if args_dict['model_params'] is not None:
+        args_dict['model_params'] = fix_model_params(args_dict['model_params'])
+
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     ## Setup loging stuff, this removes 'log_dir' from the dictionary
-    setup_logging(timestamp, args_dict)
+    setup_logging(timestamp, file_components, optional_file_components, args_dict)
 
     logging.info("Starting training with the following arguments: {}".format(args_dict))
+    run_batch_classification(timestamp=timestamp,  **args_dict)
 
-    run_batch_classification(timestamp=timestamp, **args_dict)
+
+if __name__ == '__main__':
+    main()
+
