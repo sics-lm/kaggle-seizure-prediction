@@ -22,16 +22,17 @@ import dataset
 
 
 
-def get_model(method, training_data_x, training_data_y):
+def get_model(method, training_data_x, training_data_y, model_params=None, random_state=None):
     """
     Returns a dictionary with the model and cross-validation parameter grid for the model named *method*.
     """
-    param_grid = dict()
+    param_grid = dict()  ## This is the parameter grid which the grid search will go over
+
     min_c = sklearn.svm.l1_min_c(training_data_x, training_data_y, loss='log')
 
     if method == 'logistic':
-        clf = sklearn.linear_model.LogisticRegression(C=1, random_state=1729)
-        param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2']}
+        clf = sklearn.linear_model.LogisticRegression(C=1, random_state=random_state)
+        param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2'], 'random_state':[random_state]}
 
     elif method == 'svm':
         clf = sklearn.svm.SVC(probability=True, class_weight='auto')
@@ -69,18 +70,22 @@ def get_model(method, training_data_x, training_data_y):
         param_grid = [{'algorithm': ['ball_tree', 'kd_tree', 'brute'],
                        'n_neighbors': range(1, 5)}]
 
-
     else:
         raise NotImplementedError("Method {} is not supported".format(method))
+
+    ## Model params overrides the default param_grid
+    if model_params is not None:
+        param_grid = model_params
+
 
     return dict(estimator=clf, param_grid=param_grid)
 
 
-def get_cv_generator(training_data, do_segment_split=True):
+def get_cv_generator(training_data, do_segment_split=True, random_state=None):
     """
     Returns a cross-validation generator.
     """
-    k_fold_kwargs = dict(n_folds=10, random_state=1729)
+    k_fold_kwargs = dict(n_folds=10, random_state=random_state)
     if do_segment_split:
         cv = dataset.SegmentCrossValidator(training_data, cross_validation.StratifiedKFold, **k_fold_kwargs)
     else:
@@ -97,14 +102,18 @@ def train_model(interictal,
                 do_segment_split=True,
                 processes=1,
                 do_standardize=False,
-                cv_verbosity=2):
-
+                cv_verbosity=2,
+                model_params=None,
+                random_state=None):
+    if random_state is not None:
+        np.random.seed(random_state)
     training_data, test_data = dataset.split_experiment_data(interictal,
                                                              preictal,
                                                              training_ratio=training_ratio,
                                                              do_downsample=do_downsample,
                                                              downsample_ratio=downsample_ratio,
-                                                             do_segment_split=do_segment_split)
+                                                             do_segment_split=do_segment_split,
+                                                             random_state=random_state)
     test_data_x = test_data.drop('Preictal', axis=1)
     test_data_y = test_data['Preictal']
 
@@ -112,7 +121,9 @@ def train_model(interictal,
                        training_ratio=training_ratio,
                        do_segment_split=do_segment_split,
                        processes=processes,
-                       cv_verbosity=cv_verbosity)
+                       cv_verbosity=cv_verbosity,
+                       model_params=model_params,
+                       random_state=random_state)
 
     report = get_report(clf, test_data_x, test_data_y)
     logging.info(report)
@@ -200,17 +211,23 @@ def select_model(training_data, method='logistic',
                  training_ratio=0.8,
                  do_segment_split=True,
                  processes=1,
-                 cv_verbosity=2):
+                 cv_verbosity=2,
+                 model_params=None,
+                 random_state=None):
     """Fits a model given by *method* to the training data."""
     logging.info("Training a {} model".format(method))
 
     training_data_x = training_data.drop('Preictal', axis=1)
     training_data_y = training_data['Preictal']
 
-    cv = get_cv_generator(training_data, do_segment_split=do_segment_split)
+    cv = get_cv_generator(training_data, do_segment_split=do_segment_split, random_state=random_state)
 
     scorer = sklearn.metrics.make_scorer(sklearn.metrics.roc_auc_score, average='weighted')
-    model_dict = get_model(method, training_data_x, training_data_y)
+    model_dict = get_model(method,
+                           training_data_x,
+                           training_data_y,
+                           model_params=model_params,
+                           random_state=random_state)
     common_cv_kwargs = dict(cv=cv,
                             scoring=scorer,
                             n_jobs=processes,
