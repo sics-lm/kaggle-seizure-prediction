@@ -96,7 +96,7 @@ def run_classification(feature_folder, rebuild_data=False, training_ratio=1.0,
     return model, scores
 
 
-def load_csv(filename, frame_length=12, sliding_frames=True):
+def load_csv(filename, frame_length=12, sliding_frames=False):
 
     #Read the csvfile with pandas and extract the values into an numpy array
     from_file_array = pd.read_table(filename, sep=',', dtype=np.float64, header=None).values
