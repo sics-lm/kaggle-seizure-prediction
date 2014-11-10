@@ -54,13 +54,19 @@ def run_batch_classification(feature_folders,
         all_scores.append(score_dict)
 
     if submission_file is None:
-        name_components = ["submission"]
-        name_components.append(feature_type)
-        name_components.append(kwargs['method'])
-        if kwargs['do_standardize']:
-            name_components.append("standardized")
-        name_components.append(str(timestamp))
-        filename = '_'.join(name_components) + '.csv'
+        name_components = [feature_type,
+                           kwargs['method'],
+                           'frame_length_{}'.format(frame_length)]
+
+        optional_components = dict(standardized=kwargs['do_standardize'],
+                                   sliding_frames=sliding_frames)
+
+        filename = fileutils.generate_filename('submission',
+                                               '.csv',
+                                               name_components,
+                                               optional_components,
+                                               timestamp=timestamp)
+
         if csv_directory is not None:
             submission_file = os.path.join(csv_directory, filename)
         else:
