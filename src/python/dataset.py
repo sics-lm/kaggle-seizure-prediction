@@ -30,12 +30,12 @@ class SegmentCrossValidator:
 
         #Now create a series with only the segments as rows. This is what we will pass into the wrapped cross validation generator
         self.segments = self.all_segments['Preictal'].groupby(level='segment').first()
+        self.segments.sort(inplace=True)
 
         if base_cv is None:
             self.cv = cross_validation.StratifiedKFold(self.segments, **cv_kwargs)
         else:
             self.cv = base_cv(self.segments, **cv_kwargs)
-
 
     def __iter__(self):
         """
@@ -45,7 +45,6 @@ class SegmentCrossValidator:
             #The indices returned from self.cv are relative to the segment name data series, we pick out the segment names they belong to
             training_segments = list(self.segments[training_indices].index)
             test_segments = list(self.segments[test_indices].index)
-
             # Now that we have the segment names, we pick out the rows in the properly indexed dataframe
             all_training_indices = self.all_segments.loc[training_segments]
             all_test_indices = self.all_segments.loc[test_segments]
@@ -113,10 +112,12 @@ def scale(dataframes, center=True, scale=True, inplace=False):
         return new_dataframes
 
 
-def split_experiment_data(interictal, preictal,
+def split_experiment_data(interictal,
+                          preictal,
                           training_ratio, do_downsample=True,
                           downsample_ratio=2.0,
-                          do_segment_split=True):
+                          do_segment_split=True,
+                          random_state=None):
     """
     Creates a split of the data into two seperate data frames.
     Args:
@@ -135,17 +136,20 @@ def split_experiment_data(interictal, preictal,
     dataset = merge_interictal_preictal(interictal, preictal,
                                         do_downsample=do_downsample,
                                         downsample_ratio=downsample_ratio,
-                                        do_segment_split=do_segment_split)
+                                        do_segment_split=do_segment_split,
+                                        random_state=random_state)
     return split_dataset(dataset,
                          training_ratio=training_ratio,
-                         do_segment_split=do_segment_split)
+                         do_segment_split=do_segment_split,
+                         random_state=random_state)
 
 
 
 def merge_interictal_preictal(interictal, preictal,
                               do_downsample=True,
                               downsample_ratio=2.0,
-                              do_segment_split=True):
+                              do_segment_split=True,
+                              random_state=None):
     """
     Merges the interictal and preictal data frames to a single data frame. Also sorts the multilevel index.
 
@@ -168,13 +172,14 @@ def merge_interictal_preictal(interictal, preictal,
 
     if do_downsample:
         interictal = downsample(interictal, len(preictal) * downsample_ratio,
-                                do_segment_split=do_segment_split)
+                                do_segment_split=do_segment_split,
+                                random_state=random_state)
     dataset = pd.concat((interictal, preictal))
     dataset.sortlevel('segment', inplace=True)
     return dataset
 
 
-def downsample(df1, n_samples, do_segment_split=True):
+def downsample(df1, n_samples, do_segment_split=True, random_state=None):
     """
     Returns a downsampled version of *df1* so that it contains at most
     a ratio of *downsample_ratio* samples of df2.
@@ -185,13 +190,17 @@ def downsample(df1, n_samples, do_segment_split=True):
     Returns:
         A slice of df1 containing len(df2)*downsample_ratio number of samples.
     """
+    if random_state is not None:
+        random.seed(random_state)
+
     if do_segment_split:
-        df1_segments = set(df1.index.get_level_values('segment'))
+        df1_segments = list(sorted(df1.index.get_level_values('segment').unique()))
         samples_per_segment = len(df1)/len(df1_segments)
 
         n_segment_samples = int(n_samples / samples_per_segment)
         if n_segment_samples < len(df1_segments):
-            sample_segments = random.sample(set(df1_segments), n_segment_samples)
+            sample_segments = random.sample(df1_segments, n_segment_samples)
+
             return df1.loc[sample_segments]
         else:
             return df1
@@ -206,7 +215,7 @@ def downsample(df1, n_samples, do_segment_split=True):
             return df1
 
 
-def split_dataset(dataframe, training_ratio=.8, do_segment_split=True, shuffle=False):
+def split_dataset(dataframe, training_ratio=.8, do_segment_split=True, shuffle=False, random_state=None):
     """
     Splits the dataset into a training and test partition.
     Args:
@@ -228,10 +237,16 @@ def split_dataset(dataframe, training_ratio=.8, do_segment_split=True, shuffle=F
 
     if do_segment_split:
         # We use the segment based cross validator to get a stratified split.
-        cv = SegmentCrossValidator(dataframe, n_folds=k, shuffle=shuffle)
+        cv = SegmentCrossValidator(dataframe,
+                                   n_folds=k,
+                                   shuffle=shuffle,
+                                   random_state=random_state)
     else:
         # Don't split by segment, but still do a stratified split
-        cv = cross_validation.StratifiedKFold(dataframe['Preictal'], n_folds=k, shuffle=shuffle)
+        cv = cross_validation.StratifiedKFold(dataframe['Preictal'],
+                                              n_folds=k,
+                                              shuffle=shuffle,
+                                              random_state=random_state)
 
     training_indices, test_indices = first(cv)
     return dataframe.iloc[training_indices], dataframe.iloc[test_indices]
