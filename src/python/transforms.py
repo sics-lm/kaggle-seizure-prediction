@@ -32,14 +32,14 @@ class Filter:
         cutoff /= self.nyq
         b, a = iirfilter(N=order, Wn=cutoff, rp=ripple, rs=attenuation,
                          btype=btype, ftype='ellip')
-        return lfilter(b, a, data, axis=0)
+        return filtfilt(b, a, data, axis=0)
 
     def apply_butter_filter(self, data, order, cutoff, btype):
         ripple = 3
         attenuation = 50
         cutoff /= self.nyq
         b, a = butter(N=order, Wn=cutoff, btype=btype)
-        return lfilter(b, a, data, axis=0)
+        return filtfilt(b, a, data, axis=0)
 
     def apply(self, data):
 
