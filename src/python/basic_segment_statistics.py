@@ -106,8 +106,24 @@ def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix
     class_results.to_csv(csv_path, sep='\t', float_format='%11.4f')
 
 
-def read_stats(stat_file):
-    return pd.read_csv(stat_file, sep='\t', index_col=['metric', 'class', 'segment'])
+def read_stats(stat_file, metrics=None):
+    stats_df = pd.read_csv(stat_file, sep='\t', index_col=['metric', 'class', 'segment'])
+    assert isinstance(stats_df, pd.DataFrame)
+    stats_df.sortlevel('metric', inplace=True)
+    if metrics is not None:
+        stats_df = stats_df.loc[metrics]
+    reshaped = stats_df.reset_index(['metric', 'class', 'segment']).drop('class', axis=1).pivot('segment', 'metric')
+    return reshaped
+
+
+def read_folder(stats_folder, metrics=['absolute mean', 'absolute median', 'kurtosis', 'skew', 'std']):
+    glob_pattern = os.path.join(stats_folder, '*segments_statistics.csv')
+    files = glob.glob(glob_pattern)
+    if files:
+        stats = pd.concat([read_stats(stat_file, metrics) for stat_file in files])
+        return stats
+    else:
+        raise FileNotFoundError("No segment statistics file in folder {}".format(stats_folder))
 
 
 if __name__ == '__main__':
