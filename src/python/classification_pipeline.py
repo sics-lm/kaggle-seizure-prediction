@@ -438,7 +438,7 @@ def get_cli_args():
                         dest='submission_file')
     parser.add_argument("--frame-length",
                         help="The size in windows each frame (feature vector) should be.",
-                        dest='frame_length', default=1, type=int)
+                        dest='frame_length', default=12, type=int)
     parser.add_argument("--sliding-frames",
                         help=("If enabled, frames for the training-data will be"
                               " extracted by overlapping windows, greatly "
