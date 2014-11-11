@@ -357,6 +357,13 @@ def load_data_frames(feature_folder,
         preictal = preictal.join(segment_statistics)
         test = test.join(segment_statistics)
 
+    preictal.sortlevel('segment', inplace=True)
+    preictal.sortlevel(axis=1, inplace=True)
+    interictal.sortlevel('segment', inplace=True)
+    interictal.sortlevel(axis=1, inplace=True)
+    test.sortlevel('segment', inplace=True)
+    test.sortlevel(axis=1, inplace=True)
+
     return interictal, preictal, test
 
 
@@ -414,15 +421,12 @@ def load_feature_files(feature_folder,
                                           frame_length=frame_length,
                                           sliding_frames=sliding_frames,
                                           processes=processes)
-        complete_frame.sortlevel(axis=1, inplace=True)
-        complete_frame.sortlevel('segment', inplace=True)
         complete_frame.to_pickle(cache_file)
     else:
         logging.info("Loading {} data from "
                      "cache file {}".format(class_name,
                                             cache_file))
         complete_frame = pd.read_pickle(cache_file)
-        complete_frame.sortlevel('segment', inplace=True)
 
     return complete_frame
 
