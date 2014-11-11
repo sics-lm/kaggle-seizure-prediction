@@ -140,6 +140,30 @@ class Segment:
         self.mat_struct.sampling_frequency = new_frequency
 
 
+    def winsorize(self, scale, k=5):
+        """Makes any sample which is more than *k* scale units (std or mad) away from the centers, be exactly *k* scale
+        units from the center.
+        :param scale: A (n_channels, 1) NDArray-like with scale-estimates (like standard deviation) for the channels.
+        :param k: The maximum number of standard deviations a value is allowed to have to not be clipped
+        :return: None. The winsorizing is done inplace
+        """
+
+        limits = k * scale
+        outliers = np.abs(self.mat_struct.data) > limits
+        limited = np.sign(self.mat_struct.data) * limits
+        self.mat_struct.data[outliers] = limited[outliers]
+
+
+    def scale(self, center, scale):
+        """
+        Center and scale the signal.
+        :param center: A (n_channels, 1) NDArray-like with center-estimates (medians or means) for the channels.
+        :param scale: A (n_channels, 1) NDArray-like with scale-estimates (like standard deviation or mean absolute deviations) for the channels.
+        :return: None. The scaling is done in-place.
+        """
+        self.mat_struct.data = (self.mat_struct.data - center) / scale
+
+
 class DFSegment(object):
     def __init__(self, sampling_frequency, dataframe, do_downsample=False, downsample_frequency=200):
         self.sampling_frequency = sampling_frequency
