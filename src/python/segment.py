@@ -32,7 +32,6 @@ class Segment:
         except ValueError as exception:
             print("Error when loading {}".format(mat_filename))
             raise exception
-        self.dataframe = pd.DataFrame(self.mat_struct.data.transpose().astype('float32'), columns=self.mat_struct.channels)
 
     def get_name(self):
         return self.name
@@ -91,8 +90,6 @@ class Segment:
     def get_sequence(self):
         return self.mat_struct.sequence
 
-    def get_dataframe(self):
-        return self.dataframe
 
     def resample_frequency(self, new_frequency, method='resample', inplace=True, **method_kwargs):
         """
