@@ -414,6 +414,8 @@ def load_feature_files(feature_folder,
                                           frame_length=frame_length,
                                           sliding_frames=sliding_frames,
                                           processes=processes)
+        complete_frame.sortlevel(axis=1, inplace=True)
+        complete_frame.sortlevel('segment', inplace=True)
         complete_frame.to_pickle(cache_file)
     else:
         logging.info("Loading {} data from "
