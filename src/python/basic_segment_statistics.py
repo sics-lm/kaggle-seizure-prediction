@@ -9,6 +9,8 @@ import random
 from collections import defaultdict
 
 import pandas as pd
+import scipy.stats
+import numpy as np
 
 import segment
 
@@ -40,7 +42,24 @@ def load_segments(feature_folder, glob_pattern='*.mat', sample_size=None):
     return segments
 
 
-def load_and_transform_segments(feature_folder, glob_suffix='*', methods=None):
+def median_absolute_deviation(data, subject_median=None, axis=0):
+    """A robust estimate of the standard deviation"""
+    ## The scaling factor for estimating the standard deviation from the MAD
+    c = scipy.stats.norm.ppf(3/4)
+    if isinstance(data, pd.DataFrame):
+        if subject_median is None:
+            subject_median = data.median(axis=axis)
+        median_residuals = data - subject_median
+        mad = median_residuals.abs().median(axis=axis)
+    else:
+        if subject_median is None:
+            subject_median = np.median(data, axis=axis)
+        median_residuals = data - subject_median[:, np.newaxis]  # deviation between median and data
+        mad = np.median(np.abs(median_residuals), axis=axis)
+    return mad/c
+
+
+def load_and_transform_segments(feature_folder, glob_suffix='*', methods=None, processes=1):
     """Applies the each of the expressions in *methods* to each segment globbed by glob_pattern in feature_folder.
     Args:
         feature_folder: A folder containing the mat files to load.
@@ -60,11 +79,11 @@ def load_and_transform_segments(feature_folder, glob_suffix='*', methods=None):
             seg = segment.DFSegment.from_mat_file(f)
             if isinstance(methods, dict):
                 for name, method in methods.items():
-                    expr = 'seg.dataframe{method}'.format(method=method)
+                    expr = method.format(dataframe='seg.dataframe')
                     transformed[name][basename] = eval(expr)
             else:
                 for method in methods:
-                    expr = 'seg.dataframe{method}'.format(method=method)
+                    expr = method.format(dataframe='seg.dataframe')
                     transformed[method][basename] = eval(expr)
 
         for method_name, results in transformed.items():
@@ -78,22 +97,37 @@ def load_and_transform_segments(feature_folder, glob_suffix='*', methods=None):
     return complete_frame
 
 
-def process_subject(feature_folder, methods = {'median': '.median()',
-                                               'mean': '.mean()',
-                                               'mad' : '.mad()',
-                                               'std': '.std()',
-                                               'sem': '.sem()',
-                                               'skew': '.skew()',
-                                               'kurtosis': '.kurtosis()',
-                                               'absolute median': '.abs().median()',
-                                               'absolute mean': '.abs().mean()'},
-                    glob_suffix='*'):
+def get_default_methods(subset=None):
+    methods = {'max': '{dataframe}.max()',
+               'min': '{dataframe}.min()',
+               'median': '{dataframe}.median()',
+               'mad': 'median_absolute_deviation({dataframe})',
+               'mean': '{dataframe}.mean()',
+               'mean absolute deviation': '{dataframe}.mad()',
+               'std': '{dataframe}.std()',
+               'sem': '{dataframe}.sem()',
+               'skew': '{dataframe}.skew()',
+               'kurtosis': '{dataframe}.kurtosis()',
+               'absolute median': '{dataframe}.abs().median()',
+               'absolute mean': '{dataframe}.abs().mean()',
+               'absolute max': '{dataframe}.abs().max()'}
+    if subset is not None:
+        methods = {method: expr for method, expr in methods.items() if method in subset}
+    return methods
+
+
+def process_subject(feature_folder, methods = None,
+                    subset=None,
+                    glob_suffix='*', processes=1):
     """Calculates a bunch of statistics for the different classes of the subject in feature_folder"""
-    class_results = load_and_transform_segments(feature_folder, methods=methods, glob_suffix=glob_suffix)
+    if methods is None:
+        methods = get_default_methods(subset=subset)
+
+    class_results = load_and_transform_segments(feature_folder, methods=methods, glob_suffix=glob_suffix, processes=processes)
     return class_results
 
 
-def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix='*'):
+def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix='*', subset=None):
     """Calculates statistics for all the segment files in *feature_folder* and saves it to a file in csv_directory"""
     slashed_path = os.path.join(feature_folder, '') ## This makes sure the path has a trailing '/', so that os.dirname will give the whole path
     _, subject_folder_name = os.path.split(os.path.dirname(slashed_path))
@@ -102,8 +136,8 @@ def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix
     if not os.path.exists(csv_directory):
         os.makedirs(csv_directory)
     csv_path = os.path.join(csv_directory, filename)
-    class_results = process_subject(feature_folder, glob_suffix=glob_suffix)
-    class_results.to_csv(csv_path, sep='\t', float_format='%11.4f')
+    class_results = process_subject(feature_folder, glob_suffix=glob_suffix, processes=processes, subset=subset)
+    class_results.to_csv(csv_path, sep='\t', float_format='%11.8f')
 
 
 def read_stats(stat_file, metrics=None):
@@ -143,7 +177,11 @@ if __name__ == '__main__':
                         help="Which directory the statistics CSV file be written to.",
                         dest='csv_directory',
                         default='../../data/segment_statistics')
-
+    parser.add_argument("--metrics",
+                        nargs='+',
+                        help=("A selection of statistics to collect"),
+                        choices=get_default_methods().keys(),
+                        dest='subset')
     args = parser.parse_args()
 
-    calculate_statistics(args.feature_folder, args.csv_directory, args.processes, args.glob_suffix)
+    calculate_statistics(args.feature_folder, args.csv_directory, args.processes, args.glob_suffix, subset=args.subset)
