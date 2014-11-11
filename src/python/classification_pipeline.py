@@ -29,7 +29,7 @@ def run_batch_classification(feature_folders,
                              feature_type='cross-correlation',
                              processes=1,
                              csv_directory=None,
-                             segment_statistics=None,
+                             segment_statistics=False,
                              **kwargs):
     """Runs the batch classificatio on the feature folders.
     Args:
@@ -64,6 +64,8 @@ def run_batch_classification(feature_folders,
         all_scores.append(score_dict)
 
     if submission_file is None:
+
+
         if file_components is None:
             file_components = [feature_type,
                                kwargs['method'],
@@ -94,7 +96,7 @@ def load_features(feature_folders,
                   sliding_frames=False,
                   rebuild_data=False,
                   processes=1,
-                  segment_statistics=None):
+                  segment_statistics=False):
     """
     Loads the features from the list of paths *feature_folder*. Returns an
     iterator of dictionaries, where each dictionary has the keys 'subject_folder',
@@ -464,9 +466,12 @@ def get_cli_args():
                               "validation grid search, but the values doesn't have to be sequences. ",
                               "It will be used instead of the default grid_params."),
                         dest='model_params')
-    parser.add_argument("--segment-statistics-file",
-                        help=("Augment the features with statistics from the supplied segment statistics file"),
-                        dest='segment_statistics')
+    parser.add_argument("--segment-statistics",
+                        help=("If this flag is set, the feature dataframes will be augmented by a segment statistics "
+                              "file if it exists in the feature folder. This is not compatible with combined features"),
+                        dest='segment_statistics',
+                        action='store_true',
+                        default=False)
     parser.add_argument("--random-state",
                         help=("Give a start seed for random stuff. Ensures repeatability between runs. If set to 'None', "
                               "The random functions won't be seeded (using default initialization)"),

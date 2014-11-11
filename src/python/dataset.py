@@ -311,7 +311,7 @@ def normalize_segment_names(dataframe, inplace=False):
 def load_data_frames(feature_folder,
                      classes=('interictal', 'preictal', 'test'),
                      sliding_frames=False,
-                     segment_statistics=None,
+                     segment_statistics=False,
                      **kwargs):
     """
                      load_function=None,
@@ -321,15 +321,10 @@ def load_data_frames(feature_folder,
                      frame_length=1,
                      sliding_frames=True):
     """
-    if segment_statistics is not None:
-        segment_statistics = basic_segment_statistics.read_stats(segment_statistics)
-
-
     if 'preictal' in classes:
         preictal = load_feature_files(feature_folder,
                                       class_name="preictal",
                                       sliding_frames=sliding_frames,
-                                      segment_statistics=segment_statistics,
                                       **kwargs)
         preictal['Preictal'] = 1
     else:
@@ -338,7 +333,6 @@ def load_data_frames(feature_folder,
         interictal = load_feature_files(feature_folder,
                                         class_name="interictal",
                                         sliding_frames=sliding_frames,
-                                        segment_statistics=segment_statistics,
                                         **kwargs)
         interictal['Preictal'] = 0
     else:
@@ -349,10 +343,19 @@ def load_data_frames(feature_folder,
                                   class_name="test",
                                   # Never use sliding frames for the test-data
                                   sliding_frames=False,
-                                  segment_statistics=segment_statistics,
                                   **kwargs)
     else:
         test = pd.DataFrame(np.zeros(0))
+
+    if segment_statistics:
+        try:
+            logging.info("Loading segment statistics file from {}".format(feature_folder))
+            segment_statistics = basic_segment_statistics.read_folder(feature_folder)
+        except FileNotFoundError:
+            logging.warning("There is not statistics file in {}".format(feature_folder))
+        interictal = interictal.join(segment_statistics)
+        preictal = preictal.join(segment_statistics)
+        test = test.join(segment_statistics)
 
     return interictal, preictal, test
 
@@ -366,8 +369,7 @@ def load_feature_files(feature_folder,
                        sliding_frames=False,
                        processes=1,
                        output_folder=None,
-                       file_pattern="*segment*.csv",
-                       segment_statistics=None):
+                       file_pattern="*segment*.csv"):
     """
     Loads all the files matching the class name and patter from the given feature folder.
     :param feature_folder: A folder containing files to load.
@@ -384,8 +386,6 @@ def load_feature_files(feature_folder,
     :param processes: The number of processes to use for parallel loading of feature files.
     :param output_folder: The file to save the concatenated feature data frame caches to.
     :param file_pattern: A pattern wich will be used to select what files to load as features.
-    :param segment_statistics: A segment statistics dataframe obtained from basic_segment_statistics.read_stats, used
-                               to augment the features loaded from feature_folder.
     :return: A pandas dataframe where all the features loaded from feature folder with the given class are
              concatenated. The index will have a level called 'segment' with the segment name for the feature frames.
     """
@@ -421,6 +421,7 @@ def load_feature_files(feature_folder,
                                             cache_file))
         complete_frame = pd.read_pickle(cache_file)
         complete_frame.sortlevel('segment', inplace=True)
+
     return complete_frame
 
 
