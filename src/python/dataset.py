@@ -358,11 +358,16 @@ def load_data_frames(feature_folder,
         test = test.join(segment_statistics)
 
     preictal.sortlevel('segment', inplace=True)
-    preictal.sortlevel(axis=1, inplace=True)
+    if isinstance(preictal.columns, pd.MultiIndex):
+        preictal.sortlevel(axis=1, inplace=True)
+
     interictal.sortlevel('segment', inplace=True)
-    interictal.sortlevel(axis=1, inplace=True)
+    if isinstance(interictal.columns, pd.MultiIndex):
+        interictal.sortlevel(axis=1, inplace=True)
+
     test.sortlevel('segment', inplace=True)
-    test.sortlevel(axis=1, inplace=True)
+    if isinstance(test.columns, pd.MultiIndex):
+        test.sortlevel(axis=1, inplace=True)
 
     return interictal, preictal, test
 
