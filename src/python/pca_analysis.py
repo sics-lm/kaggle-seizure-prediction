@@ -4,6 +4,8 @@ import sys
 import os.path
 import pickle
 import datetime
+import logging
+
 import pandas as pd
 import numpy as np
 
@@ -23,10 +25,14 @@ def run_pca_analysis(feature_folder,
                      n_samples=100,
                      do_standardize=False,
                      frame_length=12,
-                     sliding_frames=False):
+                     sliding_frames=False,
+                     segment_statistics=False,
+                     processes=1):
     interictal, preictal, test_data = load_data_frames(feature_folder,
                                                        frame_length=frame_length,
-                                                       sliding_frames=sliding_frames)
+                                                       sliding_frames=sliding_frames,
+                                                       segment_statistics=segment_statistics,
+                                                       processes=processes)
 
     if has_nan(interictal) or has_nan(preictal) or has_nan(test_data):
         print("WARNING: NaN values found, quitting!",
@@ -53,10 +59,14 @@ def run_xcorr_pca_analysis(feature_folder,
                            do_downsample=True,
                            n_samples=100,
                            do_standardize=False,
-                           sliding_frames=False):
+                           sliding_frames=False,
+                           segment_statistics=False,
+                           processes=1):
     interictal, preictal, test_data = correlation_convertion.load_data_frames(feature_folder,
                                                                               frame_length=frame_length,
-                                                                              sliding_frames=sliding_frames)
+                                                                              sliding_frames=sliding_frames,
+                                                                              segment_statistics=segment_statistics,
+                                                                              processes=processes)
     fig,pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
@@ -72,6 +82,9 @@ def run_xcorr_pca_analysis(feature_folder,
 
 
 def mould_data(interictal, preictal, test_data, do_downsample=True, n_samples=100, do_standardize=False):
+    interictal.drop('Preictal', axis=1, inplace=True)
+    preictal.drop('Preictal', axis=1, inplace=True)
+
     if do_downsample:
         interictal = dataset.downsample(interictal, n_samples, do_segment_split=False)
         preictal = dataset.downsample(preictal, n_samples, do_segment_split=False)
@@ -80,7 +93,7 @@ def mould_data(interictal, preictal, test_data, do_downsample=True, n_samples=10
 
 
 def pca_transform(interictal, preictal, test_data, label=None, do_standardize=False):
-    concat_frames = [interictal.drop('Preictal', axis=1), preictal.drop('Preictal', axis=1), test_data]
+    concat_frames = [interictal, preictal, test_data]
     feature_matrix = pd.concat(concat_frames)
     if do_standardize:
         feature_matrix = (feature_matrix - feature_matrix.mean()) / feature_matrix.std()
@@ -154,11 +167,17 @@ if __name__ == '__main__':
     #                     dest='do_segment_split',
     #                     default=True)
 
-    # parser.add_argument("--processes",
-    #                     help="How many processes should be used for parellelized work.",
-    #                     dest='processes',
-    #                     default=4,
-    #                     type=int)
+    parser.add_argument("--processes",
+                        help="How many processes should be used for parellelized work.",
+                        dest='processes',
+                        default=4,
+                        type=int)
+
+    parser.add_argument("--segment-statistics",
+                        dest='segment_statistics',
+                        action='store_true',
+                        default=False,
+                        help="Augment the data with segment statistics")
 
     parser.add_argument("--frame-length",
                         help="The size in windows each frame (feature vector) should be. Only applicable to --feature-type 'xcorr' at the momen",
@@ -175,16 +194,22 @@ if __name__ == '__main__':
     parser.add_argument("--feature-type", help="What kind of features are being processed.", choices=['wavelets', 'xcorr'],
                         default='wavelets')
 
+    logging.getLogger().setLevel('INFO')
+
     args = parser.parse_args()
     if args.feature_type == 'wavelets':
         run_pca_analysis(args.feature_folder, do_downsample=args.do_downsample,
                          n_samples=args.n_samples, do_standardize=args.do_standardize,
                          sliding_frames=args.sliding_frames,
-                         frame_length=args.frame_length)
+                         frame_length=args.frame_length,
+                         processes=args.processes,
+                         segment_statistics=args.segment_statistics)
     elif args.feature_type == 'xcorr':
         run_xcorr_pca_analysis(feature_folder=args.feature_folder,
                                frame_length=args.frame_length,
                                do_downsample=args.do_downsample,
                                n_samples=args.n_samples,
                                do_standardize=args.do_standardize,
-                               sliding_frames=args.sliding_frames)
+                               sliding_frames=args.sliding_frames,
+                               processes=args.processes,
+                               segment_statistics=args.segment_statistics)
