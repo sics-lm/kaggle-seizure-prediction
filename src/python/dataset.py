@@ -164,15 +164,20 @@ def merge_interictal_preictal(interictal, preictal,
     Returns:
         A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
     """
+    logging.info("Merging interictal and preictal datasets")
     try:
-        interictal.sortlevel('segment', inplace=True)
         preictal.sortlevel('segment', inplace=True)
-        interictal.sortlevel(axis=1, inplace=True)
-        preictal.sortlevel(axis=1, inplace=True)
+        if isinstance(preictal.columns, pd.MultiIndex):
+            preictal.sortlevel(axis=1, inplace=True)
+
+        interictal.sortlevel('segment', inplace=True)
+        if isinstance(interictal.columns, pd.MultiIndex):
+            interictal.sortlevel(axis=1, inplace=True)
     except TypeError:
-        pass
+        logging.warn("TypeError when trying to merge interictal and preictal sets.")
 
     if do_downsample:
+        logging.info("Downsampling datasets")
         interictal = downsample(interictal, len(preictal) * downsample_ratio,
                                 do_segment_split=do_segment_split,
                                 random_state=random_state)
