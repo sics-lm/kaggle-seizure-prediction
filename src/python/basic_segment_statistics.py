@@ -160,6 +160,15 @@ def read_folder(stats_folder, metrics=['absolute mean', 'absolute median', 'kurt
         raise FileNotFoundError("No segment statistics file in folder {}".format(stats_folder))
 
 
+def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()'):
+    """
+    Returns the metric given by stats df as a NDArray-like of shape (n_channels, 1)
+    :param stats_df:
+    :param metric_name:
+    :return:
+    """
+    all_segment_metrics = None
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="""Script for generating a bunch of statistics about the segments""")
