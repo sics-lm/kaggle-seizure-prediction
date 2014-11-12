@@ -11,7 +11,7 @@ import logging
 import pandas as pd
 import numpy as np
 import sklearn
-from sklearn import cross_validation
+from sklearn import cross_validation, preprocessing
 
 import fileutils
 from features_combined import load as load_combined
@@ -89,29 +89,48 @@ def scale(dataframes, center=True, scale=True, inplace=False):
     """
     ## This can be quite memory intensive, especially if the
     ## dataframes are big
-    complete_frame = pd.concat(dataframes, axis=0)
-    mean = complete_frame.mean()
-    std = complete_frame.std()
-    mean['Preictal'] = 0  # Don't screw up the class label
-    std['Preictal'] = 1  # Don't change the class label
+    interictal, preictal, test = dataframes
 
-    if inplace:
-        for dataframe in dataframes:
-            if center:
-                dataframe -= mean
-            if scale:
-                dataframe /= std
-        return dataframes
-    else:
-        new_dataframes = []
-        for dataframe in dataframes:
-            new_dataframe = dataframe
-            if center:
-                new_dataframe = new_dataframe - mean
-            if scale:
-                new_dataframe = new_dataframe / std
-            new_dataframes.append(new_dataframe)
-        return new_dataframes
+    interictal = interictal.drop('Preictal', axis=1)
+    preictal = preictal.drop('Preictal', axis=1)
+
+    # Keep structure info as we will need to rebuild the dataframes
+    interictal_index = interictal.index
+    interictal_columns = interictal.columns
+    preictal_index = preictal.index
+    preictal_columns = preictal.columns
+    test_index = test.index
+    test_columns = test.columns
+
+    inter_samples = interictal.shape[0]
+
+    # Concatenate the training data as we will use those for
+    # fitting the scaler
+    training_frame = pd.concat([interictal, preictal], axis=0)
+
+    # Perform the scaling
+    scaler = preprocessing.StandardScaler().fit(training_frame)
+    scaled_training_array = scaler.transform(training_frame)
+    scaled_test_array = scaler.transform(test)
+
+    # Rebuild the dataframes
+    interictal_scaled_array = scaled_training_array[:inter_samples]
+    preictal_scaled_array = scaled_training_array[inter_samples:]
+
+    new_interictal = pd.DataFrame(
+        interictal_scaled_array, index=interictal_index,
+        columns=interictal_columns)
+    new_preictal = pd.DataFrame(
+        preictal_scaled_array, index=preictal_index,
+        columns=preictal_columns)
+    new_test = pd.DataFrame(
+        scaled_test_array, index=test_index,
+        columns=test_columns)
+
+    new_interictal['Preictal'] = 0
+    new_preictal['Preictal'] = 1
+
+    return [new_interictal, new_preictal, new_test]
 
 
 def split_experiment_data(interictal,
