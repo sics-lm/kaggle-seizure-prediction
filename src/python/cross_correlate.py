@@ -300,9 +300,10 @@ if __name__ == '__main__':
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
     parser.add_argument("--old-csv-format", help="Use the old CSV format where the channel pairs are rows", action='store_true',
                         dest='old_csv_format')
-    parser.add_argument("--old-segment-format", help="Use the old Segment format where the data is accesses through a numpy array",
-                        action='store_true',
-                        dest='old_segment_format')
+    parser.add_argument("--new-segment-format", help="Use the old Segment format where the data is accesses through a numpy array",
+                        action='store_false',
+                        dest='new_segment_format',
+                        default=False)
     parser.add_argument("--only-missing-files", help="Should the feature extractor only extract features for non-missing files",
                         default=False,
                         action='store_true',
@@ -310,6 +311,11 @@ if __name__ == '__main__':
     parser.add_argument("--resample-frequency", help="The frequency to resample to,",
                         type=float,
                         dest='resample_frequency')
+    parser.add_argument("--normalize-signal",
+                        help="Setting this flag will normalize the channels based on the subject median and MAD",
+                        default=False,
+                        action='store_true',
+                        dest='normalize_signal')
 
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
@@ -325,7 +331,8 @@ if __name__ == '__main__':
                               output_dir=args.csv_directory,
                               workers=args.workers,
                               naming_function=csv_naming_function,
-                              old_segment_format=True, #args.old_segment_format,
+                              old_segment_format=not args.new_segment_format,
+                              normalize_signal=args.normalize_signal,
                               only_missing_files=args.only_missing_files,
                               resample_frequency=args.resample_frequency,
                               # Arguments for calculate_cross_correlations
