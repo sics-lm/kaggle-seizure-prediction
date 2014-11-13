@@ -205,14 +205,12 @@ def preprocess_features(interictal,
                                         do_segment_split=do_segment_split,
                                         random_state=random_state)
     if do_standardize:
-    if do_standardize:
         logging.info("Standardizing variables.")
         interictal, preictal, test = dataset.scale([interictal, preictal, test], inplace=True)
         logging.info("Shapes after standardization:")
         logging.info("Interictal: {}".format(interictal_data.shape))
         logging.info("Preictal: {}".format(preictal_data.shape))
         logging.info("Unlabeled: {}".format(unlabeled_data.shape))
-
 
     return interictal, preictal, test
 
@@ -233,7 +231,8 @@ def run_classification(interictal_data,
                        do_refit=True,
                        cv_verbosity=2,
                        model_params=None,
-                       random_state=None):
+                       random_state=None,
+                       no_crossvalidation=False):
     logging.info("Running classification on folder {}".format(subject_folder))
 
     if model_file is None and not rebuild_model:
@@ -252,7 +251,8 @@ def run_classification(interictal_data,
                                              processes=processes,
                                              cv_verbosity=cv_verbosity,
                                              model_params=model_params,
-                                             random_state=random_state)
+                                             random_state=random_state,
+                                             no_crossvalidation=no_crossvalidation)
         if model_file is None:
             #Create a new filename based on the model method and the
             #date
@@ -268,7 +268,8 @@ def run_classification(interictal_data,
         with open(model_file, 'wb') as fp:
             pickle.dump(model, fp)
 
-    if do_refit:
+    #If we don't use cross-validation we shouldn't refit
+    if do_refit and not no_crossvalidation:
         logging.info("Refitting model with held-out data.")
         model = seizure_modeling.refit_model(interictal_data,
                                              preictal_data,
@@ -483,6 +484,11 @@ def get_cli_args():
                         help="Directory for writing classification log files.",
                         default='../../classification_logs',
                         dest='log_dir')
+    parser.add_argument("--no-cv",
+                        help=("Turn off cross-validation and grid search."),
+                        default=False,
+                        action='store_true',
+                        dest='no_crossvalidation')
     parser.add_argument("--cv-verbosity",
                         help=("The verbosity level of the Cross-Validation grid"
                               " search. The higher, the more verbose the grid"
