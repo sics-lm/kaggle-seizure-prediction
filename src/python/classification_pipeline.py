@@ -30,6 +30,11 @@ def run_batch_classification(feature_folders,
                              processes=1,
                              csv_directory=None,
                              segment_statistics=False,
+                             do_downsample=True,
+                             downsample_ratio=2.0,
+                             do_standardize=False,
+                             do_segment_split=True,
+                             random_state=None,
                              **kwargs):
     """Runs the batch classificatio on the feature folders.
     Args:
@@ -53,25 +58,29 @@ def run_batch_classification(feature_folders,
                                       sliding_frames=sliding_frames,
                                       rebuild_data=rebuild_data,
                                       processes=processes,
-                                      segment_statistics=segment_statistics):
+                                      segment_statistics=segment_statistics,
+                                      do_downsample=do_downsample,
+                                      downsample_ratio=downsample_ratio,
+                                      do_standardize=do_standardize,
+                                      do_segment_split=do_segment_split,
+                                      random_state=random_state):
         kwargs.update(feature_dict)  # Adds the content of feature dict to the keywords for run_classification
         segment_scores = run_classification(processes=processes,
                                             csv_directory=csv_directory,
                                             file_components=file_components,
                                             optional_file_components=optional_file_components,
+                                            random_state=random_state,
                                             **kwargs)
         score_dict = segment_scores.to_dict()['preictal']
         all_scores.append(score_dict)
 
     if submission_file is None:
-
-
         if file_components is None:
             file_components = [feature_type,
                                kwargs['method'],
                                'frame_length_{}'.format(frame_length)]
         if optional_file_components is None:
-            optional_file_components = dict(standardized=kwargs['do_standardize'],
+            optional_file_components = dict(standardized=do_standardize,
                                             sliding_frames=sliding_frames)
 
         filename = fileutils.generate_filename('submission',
@@ -96,7 +105,12 @@ def load_features(feature_folders,
                   sliding_frames=False,
                   rebuild_data=False,
                   processes=1,
-                  segment_statistics=False):
+                  segment_statistics=False,
+                  do_downsample=False,
+                  downsample_ratio=2.0,
+                  do_standardize=False,
+                  do_segment_split=True,
+                  random_state=None):
     """
     Loads the features from the list of paths *feature_folder*. Returns an
     iterator of dictionaries, where each dictionary has the keys 'subject_folder',
@@ -139,6 +153,12 @@ def load_features(feature_folders,
                                                                               frame_length=frame_length,
                                                                               sliding_frames=sliding_frames,
                                                                               segment_statistics=segment_statistics)
+            interictal, preictal, unlabeled = preprocess_features(interictal, preictal, unlabeled,
+                                                                  do_downsample=do_downsample,
+                                                                  downsample_ratio=downsample_ratio,
+                                                                  do_standardize=do_standardize,
+                                                                  do_segment_split=do_segment_split,
+                                                                  random_state=random_state)
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
                        unlabeled_data=unlabeled,
@@ -170,6 +190,26 @@ def load_features(feature_folders,
         raise NotImplementedError("No feature loading method implemented for feature type {}".format(feature_type))
 
 
+def preprocess_features(interictal,
+                        preictal,
+                        test,
+                        do_downsample=False,
+                        downsample_ratio=2.0,
+                        do_standardize=False,
+                        do_segment_split=False,
+                        random_state=None):
+    logging.info("Preprocessing features")
+    if do_downsample:
+        interictal = dataset.downsample(interictal,
+                                        len(preictal)*downsample_ratio,
+                                        do_segment_split=do_segment_split,
+                                        random_state=random_state)
+    if do_standardize:
+        logging.info("Standardizing variables.")
+        interictal, preictal, test = dataset.scale([interictal, preictal, test])
+    return interictal, preictal, test
+
+
 def run_classification(interictal_data,
                        preictal_data,
                        unlabeled_data,
@@ -179,9 +219,6 @@ def run_classification(interictal_data,
                        optional_file_components=None,
                        model_file=None,
                        rebuild_model=False,
-                       do_downsample=False,
-                       downsample_ratio=2.0,
-                       do_standardize=False,
                        method="logistic",
                        do_segment_split=False,
                        processes=4,
@@ -191,12 +228,6 @@ def run_classification(interictal_data,
                        model_params=None,
                        random_state=None):
     logging.info("Running classification on folder {}".format(subject_folder))
-    if do_standardize:
-        logging.info("Standardizing variables.")
-        interictal_data, preictal_data, unlabeled_data = dataset.scale([interictal_data,
-                                                                       preictal_data,
-                                                                       unlabeled_data],
-                                                                       inplace=True)
     if model_file is None and not rebuild_model:
         model = get_latest_model(subject_folder, method)
         if model is None:
@@ -208,12 +239,9 @@ def run_classification(interictal_data,
         model = seizure_modeling.train_model(interictal_data,
                                              preictal_data,
                                              method=method,
-                                             do_downsample=do_downsample,
-                                             downsample_ratio=downsample_ratio,
                                              do_segment_split=do_segment_split,
                                              training_ratio=training_ratio,
                                              processes=processes,
-                                             do_standardize=do_standardize,
                                              cv_verbosity=cv_verbosity,
                                              model_params=model_params,
                                              random_state=random_state)
@@ -236,10 +264,7 @@ def run_classification(interictal_data,
         logging.info("Refitting model with held-out data.")
         model = seizure_modeling.refit_model(interictal_data,
                                              preictal_data,
-                                             model,
-                                             do_downsample=do_downsample,
-                                             downsample_ratio=downsample_ratio,
-                                             do_segment_split=do_segment_split)
+                                             model)
 
     if csv_directory is None:
         csv_directory = subject_folder
