@@ -31,7 +31,7 @@ def run_batch_classification(feature_folders,
                              csv_directory=None,
                              segment_statistics=False,
                              **kwargs):
-    """Runs the batch classificatio on the feature folders.
+    """Runs the batch classification on the feature folders.
     Args:
 
         feature_folders: Should be a list of folders containing feature
@@ -197,6 +197,10 @@ def run_classification(interictal_data,
                                                                        preictal_data,
                                                                        unlabeled_data],
                                                                        inplace=True)
+        logging.info("Shapes after standardization:")
+        logging.info("Interictal: {}".format(interictal_data.shape))
+        logging.info("Preictal: {}".format(preictal_data.shape))
+        logging.info("Unlabeled: {}".format(unlabeled_data.shape))
     if model_file is None and not rebuild_model:
         model = get_latest_model(subject_folder, method)
         if model is None:

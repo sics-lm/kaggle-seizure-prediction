@@ -35,8 +35,8 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
         param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2'], 'random_state':[random_state]}
 
     elif method == 'svm':
-        clf = sklearn.svm.SVC(probability=True, class_weight='auto')
-        param_grid = [{'kernel': ['rbf'], 'gamma': [0, 1e-1, 1e-2, 1e-3],
+        clf = sklearn.svm.SVC(probability=True, class_weight='auto', cache_size=1000)
+        param_grid = [{'kernel': ['rbf'], 'gamma': [0, 1e-1, 1e-3],
                        'C': np.linspace(min_c, 1000, 3)}]
 
     elif method == 'mirowski-svm':
@@ -114,6 +114,10 @@ def train_model(interictal,
                                                              downsample_ratio=downsample_ratio,
                                                              do_segment_split=do_segment_split,
                                                              random_state=random_state)
+    logging.info("Shapes after splitting experiment data:")
+    logging.info("training_data: {}".format(training_data.shape))
+    logging.info("test_data: {}".format(test_data.shape))
+
     test_data_x = test_data.drop('Preictal', axis=1)
     test_data_y = test_data['Preictal']
 
