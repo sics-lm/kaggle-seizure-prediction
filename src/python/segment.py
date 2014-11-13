@@ -8,6 +8,67 @@ import scipy.signal
 import os.path
 import pandas as pd
 import numpy as np
+import fileutils
+import glob
+import basic_segment_statistics
+
+
+def load_segment(segment_path, old_segment_format=True, normalize_signal=False, resample_frequency=None):
+    """
+    Convienience function for loading segments
+    :param mat_filename: Path to the segment file to load.
+    :param old_segment_format: If True, the old format will be used. If False, the format backed by a pandas dataframe will be used.
+    :param normalize_signal: If True, the signal will be normalized using the subject median and median absolute deviation.
+    :param resample_frequency: If this is set to a number, the signal will be resampled to that frequency.
+    :return: A Segment or DFSegment object with the data from the segment in *segment_path*.
+    """
+    if normalize_signal:
+        return load_and_standardize(segment_path, old_segment_format=old_segment_format)
+    else:
+        if old_segment_format:
+            segment = Segment(segment_path)
+        else:
+            segment = DFSegment.from_mat_file(segment_path)
+        if resample_frequency is not None:
+            segment.resample_frequency(resample_frequency, inplace=True)
+        return segment
+
+
+def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics/*.csv',
+                         center_name='median', scale_name='mad', old_segment_format=True,
+                         k=10):
+    """
+    Loads the segment given by *mat_name* and returns a standardized version. The values for standardization (scaling
+    factor and center values) should be in a segment statistics file in *stats_folder* and must have been produced
+    earlier.
+    :param mat_filename: A path to the segment to load. Must contain the name of the subject in the file.
+    :param stats_folder: A folder which keeps statistics files produced by the module basic_segment_statistics. The file
+                        to use will be inferred from the subject name in mat_filename, and a stats_file with the same
+                        subject name in it should exist in stats_folder.
+    :param center_name: The name of the metric to use as a centering vector (one value for each channel). The must correspond to a metric present in stats file.
+    :param scale_name: The name of the metric to use as a scaling vector (one value for each channel). The must correspond to a metric present in stats file.
+    :param old_segment_format: If True, use the old segment format.
+    :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose name contains the same subject as mat_filename
+    """
+    subject = fileutils.get_subject(mat_filename)
+    stats_files = [filename for filename
+                   in glob.glob(stats_glob)
+                   if subject == fileutils.get_subject(filename)]
+    if len(stats_files) != 1:
+        raise ValueError("Can't determine which stats file to use with the glob {} and the subject {}".format(stats_glob, subject))
+    stats = basic_segment_statistics.read_stats(stats_files[0])
+    center = basic_segment_statistics.get_subject_metric(stats, center_name)
+    scale = basic_segment_statistics.get_subject_metric(stats, scale_name)
+
+    if old_segment_format:
+        segment = Segment(mat_filename)
+    else:
+        segment = DFSegment.from_mat_file(mat_filename)
+
+    segment.center(center)
+    segment.winsorize(scale, k=k)  # We have to winsorize before scaling
+    segment.scale(scale)
+    return segment
 
 
 class Segment:
@@ -153,16 +214,37 @@ class Segment:
         limited = np.sign(self.mat_struct.data) * limits
         self.mat_struct.data[outliers] = limited[outliers]
 
+    def center(self, center):
+        """
+        Centers the data at the given centers.
+        :param center: A NDArray-like of shape (n_channels, 1) with a center for each of the channels.
+        :return: None, the centering is done inplace
+        """
+        self.mat_struct.data = self.mat_struct.data - center
 
-    def scale(self, center, scale):
+    def scale(self, scale):
         """
         Center and scale the signal.
-        :param center: A (n_channels, 1) NDArray-like with center-estimates (medians or means) for the channels.
-        :param scale: A (n_channels, 1) NDArray-like with scale-estimates (like standard deviation or mean absolute deviations) for the channels.
+        :param scale: A (n_channels, 1) NDArray-like with scale-estimates (like standard deviation or median absolute
+                      deviations) for the channels.
         :return: None. The scaling is done in-place.
         """
-        self.mat_struct.data = (self.mat_struct.data - center) / scale
+        self.mat_struct.data = self.mat_struct.data / scale
 
+    def mean(self):
+        return np.mean(self.mat_struct.data, axis=1)[:, np.newaxis]
+
+    def median(self):
+        return np.median(self.mat_struct.data, axis=1)[:, np.newaxis]
+
+    def mad(self, median):
+        """Return the median absolute deviation for this segment only, scaled by phi-1(3/4) to approximate the standard
+           deviation."""
+        c = scipy.stats.norm.ppf(3/4)
+        subject_median = self.median()
+        median_residuals = self.mat_struct.data - subject_median  # deviation between median and data
+        mad = np.median(np.abs(median_residuals), axis=1)[:, np.newaxis]
+        return mad/c
 
 class DFSegment(object):
     def __init__(self, sampling_frequency, dataframe, do_downsample=False, downsample_frequency=200):
@@ -366,3 +448,7 @@ def example_preictal():
 
 def example_interictal():
     return Segment('../../data/Dog_1/Dog_1_interictal_segment_0001.mat')
+
+
+if __name__ == '__main__':
+    example = load_and_standardize('../../data/Dog_1/Dog_1_preictal_segment_0001.mat')
