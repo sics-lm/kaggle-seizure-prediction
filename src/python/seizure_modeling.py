@@ -97,11 +97,8 @@ def train_model(interictal,
                 preictal,
                 method='logistic',
                 training_ratio=0.8,
-                do_downsample=True,
-                downsample_ratio=2.0,
                 do_segment_split=True,
                 processes=1,
-                do_standardize=False,
                 cv_verbosity=2,
                 model_params=None,
                 random_state=None):
@@ -110,15 +107,12 @@ def train_model(interictal,
     training_data, test_data = dataset.split_experiment_data(interictal,
                                                              preictal,
                                                              training_ratio=training_ratio,
-                                                             do_downsample=do_downsample,
-                                                             downsample_ratio=downsample_ratio,
                                                              do_segment_split=do_segment_split,
                                                              random_state=random_state)
     test_data_x = test_data.drop('Preictal', axis=1)
     test_data_y = test_data['Preictal']
 
     clf = select_model(training_data, method=method,
-                       training_ratio=training_ratio,
                        do_segment_split=do_segment_split,
                        processes=processes,
                        cv_verbosity=cv_verbosity,
@@ -130,7 +124,7 @@ def train_model(interictal,
     return clf
 
 
-def refit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=2.0, do_segment_split=True):
+def refit_model(interictal, preictal, clf):
     """
     Fits the classifier *clf* to the given preictal and interictal
     data. If *do_downsample* is true, the majority class will be
@@ -138,10 +132,7 @@ def refit_model(interictal, preictal, clf, do_downsample=True, downsample_ratio=
     how the majority class to the minority class after downsampling.
     """
 
-    training_data = dataset.merge_interictal_preictal(interictal, preictal,
-                                                      do_downsample=do_downsample,
-                                                      downsample_ratio=downsample_ratio,
-                                                      do_segment_split=do_segment_split)
+    training_data = dataset.merge_interictal_preictal(interictal, preictal)
     if hasattr(clf, 'best_estimator_'):
         return clf.best_estimator_.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
     else:
@@ -208,7 +199,6 @@ def grid_scores(clf):
 
 
 def select_model(training_data, method='logistic',
-                 training_ratio=0.8,
                  do_segment_split=True,
                  processes=1,
                  cv_verbosity=2,
