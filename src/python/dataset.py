@@ -135,8 +135,7 @@ def scale(dataframes, center=True, scale=True, inplace=False):
 
 def split_experiment_data(interictal,
                           preictal,
-                          training_ratio, do_downsample=True,
-                          downsample_ratio=2.0,
+                          training_ratio,
                           do_segment_split=True,
                           random_state=None):
     """
@@ -154,32 +153,20 @@ def split_experiment_data(interictal,
         two seperate and disjunct data frames, such that the first partition
         contains a ratio of *training_ratio* of all the data.
     """
-    dataset = merge_interictal_preictal(interictal, preictal,
-                                        do_downsample=do_downsample,
-                                        downsample_ratio=downsample_ratio,
-                                        do_segment_split=do_segment_split,
-                                        random_state=random_state)
+    dataset = merge_interictal_preictal(interictal, preictal)
     return split_dataset(dataset,
                          training_ratio=training_ratio,
                          do_segment_split=do_segment_split,
                          random_state=random_state)
 
 
-
-def merge_interictal_preictal(interictal, preictal,
-                              do_downsample=True,
-                              downsample_ratio=2.0,
-                              do_segment_split=True,
-                              random_state=None):
+def merge_interictal_preictal(interictal, preictal):
     """
     Merges the interictal and preictal data frames to a single data frame. Also sorts the multilevel index.
 
     Args:
         *interictal*: A data frame containing the interictal samples.
         *preictal*: A data frame containing the preictal samples.
-        *do_downsample*: flag of whether to down sample the larger class.
-        *downsample_ratio*: The maximum imbalance ratio to use for down sampling.
-        *do_segment_split*: flag of whether to split based on segment names.
     Returns:
         A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
     """
@@ -193,13 +180,8 @@ def merge_interictal_preictal(interictal, preictal,
         if isinstance(interictal.columns, pd.MultiIndex):
             interictal.sortlevel(axis=1, inplace=True)
     except TypeError:
-        logging.warn("TypeError when trying to merge interictal and preictal sets.")
+        logging.warning("TypeError when trying to merge interictal and preictal sets.")
 
-    if do_downsample:
-        logging.info("Downsampling datasets")
-        interictal = downsample(interictal, len(preictal) * downsample_ratio,
-                                do_segment_split=do_segment_split,
-                                random_state=random_state)
     dataset = pd.concat((interictal, preictal))
     dataset.sortlevel('segment', inplace=True)
     return dataset
