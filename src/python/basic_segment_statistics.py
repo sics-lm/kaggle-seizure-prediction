@@ -140,14 +140,22 @@ def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix
     class_results.to_csv(csv_path, sep='\t', float_format='%11.8f')
 
 
-def read_stats(stat_file, metrics=None):
-    stats_df = pd.read_csv(stat_file, sep='\t', index_col=['metric', 'class', 'segment'])
-    assert isinstance(stats_df, pd.DataFrame)
-    stats_df.sortlevel('metric', inplace=True)
+def read_stats(stat_file, metrics=None, use_cache=True):
     if metrics is not None:
-        stats_df = stats_df.loc[metrics]
-    reshaped = stats_df.reset_index(['metric', 'class', 'segment']).drop('class', axis=1).pivot('segment', 'metric')
-    return reshaped
+        ## We convert the metrics to a sorted tuple, so that it's hashable
+        metrics = tuple(sorted(metrics))
+    cache = read_stats.cache
+    if use_cache and stat_file in cache and metrics in cache[stat_file]:
+        return cache[stat_file][metrics]
+    else:
+        stats_df = pd.read_csv(stat_file, sep='\t', index_col=['metric', 'class', 'segment'])
+        stats_df.sortlevel('metric', inplace=True)
+        if metrics is not None:
+            stats_df = stats_df.loc[metrics]
+        reshaped = stats_df.reset_index(['metric', 'class', 'segment']).drop('class', axis=1).pivot('segment', 'metric')
+        read_stats.cache[stat_file][metrics] = reshaped
+        return reshaped
+read_stats.cache = defaultdict(dict)
 
 
 def read_folder(stats_folder, metrics=['absolute mean', 'absolute median', 'kurtosis', 'skew', 'std']):
@@ -160,7 +168,7 @@ def read_folder(stats_folder, metrics=['absolute mean', 'absolute median', 'kurt
         raise FileNotFoundError("No segment statistics file in folder {}".format(stats_folder))
 
 
-def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()', channel_ordering=None):
+def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()', channel_ordering=None, use_cache=True):
     """
     Returns the metric given by stats df as a NDArray-like of shape (n_channels, 1)
     :param stats_df: The statistics dataframe aquired from read_stats.
@@ -169,6 +177,11 @@ def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()',
     :param channel_ordering: An optional ordered sequence of channel names, which will ensure that the outputted statistics vector has the same order as the segment which the statistic should be applied on.
     :return: A NDArray of shape (n_channels, 1) where each element along axis 0 correspond to a statistic for that channel.
     """
+    cache = get_subject_metric.cache
+    assert isinstance(stats_df, pd.DataFrame)
+    if use_cache and id(stats_df) in cache and (metric_name, aggregator) in cache[id(stats_df)]:
+        return cache[id(stats_df)][(metric_name, aggregator)]
+
     # The stats dataframes have a 2-level column index, where the first level are the channel names and the seconde
     # the metric name. To get the metric but keep the channels we slice the first level with all the entries using
     # slice(None), this is equivalent to [:] for regular slices.
@@ -177,8 +190,10 @@ def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()',
     else:
         segment_metrics = stats_df.loc[:, (channel_ordering, metric_name)]
     aggregated_metric = eval(aggregator.format(dataframe='segment_metrics'))
-
-    return aggregated_metric[:,np.newaxis]
+    added_axis = aggregated_metric[:,np.newaxis]
+    cache[id(stats_df)][(metric_name, aggregator)] = added_axis
+    return added_axis
+get_subject_metric.cache = defaultdict(dict)
 
 
 if __name__ == '__main__':
