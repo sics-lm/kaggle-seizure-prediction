@@ -189,7 +189,8 @@ def run_classification(interictal_data,
                        do_refit=True,
                        cv_verbosity=2,
                        model_params=None,
-                       random_state=None):
+                       random_state=None,
+                       no_crossvalidation=False):
     logging.info("Running classification on folder {}".format(subject_folder))
     if do_standardize:
         logging.info("Standardizing variables.")
@@ -216,7 +217,8 @@ def run_classification(interictal_data,
                                              do_standardize=do_standardize,
                                              cv_verbosity=cv_verbosity,
                                              model_params=model_params,
-                                             random_state=random_state)
+                                             random_state=random_state,
+                                             no_crossvalidation=no_crossvalidation)
         if model_file is None:
             #Create a new filename based on the model method and the
             #date
@@ -232,7 +234,8 @@ def run_classification(interictal_data,
         with open(model_file, 'wb') as fp:
             pickle.dump(model, fp)
 
-    if do_refit:
+    #If we don't use cross-validation we shouldn't refit
+    if do_refit and not no_crossvalidation:
         logging.info("Refitting model with held-out data.")
         model = seizure_modeling.refit_model(interictal_data,
                                              preictal_data,
@@ -450,6 +453,11 @@ def get_cli_args():
                         help="Directory for writing classification log files.",
                         default='../../classification_logs',
                         dest='log_dir')
+    parser.add_argument("--no-cv",
+                        help=("Turn off cross-validation and grid search."),
+                        default=False,
+                        action='store_true',
+                        dest='no_crossvalidation')
     parser.add_argument("--cv-verbosity",
                         help=("The verbosity level of the Cross-Validation grid"
                               " search. The higher, the more verbose the grid"

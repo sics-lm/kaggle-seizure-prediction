@@ -20,6 +20,23 @@ import numpy as np
 import correlation_convertion
 import dataset
 
+def get_model_class(method):
+    if method == 'logistic':
+        return sklearn.linear_model.LogisticRegression
+    elif method == 'svm':
+        return sklearn.svm.SVC
+    elif method == 'mirowski-svm':
+        return sklearn.svm.SVC
+    elif method == 'sgd':
+        return sklearn.linear_model.SGDClassifier
+    elif method == 'random-forest':
+        return sklearn.ensemble.RandomForestClassifier
+    elif method == 'nearest-centroid':
+        return sklearn.neighbors.NearestCentroid
+    elif method == 'knn':
+        return sklearn.neighbors.KNeighborsClassifier
+    else:
+        raise NotImplementedError("Method {} is not supported".format(method))
 
 
 def get_model(method, training_data_x, training_data_y, model_params=None, random_state=None):
@@ -104,29 +121,41 @@ def train_model(interictal,
                 do_standardize=False,
                 cv_verbosity=2,
                 model_params=None,
-                random_state=None):
+                random_state=None,
+                no_crossvalidation=False):
     if random_state is not None:
         np.random.seed(random_state)
-    training_data, test_data = dataset.split_experiment_data(interictal,
-                                                             preictal,
-                                                             training_ratio=training_ratio,
-                                                             do_downsample=do_downsample,
-                                                             downsample_ratio=downsample_ratio,
-                                                             do_segment_split=do_segment_split,
-                                                             random_state=random_state)
-    test_data_x = test_data.drop('Preictal', axis=1)
-    test_data_y = test_data['Preictal']
 
-    clf = select_model(training_data, method=method,
-                       training_ratio=training_ratio,
-                       do_segment_split=do_segment_split,
-                       processes=processes,
-                       cv_verbosity=cv_verbosity,
-                       model_params=model_params,
-                       random_state=random_state)
+    if no_crossvalidation:
+        clf_class = get_model_class(method=method)
+        clf = clf_class(**model_params)
+        training_data = dataset.merge_interictal_preictal(interictal, preictal)
+        training_x = training_data.drop('Preictal', axis=1)
+        training_y = training_data['Preictal']
+        clf.fit(training_x, training_y)
 
-    report = get_report(clf, test_data_x, test_data_y)
-    logging.info(report)
+    else:
+        training_data, test_data = dataset.split_experiment_data(interictal,
+                                                                 preictal,
+                                                                 training_ratio=training_ratio,
+                                                                 do_downsample=do_downsample,
+                                                                 downsample_ratio=downsample_ratio,
+                                                                 do_segment_split=do_segment_split,
+                                                                 random_state=random_state)
+        test_data_x = test_data.drop('Preictal', axis=1)
+        test_data_y = test_data['Preictal']
+
+        clf = select_model(training_data, method=method,
+                           training_ratio=training_ratio,
+                           do_segment_split=do_segment_split,
+                           processes=processes,
+                           cv_verbosity=cv_verbosity,
+                           model_params=model_params,
+                           random_state=random_state)
+
+        report = get_report(clf, test_data_x, test_data_y)
+        logging.info(report)
+
     return clf
 
 
