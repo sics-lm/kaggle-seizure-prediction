@@ -123,7 +123,8 @@ def normalize_score(score, mean, std):
     """Normalizes the score by considering a normal distribution centered on 0.5
        with a std of 0.5"""
     score -= mean
-    score /= std*2  # We don't want to clip to much of the distribution
+    if std != 0:
+        score /= std*2  # We don't want to clip to much of the distribution
     score += 0.5
     if score < 0:
         score = 0
