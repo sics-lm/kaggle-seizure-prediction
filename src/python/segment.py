@@ -52,8 +52,8 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
     """
     subject = fileutils.get_subject(mat_filename)
     stats_files = [filename for filename
-                  in glob.glob(stats_glob)
-                  if subject == fileutils.get_subject(filename)]
+                   in glob.glob(stats_glob)
+                   if subject == fileutils.get_subject(filename)]
     if len(stats_files) != 1:
         raise ValueError("Can't determine which stats file to use with the glob {} and the subject {}".format(stats_glob, subject))
     stats = basic_segment_statistics.read_stats(stats_files[0])
@@ -66,7 +66,7 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
         segment = DFSegment.from_mat_file(mat_filename)
 
     segment.center(center)
-    segment.winsorize(scale)  # We have to winsorize before scaling
+    segment.winsorize(scale, k=k)  # We have to winsorize before scaling
     segment.scale(scale)
     return segment
 
