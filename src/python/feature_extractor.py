@@ -5,14 +5,14 @@ import multiprocessing
 import random
 
 import fileutils
-from segment import Segment, DFSegment
-
+from segment import load_segment
 
 
 def extract(feature_folder,
             extractor_function,
             output_dir=None,
             old_segment_format=True,
+            normalize_signal=False,
             workers=1,
             naming_function=None,
             sample_size=None,
@@ -62,6 +62,7 @@ def extract(feature_folder,
                                            extractor_function=extractor_function,
                                            output_dir=output_dir,
                                            old_segment_format=old_segment_format,
+                                           normalize_signal=normalize_signal,
                                            extractor_kwargs=extractor_kwargs,
                                            naming_function=naming_function,
                                            resample_frequency=resample_frequency))
@@ -75,14 +76,17 @@ def extract(feature_folder,
                             extractor_function=extractor_function,
                             output_dir=output_dir,
                             old_segment_format=old_segment_format,
+                            normalize_signal=normalize_signal,
                             extractor_kwargs=extractor_kwargs,
                             naming_function=naming_function,
                             resample_frequency=resample_frequency)
 
 
 def worker_function(segment_path, extractor_function, output_dir,
-                    old_segment_format=False, extractor_kwargs=None,
-                    naming_function=None, resample_frequency=None):
+                    old_segment_format=False, normalize_signal=False,
+                    extractor_kwargs=None,
+                    naming_function=None,
+                    resample_frequency=None):
     """Worker function for the feature extractor. Reads the segment
     from *segment_path* and runs uses it as the first argument to
     *extractor_function*.
@@ -103,12 +107,11 @@ def worker_function(segment_path, extractor_function, output_dir,
     if output_dir is None:
         output_dir = os.path.dirname(segment_path)
 
-    if old_segment_format:
-        segment = Segment(segment_path)
-    else:
-        segment = DFSegment.from_mat_file(segment_path)
-        if resample_frequency is not None:
-            segment.resample_frequency(resample_frequency, inplace=True)
+    segment = load_segment(segment_path,
+                           old_segment_format=old_segment_format,
+                           normalize_signal=normalize_signal,
+                           resample_frequency=resample_frequency)
+
 
     features = extractor_function(segment, **extractor_kwargs)
     write_features(features, segment_path, extractor_function, output_dir, extractor_kwargs, naming_function)
