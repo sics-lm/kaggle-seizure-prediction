@@ -12,8 +12,31 @@ import fileutils
 import glob
 import basic_segment_statistics
 
+
+def load_segment(segment_path, old_segment_format=True, normalize_signal=False, resample_frequency=None):
+    """
+    Convienience function for loading segments
+    :param mat_filename: Path to the segment file to load.
+    :param old_segment_format: If True, the old format will be used. If False, the format backed by a pandas dataframe will be used.
+    :param normalize_signal: If True, the signal will be normalized using the subject median and median absolute deviation.
+    :param resample_frequency: If this is set to a number, the signal will be resampled to that frequency.
+    :return: A Segment or DFSegment object with the data from the segment in *segment_path*.
+    """
+    if normalize_signal:
+        return load_and_standardize(segment_path, old_segment_format=old_segment_format)
+    else:
+        if old_segment_format:
+            segment = Segment(segment_path)
+        else:
+            segment = DFSegment.from_mat_file(segment_path)
+        if resample_frequency is not None:
+            segment.resample_frequency(resample_frequency, inplace=True)
+        return segment
+
+
 def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics/*.csv',
-                         center_name='median', scale_name='mad', old_segment_format=True):
+                         center_name='median', scale_name='mad', old_segment_format=True,
+                         k=10):
     """
     Loads the segment given by *mat_name* and returns a standardized version. The values for standardization (scaling
     factor and center values) should be in a segment statistics file in *stats_folder* and must have been produced
