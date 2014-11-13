@@ -160,14 +160,26 @@ def read_folder(stats_folder, metrics=['absolute mean', 'absolute median', 'kurt
         raise FileNotFoundError("No segment statistics file in folder {}".format(stats_folder))
 
 
-def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()'):
+def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()', channel_ordering=None):
     """
     Returns the metric given by stats df as a NDArray-like of shape (n_channels, 1)
-    :param stats_df:
-    :param metric_name:
-    :return:
+    :param stats_df: The statistics dataframe aquired from read_stats.
+    :param metric_name: The metric we wan't to select.
+    :param aggregator: A string with an expression used to aggregate the per segment statistic to a single statistic for the whole subject.
+    :param channel_ordering: An optional ordered sequence of channel names, which will ensure that the outputted statistics vector has the same order as the segment which the statistic should be applied on.
+    :return: A NDArray of shape (n_channels, 1) where each element along axis 0 correspond to a statistic for that channel.
     """
-    all_segment_metrics = None
+    # The stats dataframes have a 2-level column index, where the first level are the channel names and the seconde
+    # the metric name. To get the metric but keep the channels we slice the first level with all the entries using
+    # slice(None), this is equivalent to [:] for regular slices.
+    if channel_ordering is None:
+        segment_metrics = stats_df.loc[:, (slice(None), metric_name)]
+    else:
+        segment_metrics = stats_df.loc[:, (channel_ordering, metric_name)]
+    aggregated_metric = eval(aggregator.format(dataframe='segment_metrics'))
+
+    return aggregated_metric[:,np.newaxis]
+
 
 if __name__ == '__main__':
     import argparse
