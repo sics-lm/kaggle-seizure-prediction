@@ -428,4 +428,4 @@ def example_interictal():
 
 
 if __name__ == '__main__':
-    example = load_and_standardize('../../data/Dog_1_preictal_segment_0001.mat')
+    example = load_and_standardize('../../data/Dog_1/Dog_1_preictal_segment_0001.mat')
