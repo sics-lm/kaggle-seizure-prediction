@@ -94,6 +94,11 @@ if __name__ == '__main__':
     parser.add_argument("--resample-frequency", help="The frequency to resample to,",
                         type=float,
                         dest='resample_frequency')
+    parser.add_argument("--normalize-signal",
+                        help="Setting this flag will normalize the channels based on the subject median and MAD",
+                        default=False,
+                        action='store_true',
+                        dest='normalize_signal')
 
     #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
 
@@ -107,6 +112,7 @@ if __name__ == '__main__':
                               sample_size=args.sample_size,
                               old_segment_format=True,#args.old_segment_format,
                               resample_frequency=args.resample_frequency,
+                              normalize_signal=args.normalize_signal,
                               ## Worker function kwargs:
                               feature_length_seconds=args.feature_length,
                               window_size=args.window_size)
