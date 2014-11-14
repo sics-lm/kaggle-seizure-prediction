@@ -15,7 +15,13 @@ import correlation_convertion
 import dataset
 
 from sklearn.decomposition import PCA
+
 from matplotlib import pyplot as plt
+try:
+    plt.style.use('ggplot')
+except AttributeError:
+    pass
+
 
 def has_nan(df):
     return np.count_nonzero(np.isnan(df)) != 0
