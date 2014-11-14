@@ -208,9 +208,9 @@ def preprocess_features(interictal,
         logging.info("Standardizing variables.")
         interictal, preictal, test = dataset.scale([interictal, preictal, test], inplace=True)
         logging.info("Shapes after standardization:")
-        logging.info("Interictal: {}".format(interictal_data.shape))
-        logging.info("Preictal: {}".format(preictal_data.shape))
-        logging.info("Unlabeled: {}".format(unlabeled_data.shape))
+        logging.info("Interictal: {}".format(interictal.shape))
+        logging.info("Preictal: {}".format(preictal.shape))
+        logging.info("Unlabeled: {}".format(test.shape))
 
     return interictal, preictal, test
 
@@ -361,16 +361,16 @@ def setup_logging(timestamp, file_components, optional_file_components, args):
 
 
 def fix_model_params(model_params_string):
-    model_params = eval(model_params_string)
+    return eval(model_params_string)
     # GridSearchCV expects all the parameters of model_params to have list values,
     # if any of the values aren't lists, we make them into dicts
-    listified_params = dict()
-    for param, values in model_params.items():
-        if isinstance(values, str):
-            listified_params[param] = [values]
-        else:
-            listified_params[param] = values
-    return listified_params
+    # listified_params = dict()
+    # for param, values in model_params.items():
+    #     if isinstance(values, str):
+    #         listified_params[param] = [values]
+    #     else:
+    #         listified_params[param] = values
+    # return listified_params
 
 
 
@@ -456,7 +456,8 @@ def get_cli_args():
                                  'sgd',
                                  'random-forest',
                                  'nearest-centroid',
-                                 'knn'],
+                                 'knn',
+                                 'bagging'],
                         default='logistic')
     parser.add_argument("--processes",
                         help="How many processes should be used for parellelized work.",

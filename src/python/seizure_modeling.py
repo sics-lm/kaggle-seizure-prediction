@@ -35,6 +35,8 @@ def get_model_class(method):
         return sklearn.neighbors.NearestCentroid
     elif method == 'knn':
         return sklearn.neighbors.KNeighborsClassifier
+    elif method == 'bagging':
+        return sklearn.ensemble.BaggingClassifier
     else:
         raise NotImplementedError("Method {} is not supported".format(method))
 
@@ -74,7 +76,7 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
     elif method == 'random-forest':
         clf = sklearn.ensemble.RandomForestClassifier()
         param_grid = [{'max_features': ['sqrt', 'log2'],
-                       'n_estimators': [10, 100, 100],
+                       'n_estimators': [10, 100, 1000],
                        'criterion': ['gini', 'entropy']}]
 
     elif method == 'nearest-centroid':
@@ -86,6 +88,20 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
         clf = sklearn.neighbors.KNeighborsClassifier()
         param_grid = [{'algorithm': ['ball_tree', 'kd_tree', 'brute'],
                        'n_neighbors': range(1, 5)}]
+
+    elif method == 'bagging':
+        base = sklearn.svm.SVC(
+            probability=False, class_weight='auto', cache_size=1000,
+            kernel='rbf', C=500, random_state=random_state)
+        if model_params is not None:
+            model_params['base_estimator'] = base
+            if 'max_samples' not in model_params:
+                model_params['max_samples'] = 0.5
+
+        clf = sklearn.ensemble.BaggingClassifier(
+            base_estimator=base)
+        param_grid = [{'n_estimators': [10, 20],
+                       'bootstrap_features': [True, False]}]
 
     else:
         raise NotImplementedError("Method {} is not supported".format(method))
@@ -125,7 +141,8 @@ def train_model(interictal,
 
     if no_crossvalidation:
         clf_class = get_model_class(method=method)
-        clf = clf_class(**model_params)
+        clf = clf_class()
+        clf.set_params(**model_params)
         training_data = dataset.merge_interictal_preictal(interictal, preictal)
         training_x = training_data.drop('Preictal', axis=1)
         training_y = training_data['Preictal']
