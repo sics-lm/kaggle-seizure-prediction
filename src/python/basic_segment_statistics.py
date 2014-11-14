@@ -14,12 +14,11 @@ import scipy.stats
 import numpy as np
 
 import segment
-import matplotlib as mpl
+import matplotlib.pyplot as plt
 try:
-    mpl.style.use('ggplot')
+    plt.style.use('ggplot')
 except AttributeError:
     pass
-import matplotlib.pyplot as plt
 
 
 def segments_means(segments):
@@ -146,6 +145,7 @@ def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix
     csv_path = os.path.join(csv_directory, filename)
     class_results = process_subject(feature_folder, glob_suffix=glob_suffix, processes=processes, subset=subset)
     class_results.to_csv(csv_path, sep='\t', float_format='%11.8f')
+
 
 
 def read_stats(stat_file, metrics=None, use_cache=True):
