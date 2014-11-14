@@ -6,6 +6,7 @@ import os
 import os.path
 import multiprocessing
 import random
+import math
 from collections import defaultdict
 
 import pandas as pd
@@ -13,6 +14,13 @@ import scipy.stats
 import numpy as np
 
 import segment
+import matplotlib as mpl
+try:
+    mpl.style.use('ggplot')
+except AttributeError:
+    pass
+import matplotlib.pyplot as plt
+
 
 def segments_means(segments):
     """Returns a data frame with the means of the given segments"""
@@ -148,11 +156,11 @@ def read_stats(stat_file, metrics=None, use_cache=True):
     if use_cache and stat_file in cache and metrics in cache[stat_file]:
         return cache[stat_file][metrics]
     else:
-        stats_df = pd.read_csv(stat_file, sep='\t', index_col=['metric', 'class', 'segment'])
-        stats_df.sortlevel('metric', inplace=True)
+        stats_df = read_stats_csv(stat_file)
         if metrics is not None:
             stats_df = stats_df.loc[metrics]
         reshaped = stats_df.reset_index(['metric', 'class', 'segment']).drop('class', axis=1).pivot('segment', 'metric')
+        reshaped.sortlevel(axis=1)
         read_stats.cache[stat_file][metrics] = reshaped
         return reshaped
 read_stats.cache = defaultdict(dict)
@@ -194,6 +202,44 @@ def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()',
     cache[id(stats_df)][(metric_name, aggregator)] = added_axis
     return added_axis
 get_subject_metric.cache = defaultdict(dict)
+
+
+def plot_stats(stats_df, title=None, metrics=['absolute mean',
+                                              'absolute median',
+                                              'kurtosis',
+                                              'mad',
+                                              'max',
+                                              'mean',
+                                              'mean absolute deviation',
+                                              'median',
+                                              'min',
+                                              'sem',
+                                              'skew',
+                                              'std']):
+    rows = int(math.floor(math.sqrt(len(metrics))))
+    cols = int(math.ceil(len(metrics)/rows))
+
+    f, a = plt.subplots(rows, cols)
+    for metric, ax in zip(metrics, a.flatten()):
+        stats_df.xs(metric).plot(kind='bar', colormap='gist_rainbow', ax=ax)
+        ax.get_legend().set_visible(False)
+        ax.set_title(metric)
+    if title is not None:
+        f.suptitle(title)
+
+
+def boxplot_metric(stats_df, metric):
+     stats_df.xs(metric).reset_index('class').boxplot(by='class')
+
+
+def read_stats_csv(stat_path):
+    stats_df = pd.read_csv(stat_path, sep='\t', index_col=['metric', 'class', 'segment'])
+    stats_df.sortlevel('metric', inplace=True)
+    return stats_df
+
+def read_subject_stats(stat_path):
+    stats_df = read_stats_csv(stat_path)
+    return stats_df.groupby(level=('metric', 'class')).mean()
 
 
 if __name__ == '__main__':
