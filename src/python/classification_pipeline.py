@@ -376,17 +376,6 @@ def setup_logging(timestamp, file_components, optional_file_components, args):
 
 def fix_model_params(model_params_string):
     return eval(model_params_string)
-    # GridSearchCV expects all the parameters of model_params to have list values,
-    # if any of the values aren't lists, we make them into dicts
-    # listified_params = dict()
-    # for param, values in model_params.items():
-    #     if isinstance(values, str):
-    #         listified_params[param] = [values]
-    #     else:
-    #         listified_params[param] = values
-    # return listified_params
-
-
 
 
 def get_cli_args():
