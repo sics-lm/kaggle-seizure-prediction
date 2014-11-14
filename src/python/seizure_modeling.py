@@ -142,7 +142,8 @@ def train_model(interictal,
     if no_crossvalidation:
         clf_class = get_model_class(method=method)
         clf = clf_class()
-        clf.set_params(**model_params)
+        if model_params is not None:
+            clf.set_params(**model_params)
         training_data = dataset.merge_interictal_preictal(interictal, preictal)
         training_x = training_data.drop('Preictal', axis=1)
         training_y = training_data['Preictal']

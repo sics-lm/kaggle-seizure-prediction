@@ -6,12 +6,12 @@ import logging
 import glob
 import multiprocessing
 from functools import partial
-import logging
 
 import pandas as pd
 import numpy as np
-import sklearn
 from sklearn import cross_validation, preprocessing
+from sklearn.decomposition import PCA
+
 
 import fileutils
 from features_combined import load as load_combined
@@ -72,24 +72,12 @@ def mean(*dataframes):
     means = sums / lengths
     return means
 
+def transform(transformation, interictal, preictal, test):
 
-def scale(dataframes, center=True, scale=True, inplace=False):
-    """Returns standardized (mean 0, standard deviation 1) versions of the given data frames.
-    Args:
-        dataframes: A variable number of inplace arguments which should be the
-                    dataframes to standardize.
-        center: If True, the columns of the frame will have mean 0.
-        scale:  If True, the columns will have standard deviation of 1.
-        inplace: If True, the dataframes will be standardized inplace, and
-        no new dataframe is created.
-    Returns:
-        A list of the standardized dataframes. If inplace=True, it will be the
-        same dataframes as the argument. If inplace=False, new dataframes will
-        have been created.
-    """
-    ## This can be quite memory intensive, especially if the
-    ## dataframes are big
-    interictal, preictal, test = dataframes
+    if not hasattr(transformation, 'fit_transform'):
+        logging.warn(
+            "Transformation {} has not fit_transform function, no transformation applied".format(transformation))
+        return [interictal, preictal, test]
 
     interictal = interictal.drop('Preictal', axis=1)
     preictal = preictal.drop('Preictal', axis=1)
@@ -106,31 +94,78 @@ def scale(dataframes, center=True, scale=True, inplace=False):
 
     # Concatenate the training data as we will use those for
     # fitting the scaler
+    ## This can be quite memory intensive, especially if the
+    ## dataframes are big
     training_frame = pd.concat([interictal, preictal], axis=0)
 
-    # Perform the scaling
-    scaler = preprocessing.StandardScaler().fit(training_frame)
-    scaled_training_array = scaler.transform(training_frame)
-    scaled_test_array = scaler.transform(test)
+    # Perform the transformation
+    transformed_train = transformation.fit_transform(training_frame)
+    transformed_test = transformation.transform(test)
 
     # Rebuild the dataframes
-    interictal_scaled_array = scaled_training_array[:inter_samples]
-    preictal_scaled_array = scaled_training_array[inter_samples:]
+    interictal_tr_array = transformed_train[:inter_samples]
+    preictal_tr_array = transformed_train[inter_samples:]
+
+    # A transformation like PCA changes the columns so we have to
+    # rebuild them
+    # TODO: Is there any point in keeping the columns?
+    # Wouldn't None work either way?
+    if len(interictal_columns) != interictal_tr_array.shape[1]:
+        interictal_columns = None
+        preictal_columns = None
+        test_columns = None
 
     new_interictal = pd.DataFrame(
-        interictal_scaled_array, index=interictal_index,
+        interictal_tr_array, index=interictal_index,
         columns=interictal_columns)
     new_preictal = pd.DataFrame(
-        preictal_scaled_array, index=preictal_index,
+        preictal_tr_array, index=preictal_index,
         columns=preictal_columns)
     new_test = pd.DataFrame(
-        scaled_test_array, index=test_index,
+        transformed_test, index=test_index,
         columns=test_columns)
 
     new_interictal['Preictal'] = 0
     new_preictal['Preictal'] = 1
 
+
     return [new_interictal, new_preictal, new_test]
+
+
+def pca_transform(dataframes):
+
+    interictal, preictal, test = dataframes
+    # Perform the PCA
+    pca = PCA()
+
+    return transform(pca, interictal, preictal, test)
+
+
+
+
+
+def scale(dataframes, center=True, scale=True, inplace=False):
+    """Returns standardized (mean 0, standard deviation 1) versions of the given data frames.
+    Args:
+        dataframes: A variable number of inplace arguments which should be the
+                    dataframes to standardize.
+        center: If True, the columns of the frame will have mean 0.
+        scale:  If True, the columns will have standard deviation of 1.
+        inplace: If True, the dataframes will be standardized inplace, and
+        no new dataframe is created.
+    Returns:
+        A list of the standardized dataframes. If inplace=True, it will be the
+        same dataframes as the argument. If inplace=False, new dataframes will
+        have been created.
+    """
+    interictal, preictal, test = dataframes
+
+    # Perform the scaling
+    scaler = preprocessing.StandardScaler()
+
+    return transform(scaler, interictal, preictal, test)
+
+
 
 
 def split_experiment_data(interictal,

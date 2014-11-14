@@ -9,6 +9,7 @@ import sys
 
 import numpy as np
 
+
 import correlation_convertion
 import wavelet_classification
 import features_combined
@@ -34,6 +35,7 @@ def run_batch_classification(feature_folders,
                              downsample_ratio=2.0,
                              do_standardize=False,
                              do_segment_split=True,
+                             do_pca=False,
                              random_state=None,
                              **kwargs):
     """Runs the batch classification on the feature folders.
@@ -63,6 +65,7 @@ def run_batch_classification(feature_folders,
                                       downsample_ratio=downsample_ratio,
                                       do_standardize=do_standardize,
                                       do_segment_split=do_segment_split,
+                                      do_pca=do_pca,
                                       random_state=random_state):
         kwargs.update(feature_dict)  # Adds the content of feature dict to the keywords for run_classification
         segment_scores = run_classification(processes=processes,
@@ -110,6 +113,7 @@ def load_features(feature_folders,
                   downsample_ratio=2.0,
                   do_standardize=False,
                   do_segment_split=True,
+                  do_pca=False,
                   random_state=None):
     """
     Loads the features from the list of paths *feature_folder*. Returns an
@@ -158,6 +162,7 @@ def load_features(feature_folders,
                                                                   downsample_ratio=downsample_ratio,
                                                                   do_standardize=do_standardize,
                                                                   do_segment_split=do_segment_split,
+                                                                  do_pca=do_pca,
                                                                   random_state=random_state)
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
@@ -197,6 +202,7 @@ def preprocess_features(interictal,
                         downsample_ratio=2.0,
                         do_standardize=False,
                         do_segment_split=False,
+                        do_pca=False,
                         random_state=None):
     logging.info("Preprocessing features")
     if do_downsample:
@@ -208,6 +214,14 @@ def preprocess_features(interictal,
         logging.info("Standardizing variables.")
         interictal, preictal, test = dataset.scale([interictal, preictal, test], inplace=True)
         logging.info("Shapes after standardization:")
+        logging.info("Interictal: {}".format(interictal.shape))
+        logging.info("Preictal: {}".format(preictal.shape))
+        logging.info("Unlabeled: {}".format(test.shape))
+
+    if do_pca:
+        logging.info("Performing SVD decomposition of features")
+        interictal, preictal, test = dataset.pca_transform([interictal, preictal, test])
+        logging.info("Shapes after SVD decomposition:")
         logging.info("Interictal: {}".format(interictal.shape))
         logging.info("Preictal: {}".format(preictal.shape))
         logging.info("Unlabeled: {}".format(test.shape))
@@ -437,6 +451,11 @@ def get_cli_args():
                         action='store_true',
                         help="Standardize the variables",
                         dest='do_standardize',
+                        default=False)
+    parser.add_argument("--pca",
+                        action='store_true',
+                        help="Perform dimensionality reduction on the data using PCA",
+                        dest='do_pca',
                         default=False)
     parser.add_argument("--no-refit",
                         action='store_false',
