@@ -5,7 +5,6 @@ import csv
 import os
 import os.path
 import fnmatch
-import re
 import sys
 import random
 

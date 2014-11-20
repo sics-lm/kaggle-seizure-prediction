@@ -1,16 +1,16 @@
 import mne
+
+from features import feature_extractor,wavelets
+
+
 mne.set_log_level(verbose='WARNING')
 
 
 import sys
-import numpy as np
 from itertools import chain
 
-import feature_extractor
-import wavelets as wv
-
-from transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
-from transforms import FilteredFFTWithTFCorrelation as Filtered_TF_xcorr
+from features.transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
+from features.transforms import FilteredFFTWithTFCorrelation as Filtered_TF_xcorr
 
 def extract_features_for_segment(
     segment, transformation=None,feature_length_seconds=60, window_size=5, **kwargs):
@@ -49,7 +49,7 @@ def extract_features_for_segment(
     iters = int(segment.get_duration() / feature_length_seconds)
 
     # Create Epochs object according to defined window size
-    epochs = wv.epochs_from_segment(segment, window_size)
+    epochs = wavelets.epochs_from_segment(segment, window_size)
 
     feature_list = []
     # Create a list of features
@@ -71,10 +71,36 @@ def extract_features_for_segment(
 
 
 def get_transform(transformation=None, **kwargs):
-    if transformation == None:
+    if transformation is None:
         return FFT_TF_xcorr(1, 48, 400, 'usf')
     else:
         transformation(**kwargs)
+
+
+def extract_features(segment_paths,
+                     output_dir,
+                     workers=1,
+                     sample_size=None,
+                     old_segment_format=True,
+                     resample_frequency=None,
+                     normalize_signal=False,
+                     only_missing_files=True,
+                     feature_length_seconds=60,
+                     window_size=5):
+    feature_extractor.extract(segment_paths,
+                              extract_features_for_segment,
+                              ## Arguments for feature_extractor.extract
+                              output_dir=output_dir,
+                              workers=workers,
+                              sample_size=sample_size,
+                              old_segment_format=old_segment_format,
+                              resample_frequency=resample_frequency,
+                              normalize_signal=normalize_signal,
+                              only_missing_files=only_missing_files,
+                              ## Worker function kwargs:
+                              feature_length_seconds=feature_length_seconds,
+                              window_size=window_size)
+
 
 if __name__ == '__main__':
 
@@ -86,11 +112,6 @@ if __name__ == '__main__':
     parser.add_argument("--window-size", help="What length in seconds the epochs should be.", type=float, default=5.0)
     parser.add_argument("--feature-length", help="The length of the feature vectors in seconds, will be produced by concatenating the phase lock values from the windows.", type=float, default=60.0)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
-    parser.add_argument("--file-sample-size", help="Optionally take a sample of the files of this size.", type=int, dest='sample_size')
-    parser.add_argument("--old-segment-format", help="Makes the feature extraction use the old segment format",
-                        action='store_true',
-                        default=True,
-                        dest='old_segment_format')
     parser.add_argument("--resample-frequency", help="The frequency to resample to,",
                         type=float,
                         dest='resample_frequency')
@@ -99,20 +120,12 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true',
                         dest='normalize_signal')
-
-    #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
-
     args = parser.parse_args()
 
-    feature_extractor.extract(args.segments,
-                              extract_features_for_segment,
-                              ## Arguments for feature_extractor.extract
-                              output_dir=args.csv_directory,
-                              workers=args.workers,
-                              sample_size=args.sample_size,
-                              old_segment_format=True,#args.old_segment_format,
-                              resample_frequency=args.resample_frequency,
-                              normalize_signal=args.normalize_signal,
-                              ## Worker function kwargs:
-                              feature_length_seconds=args.feature_length,
-                              window_size=args.window_size)
+    extract_features(args.segments,
+                     args.csv_directory,
+                     workers=args.workers,
+                     resample_frequency=args.resample_frequency,
+                     normalize_signal=args.normalize_signal,
+                     feature_length_seconds=args.feature_length,
+                     window_size=args.window_size)

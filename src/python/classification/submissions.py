@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import numpy as np
 
-import fileutils
+from dataset import fileutils
 
 
 def scores_to_submission(score_dicts, **kwargs):

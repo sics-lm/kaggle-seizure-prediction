@@ -4,7 +4,6 @@
 import glob
 import os
 import os.path
-import multiprocessing
 import random
 import math
 from collections import defaultdict
@@ -12,9 +11,10 @@ from collections import defaultdict
 import pandas as pd
 import scipy.stats
 import numpy as np
-
-import segment
 import matplotlib.pyplot as plt
+
+from dataset import segment
+
 try:
     plt.style.use('ggplot')
 except AttributeError:
@@ -166,7 +166,9 @@ def read_stats(stat_file, metrics=None, use_cache=True):
 read_stats.cache = defaultdict(dict)
 
 
-def read_folder(stats_folder, metrics=['absolute mean', 'absolute median', 'kurtosis', 'skew', 'std']):
+def read_folder(stats_folder, metrics=None):
+    if metrics is None:
+        metrics = ['absolute mean', 'absolute median', 'kurtosis', 'skew', 'std']
     glob_pattern = os.path.join(stats_folder, '*segments_statistics.csv')
     files = glob.glob(glob_pattern)
     if files:
@@ -204,18 +206,20 @@ def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()',
 get_subject_metric.cache = defaultdict(dict)
 
 
-def plot_stats(stats_df, title=None, metrics=['absolute mean',
-                                              'absolute median',
-                                              'kurtosis',
-                                              'mad',
-                                              'max',
-                                              'mean',
-                                              'mean absolute deviation',
-                                              'median',
-                                              'min',
-                                              'sem',
-                                              'skew',
-                                              'std']):
+def plot_stats(stats_df, title=None, metrics=None):
+    if metrics is None:
+        metrics = ['absolute mean',
+                   'absolute median',
+                   'kurtosis',
+                   'mad',
+                   'max',
+                   'mean',
+                   'mean absolute deviation',
+                   'median',
+                   'min',
+                   'sem',
+                   'skew',
+                   'std']
     rows = int(math.floor(math.sqrt(len(metrics))))
     cols = int(math.ceil(len(metrics)/rows))
 
@@ -261,7 +265,7 @@ if __name__ == '__main__':
                         default='../../data/segment_statistics')
     parser.add_argument("--metrics",
                         nargs='+',
-                        help=("A selection of statistics to collect"),
+                        help="A selection of statistics to collect",
                         choices=get_default_methods().keys(),
                         dest='subset')
     args = parser.parse_args()

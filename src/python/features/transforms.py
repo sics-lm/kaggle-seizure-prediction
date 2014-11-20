@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-from scipy.signal import resample, hann, filtfilt, freqz, iirfilter, lfilter, butter
+from scipy.signal import resample, hann, filtfilt, iirfilter, lfilter, butter
 from sklearn import preprocessing
 
 # optional modules for trying out different transforms

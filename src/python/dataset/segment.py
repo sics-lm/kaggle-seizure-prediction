@@ -2,21 +2,21 @@
 Module for loading and manipulating  EEG segments.
 """
 
+import os.path
+import glob
 
 import scipy.io
 import scipy.signal
-import os.path
+import scipy.stats
 import pandas as pd
 import numpy as np
-import fileutils
-import glob
-import basic_segment_statistics
 
+import dataset.fileutils as fileutils
 
 def load_segment(segment_path, old_segment_format=True, normalize_signal=False, resample_frequency=None):
     """
     Convienience function for loading segments
-    :param mat_filename: Path to the segment file to load.
+    :param segment_path: Path to the segment file to load.
     :param old_segment_format: If True, the old format will be used. If False, the format backed by a pandas dataframe will be used.
     :param normalize_signal: If True, the signal will be normalized using the subject median and median absolute deviation.
     :param resample_frequency: If this is set to a number, the signal will be resampled to that frequency.
@@ -42,7 +42,7 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
     factor and center values) should be in a segment statistics file in *stats_folder* and must have been produced
     earlier.
     :param mat_filename: A path to the segment to load. Must contain the name of the subject in the file.
-    :param stats_folder: A folder which keeps statistics files produced by the module basic_segment_statistics. The file
+    :param stats_glob: A folder which keeps statistics files produced by the module basic_segment_statistics. The file
                         to use will be inferred from the subject name in mat_filename, and a stats_file with the same
                         subject name in it should exist in stats_folder.
     :param center_name: The name of the metric to use as a centering vector (one value for each channel). The must correspond to a metric present in stats file.
@@ -50,6 +50,8 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
     :param old_segment_format: If True, use the old segment format.
     :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose name contains the same subject as mat_filename
     """
+    from features import basic_segment_statistics
+
     subject = fileutils.get_subject(mat_filename)
     stats_files = [filename for filename
                    in glob.glob(stats_glob)
@@ -212,6 +214,7 @@ class Segment:
         limits = k * scale
         outliers = np.abs(self.mat_struct.data) > limits
         limited = np.sign(self.mat_struct.data) * limits
+        assert isinstance(limited, np.ndarray)
         self.mat_struct.data[outliers] = limited[outliers]
 
     def center(self, center):
@@ -238,8 +241,8 @@ class Segment:
         return np.median(self.mat_struct.data, axis=1)[:, np.newaxis]
 
     def mad(self, median):
-        """Return the median absolute deviation for this segment only, scaled by phi-1(3/4) to approximate the standard
-           deviation."""
+        """Return the median absolute deviation for this segment only,
+        scaled by phi-1(3/4) to approximate the standard deviation."""
         c = scipy.stats.norm.ppf(3/4)
         subject_median = self.median()
         median_residuals = self.mat_struct.data - subject_median  # deviation between median and data

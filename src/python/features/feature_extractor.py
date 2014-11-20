@@ -4,8 +4,8 @@ import csv
 import multiprocessing
 import random
 
-import fileutils
-from segment import load_segment
+from dataset import fileutils
+from dataset.segment import load_segment
 
 
 def extract(feature_folder,
@@ -38,7 +38,10 @@ def extract(feature_folder,
                 if 'mat' in segment_path]
 
     if only_missing_files:
-        processed_features = set([os.path.join(output_dir, f) for f in os.listdir(output_dir)])
+        processed_features = set()
+        for dirpath, dirnames, filenames in os.walk(output_dir):
+            processed_features.update([os.path.join(dirpath, filename) for filename in filenames if '.csv' in filename])
+
         unprocessed_segments = []
         for segment in segments:
             if naming_function:
@@ -139,8 +142,11 @@ def write_features(features, segment_path, extractor_function, output_dir, extra
 
 
 def default_naming_function(segment_path, output_dir, extractor_function):
+    if fileutils.get_subject(output_dir) is None:
+        subject = fileutils.get_subject(segment_path)
+        output_dir = os.path.join(output_dir, subject)
     basename, ext = os.path.splitext(os.path.basename(segment_path))
-    return  os.path.join(output_dir, "{}_{}.csv".format(basename, extractor_function.__name__))
+    return os.path.join(output_dir, "{}_{}.csv".format(basename, extractor_function.__name__))
 
 
 def test_extractor(segment):

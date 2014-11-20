@@ -2,14 +2,14 @@
 """
 Module for producing spectra using the Welch method as provided by scipy.
 """
-import numpy as np
 import math
-import scipy.signal
 from collections import defaultdict
+
+import numpy as np
+import scipy.signal
 import matplotlib.pyplot as plt
 
-import fileutils
-import segment
+from dataset import fileutils, segment
 
 
 def get_channel_power_variance(files):
@@ -41,7 +41,7 @@ def group_channel_spectra(files):
     for f in files:
         channel_spectra = get_welch_spectra(segment.Segment(f))
         for channel, (f, pwelch_spec) in channel_spectra.items():
-            channel_dict[channel].append({ freq : pow for freq, pow in zip(f, pwelch_spec)})
+            channel_dict[channel].append({ freq : power for freq, power in zip(f, pwelch_spec)})
     #channel_dict now contains the frequencies and pwelch powers
     return channel_dict
 

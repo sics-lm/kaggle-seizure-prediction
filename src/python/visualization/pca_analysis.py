@@ -8,15 +8,12 @@ import logging
 
 import pandas as pd
 import numpy as np
-
-from wavelet_classification import load_data_frames, random_split
-
-import correlation_convertion
-import dataset
-
 from sklearn.decomposition import PCA
-
 from matplotlib import pyplot as plt
+
+from dataset import correlation_convertion, dataset, wavelet_classification
+
+
 try:
     plt.style.use('ggplot')
 except AttributeError:
@@ -34,11 +31,11 @@ def run_pca_analysis(feature_folder,
                      sliding_frames=False,
                      segment_statistics=False,
                      processes=1):
-    interictal, preictal, test_data = load_data_frames(feature_folder,
-                                                       frame_length=frame_length,
-                                                       sliding_frames=sliding_frames,
-                                                       segment_statistics=segment_statistics,
-                                                       processes=processes)
+    interictal, preictal, test_data = wavelet_classification.load_data_frames(feature_folder,
+                                                                              frame_length=frame_length,
+                                                                              sliding_frames=sliding_frames,
+                                                                              segment_statistics=segment_statistics,
+                                                                              processes=processes)
 
     if has_nan(interictal) or has_nan(preictal) or has_nan(test_data):
         print("WARNING: NaN values found, quitting!",

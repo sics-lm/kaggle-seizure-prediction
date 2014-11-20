@@ -2,7 +2,6 @@
 from __future__ import division
 from __future__ import print_function
 
-
 import logging
 
 import sklearn
@@ -10,15 +9,13 @@ import sklearn.linear_model
 import sklearn.svm
 import sklearn.ensemble
 import sklearn.metrics
-
 from sklearn import cross_validation
 from sklearn.grid_search import GridSearchCV
-
 import pandas as pd
 import numpy as np
 
-import correlation_convertion
-import dataset
+from dataset import dataset
+
 
 def get_model_class(method):
     if method == 'logistic':
@@ -291,6 +288,7 @@ def select_model(training_data, method='logistic',
 def preictal_ratio(predictions):
     """Returns the ratio of 'Preictal' occurances in the dataframe *predictions*"""
     is_interictal = predictions == 'Preictal'  # A dataframe with Bools in the class column
+    assert isinstance(is_interictal, pd.DataFrame)
     return is_interictal.sum() / is_interictal.count()
 
 

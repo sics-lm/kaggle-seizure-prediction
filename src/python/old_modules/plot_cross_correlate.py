@@ -3,17 +3,18 @@
 Module for plotting cross correlations.
 """
 from collections import defaultdict
-import numpy as np
 
+import numpy as np
 import matplotlib
+
+from dataset import fileutils
+from features import cross_correlate
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 import os.path
-
-import fileutils
-import cross_correlate
 
 
 def plot_correlations(correlations, output, segment_start=None, segment_end=None, subplot_rows=1, subplot_cols = 6):

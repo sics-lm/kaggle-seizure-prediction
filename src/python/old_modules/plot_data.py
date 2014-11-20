@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 
-import matplotlib.pyplot as plt
-import segment
 import os
 import os.path
-import fileutils
+
+import matplotlib.pyplot as plt
+
+from dataset import fileutils, segment
+
 
 def plot_segment(segment_object, channel_slice=None, column_slice=None):
     """Plots the given segment. If the argument *channel_slice* is given as a slice object,
@@ -32,7 +34,7 @@ def plot_segment(segment_object, channel_slice=None, column_slice=None):
     return fig, subplots
 
 
-def plot_many(filenames, output_dir=None, format='png', columns_slice=None, channel_slice=None, **kwargs):
+def plot_many(filenames, output_dir=None, output_format='png', columns_slice=None, channel_slice=None, **kwargs):
     """Plots all segment files in the given directory and outputs the plot to an image with the same name.
     The keyword arguments *columns_slice* and *channel_slice* has the same meaning as for plot_segment.
     *output_dir* can be set to a directory to write the plots to, if None is given, the same directory as
@@ -45,16 +47,11 @@ def plot_many(filenames, output_dir=None, format='png', columns_slice=None, chan
             seg = segment.Segment(filename)
             fig, subplots = plot_segment(seg, column_slice=columns_slice, channel_slice=channel_slice)
             if output_dir is None:
-                output_path = "{}.{}".format(root, format)
+                output_path = "{}.{}".format(root, output_format)
             else:
                 basename = os.path.basename(root)
-                output_path = "{}.{}".format(os.path.join(output_dir, basename), format)
-            fig.savefig(output_path, format=format, **kwargs)
-
-
-def test():
-    s = segment.test_preictal()
-    plot_segment(s, channel_slice=slice(0,1), column_slice=slice(0, 100))
+                output_path = "{}.{}".format(os.path.join(output_dir, basename), output_format)
+            fig.savefig(output_path, format=output_format, **kwargs)
 
 
 if __name__ == '__main__':
@@ -71,5 +68,5 @@ if __name__ == '__main__':
     files = fileutils.expand_paths(args.files)
     channels = slice(*args.channels) if args.channels else None
     sample = slice(*args.sample) if args.sample else None
-    plot_many(files, format=args.format, output_dir=args.output,
+    plot_many(files, output_format=args.format, output_dir=args.output,
               channel_slice=channels, columns_slice=sample)

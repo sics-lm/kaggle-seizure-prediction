@@ -6,6 +6,7 @@ import json
 import glob
 from collections import defaultdict
 
+
 CANONICAL_NAMES_FILE = '../../data/test_segment_names.json'
 
 CANONICAL_FOLDERS = ('Dog_1', 'Dog_2', 'Dog_3',
@@ -214,20 +215,3 @@ def get_test_files(dirname):
     Returns all .mat files in the directory which correspond to test segments.
     """
     return get_class_files(dirname, 'test')
-
-
-def process_segments(files, fun, output_format="{basename}_{fun_name}.txt"):
-    """Loads each of the files in the list *files* as segments and applies the function *fun* to each of the segment.
-    The function *fun* should return an iteration of rows which will be written to files using the given output_format.
-     *basename* will be the name of the files without extension, *fun_name* is the __name__ attribute of the function
-     object.
-    """
-    import segment
-
-    for file in files:
-        seg = segment.Segment(file)
-        fun_name = fun.__name__
-        base_name, ext = os.path.splitext(file)
-        output_name = output_format.format(base_name=base_name, fun_name=fun_name)
-        with open(output_name, 'w') as fp:
-            fp.writelines(fun(seg))

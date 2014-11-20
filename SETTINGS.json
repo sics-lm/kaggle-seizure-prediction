@@ -1,0 +1,26 @@
+{
+    "TRAIN_DATA_PATH": ["data/Dog_1",
+                        "data/Dog_2",
+                        "data/Dog_3",
+                        "data/Dog_4",
+                        "data/Dog_5",
+                        "data/Patient_1",
+                        "data/Patient_2"],
+    "TEST_DATA_PATH": ["data/Dog_1",
+                        "data/Dog_2",
+                        "data/Dog_3",
+                        "data/Dog_4",
+                        "data/Dog_5",
+                        "data/Patient_1",
+                        "data/Patient_2"],
+    "MODEL_PATH": "models",
+    "SUBMISSION_PATH": "submissions",
+    "LOG_PATH": "logs",
+    "FEATURE_PATH": "features",
+    "FEATURE_TYPE": "hills",
+    "FEATURE_SETTINGS": { "WINDOW_LENGTH": 5,
+                          "FEATURE_WINDOWS": 12},
+    "WORKERS": 1
+
+
+}

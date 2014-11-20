@@ -3,7 +3,6 @@ import random
 import os
 import os.path
 import logging
-import glob
 import multiprocessing
 from functools import partial
 
@@ -12,10 +11,8 @@ import numpy as np
 from sklearn import cross_validation, preprocessing
 from sklearn.decomposition import PCA
 
+from dataset import fileutils
 
-import fileutils
-from features_combined import load as load_combined
-import basic_segment_statistics
 
 def first(iterable):
     """Returns the first element of an iterable"""
@@ -349,10 +346,44 @@ def normalize_segment_names(dataframe, inplace=False):
     return dataframe
 
 
+def load_preictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
+    preictal = load_feature_files(feature_folder,
+                                  class_name="preictal",
+                                  sliding_frames=sliding_frames,
+                                  **kwargs)
+    preictal['Preictal'] = 1
+    preictal.sortlevel('segment', inplace=True)
+    if isinstance(preictal.columns, pd.MultiIndex):
+        preictal.sortlevel(axis=1, inplace=True)
+    return preictal
+
+
+def load_interictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
+    interictal = load_feature_files(feature_folder,
+                                  class_name="preictal",
+                                  sliding_frames=sliding_frames,
+                                  **kwargs)
+    interictal['Preictal'] = 0
+    interictal.sortlevel('segment', inplace=True)
+    if isinstance(interictal.columns, pd.MultiIndex):
+        interictal.sortlevel(axis=1, inplace=True)
+    return interictal
+
+
+def load_test_dataframes(feature_folder, **kwargs):
+    test = load_feature_files(feature_folder,
+                              class_name="test",
+                              # Never use sliding frames for the test-data
+                              sliding_frames=False,
+                              **kwargs)
+    test.sortlevel('segment', inplace=True)
+    if isinstance(test.columns, pd.MultiIndex):
+        test.sortlevel(axis=1, inplace=True)
+    return test
+
+
 def load_data_frames(feature_folder,
-                     classes=('interictal', 'preictal', 'test'),
                      sliding_frames=False,
-                     segment_statistics=False,
                      **kwargs):
     """
                      load_function=None,
@@ -362,60 +393,15 @@ def load_data_frames(feature_folder,
                      frame_length=1,
                      sliding_frames=True):
     """
-    if 'preictal' in classes:
-        preictal = load_feature_files(feature_folder,
-                                      class_name="preictal",
-                                      sliding_frames=sliding_frames,
-                                      **kwargs)
-        preictal['Preictal'] = 1
-    else:
-        preictal = pd.DataFrame(np.zeros(0))
-    if 'interictal' in classes:
-        interictal = load_feature_files(feature_folder,
-                                        class_name="interictal",
-                                        sliding_frames=sliding_frames,
-                                        **kwargs)
-        interictal['Preictal'] = 0
-    else:
-        interictal = pd.DataFrame(np.zeros(0))
-
-    if 'test' in classes:
-        test = load_feature_files(feature_folder,
-                                  class_name="test",
-                                  # Never use sliding frames for the test-data
-                                  sliding_frames=False,
-                                  **kwargs)
-    else:
-        test = pd.DataFrame(np.zeros(0))
-
-    if segment_statistics:
-        try:
-            logging.info("Loading segment statistics file from {}".format(feature_folder))
-            segment_statistics = basic_segment_statistics.read_folder(feature_folder)
-        except FileNotFoundError:
-            logging.warning("There is not statistics file in {}".format(feature_folder))
-        interictal = interictal.join(segment_statistics)
-        preictal = preictal.join(segment_statistics)
-        test = test.join(segment_statistics)
-
-    preictal.sortlevel('segment', inplace=True)
-    if isinstance(preictal.columns, pd.MultiIndex):
-        preictal.sortlevel(axis=1, inplace=True)
-
-    interictal.sortlevel('segment', inplace=True)
-    if isinstance(interictal.columns, pd.MultiIndex):
-        interictal.sortlevel(axis=1, inplace=True)
-
-    test.sortlevel('segment', inplace=True)
-    if isinstance(test.columns, pd.MultiIndex):
-        test.sortlevel(axis=1, inplace=True)
-
+    preictal = load_preictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
+    interictal = load_interictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
+    test = load_test_dataframes(feature_folder, **kwargs)
     return interictal, preictal, test
 
 
 def load_feature_files(feature_folder,
                        class_name,
-                       load_function=load_combined,
+                       load_function=None,
                        find_features_function=fileutils.find_grouped_feature_files,
                        rebuild_data=False,
                        frame_length=12,

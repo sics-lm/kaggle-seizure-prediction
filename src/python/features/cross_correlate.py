@@ -4,16 +4,15 @@ Module for calculating the cross correlation between channels.
 """
 from __future__ import division
 
-import numpy as np
 from collections import defaultdict
-import multiprocessing
 import os.path
 import csv
 import re
 
-import fileutils
-import segment
-import feature_extractor
+import numpy as np
+
+from features import feature_extractor
+from dataset import fileutils
 
 csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
 
@@ -257,6 +256,10 @@ def get_csv_name(f, csv_directory, window_length=None):
 
 def csv_naming_function(segment_path, output_dir, window_length=None, **kwargs):
     """Wrapper for get_csv_name for use as a feature_extrator naming function."""
+    if fileutils.get_subject(output_dir) is None:
+        subject = fileutils.get_subject(segment_path)
+        output_dir = os.path.join(output_dir, subject)
+
     return get_csv_name(segment_path, output_dir, window_length)
 
 
@@ -277,13 +280,45 @@ def setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_del
     return time_delta_config
 
 
-if __name__ == '__main__':
-    #test()
-    #exit()
-    #fileutils.process_segments(example_segments(), process_segment)
-    #plot_welch_spectra(example_segments(), '../example.pdf')
-    #exit(0)
+def extract_features(segment_paths,
+                     output_dir,
+                     workers=1,
+                     resample_frequency=None,
+                     normalize_signal=False,
+                     window_size=5,
+                     only_missing_files=True,
+                     # Arguments for calculate_cross_correlations
+                     time_delta_config=None,
+                     time_delta_begin=0,
+                     time_delta_end=0,
+                     time_delta_step=0,
+                     channels=None,
+                     segment_start=None,
+                     segment_end=None,
+                     all_time_deltas=False,
+                     old_csv_format=False):
 
+    time_delta_config = setup_time_delta(time_delta_begin, time_delta_end, time_delta_step, time_delta_config)
+    feature_extractor.extract(feature_folder=segment_paths,
+                              extractor_function=calculate_cross_correlations,
+                              # Arguments for feature_extractor.extract
+                              output_dir=output_dir,
+                              workers=workers,
+                              naming_function=csv_naming_function,
+                              normalize_signal=normalize_signal,
+                              only_missing_files=only_missing_files,
+                              resample_frequency=resample_frequency,
+                              # Arguments for calculate_cross_correlations
+                              time_delta_config=time_delta_config,
+                              window_length=window_size,
+                              channels=channels,
+                              segment_start=segment_start,
+                              segment_end=segment_end,
+                              all_time_deltas=all_time_deltas,
+                              old_csv_format=old_csv_format,)
+
+
+def main():
     import argparse
     parser = argparse.ArgumentParser(description="Calculates the cross-correlation between the channels in the given segments. Saves the results to a csv file per segment file.")
 
@@ -317,29 +352,29 @@ if __name__ == '__main__':
                         action='store_true',
                         dest='normalize_signal')
 
-    #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
-
     args = parser.parse_args()
-
-    time_delta_config = setup_time_delta(args.time_delta_begin, args.time_delta_end, args.time_delta_step, args.time_delta_config)
 
     channels = None
 
-    feature_extractor.extract(feature_folder=args.segments,
-                              extractor_function=calculate_cross_correlations,
-                              # Arguments for feature_extractor.extract
-                              output_dir=args.csv_directory,
-                              workers=args.workers,
-                              naming_function=csv_naming_function,
-                              old_segment_format=not args.new_segment_format,
-                              normalize_signal=args.normalize_signal,
-                              only_missing_files=args.only_missing_files,
-                              resample_frequency=args.resample_frequency,
-                              # Arguments for calculate_cross_correlations
-                              time_delta_config=time_delta_config,
-                              window_length=args.window_length,
-                              channels=channels,
-                              segment_start=args.segment_start,
-                              segment_end=args.segment_end,
-                              all_time_deltas=args.all_time_deltas,
-                              old_csv_format=args.old_csv_format,)
+    extract_features(segment_paths=args.segments,
+                     output_dir=args.csv_directory,
+                     workers=args.workers,
+                     resample_frequency=args.resample_frequency,
+                     normalize_signal=args.normalize_signal,
+                     window_size=args.window_length,
+                     only_missing_files=args.only_missing_files,
+                     # Arguments for calculate_cross_correlations
+                     time_delta_config=args.time_delta_config,
+                     time_delta_begin=args.time_delta_begin,
+                     time_delta_end=args.time_delta_end,
+                     time_delta_step=args.time_delta_step,
+                     segment_start=args.segment_start,
+                     channels=channels,
+                     segment_end=args.segment_end,
+                     all_time_deltas=args.all_time_deltas,
+                     old_csv_format=args.old_csv_format)
+
+
+if __name__ == '__main__':
+    main()
+

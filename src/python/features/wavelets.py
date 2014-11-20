@@ -1,13 +1,14 @@
 import mne
+
+from dataset import segment as sg
+from features import feature_extractor
+
 mne.set_log_level(verbose='WARNING')
 from mne.time_frequency.tfr import cwt_morlet
 import random
 import sys
 import numpy as np
 from itertools import chain
-
-import segment as sg
-import feature_extractor
 
 
 class EpochShim(object):
@@ -265,6 +266,34 @@ def band_wavelet_synchrony(epochs, start_freq, stop_freq):
 
     return tf_decompositions
 
+
+def extract_features(segment_paths,
+                     output_dir,
+                     workers=1,
+                     sample_size=None,
+                     old_segment_format=True,
+                     resample_frequency=None,
+                     normalize_signal=False,
+                     feature_length_seconds=60,
+                     window_size=5,
+                     no_epochs=False,
+                     only_missing_files=True):
+    feature_extractor.extract(segment_paths,
+                              extract_features_for_segment,
+                              ## Arguments for feature_extractor.extract
+                              output_dir=output_dir,
+                              workers=workers,
+                              sample_size=sample_size,
+                              old_segment_format=old_segment_format,
+                              resample_frequency=resample_frequency,
+                              normalize_signal=normalize_signal,
+                              only_missing_files=only_missing_files,
+                              ## Worker function kwargs:
+                              feature_length_seconds=feature_length_seconds,
+                              window_size=window_size,
+                              no_epochs=no_epochs)
+
+
 if __name__ == '__main__':
 
     import argparse
@@ -275,32 +304,23 @@ if __name__ == '__main__':
     parser.add_argument("--window-size", help="What length in seconds the epochs should be.", type=float, default=5.0)
     parser.add_argument("--feature-length", help="The length of the feature vectors in seconds, will be produced by concatenating the phase lock values from the windows.", type=float, default=60.0)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
-    parser.add_argument("--file-sample-size", help="Optionally take a sample of the files of this size.", type=int, dest='sample_size')
     parser.add_argument("--no-epochs", help="Don't use mne Epochs when generating the windows, just use the raw windows from the segment.",
                         action='store_true',
                         dest='no_epochs',
                         default=False)
-    parser.add_argument("--old-segment-format", help="Makes the feature extraction use the old segment format",
-                        action='store_true',
-                        default=False,
-                        dest='old_segment_format')
     parser.add_argument("--resample-frequency", help="The frequency to resample to,",
                         type=float,
                         dest='resample_frequency')
 
-    #parser.add_argument("--channels", help="Selects a subset of the channels to use.")
-
     args = parser.parse_args()
 
-    feature_extractor.extract(args.segments,
-                              extract_features_for_segment,
-                              ## Arguments for feature_extractor.extract
-                              output_dir=args.csv_directory,
-                              workers=args.workers,
-                              sample_size=args.sample_size,
-                              old_segment_format=True,#args.old_segment_format,
-                              resample_frequency=args.resample_frequency,
-                              ## Worker function kwargs:
-                              feature_length_seconds=args.feature_length,
-                              window_size=args.window_size,
-                              no_epochs=args.no_epochs)
+    extract_features(args.segments,
+                     ## Arguments for feature_extractor.extract
+                     output_dir=args.csv_directory,
+                     workers=args.workers,
+                     sample_size=args.sample_size,
+                     resample_frequency=args.resample_frequency,
+                     ## Worker function kwargs:
+                     feature_length_seconds=args.feature_length,
+                     window_size=args.window_size,
+                     no_epochs=args.no_epochs)

@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-import numpy as np
 import math
 
-import fileutils
-import segment
+import numpy as np
+
+from dataset import fileutils, segment
+
 
 def amplitude_histograms(s, bins=100):
     histograms = {channel : np.histogram(np.abs(s.get_channel_data(channel)), bins=bins) for channel in s.get_channels()}
