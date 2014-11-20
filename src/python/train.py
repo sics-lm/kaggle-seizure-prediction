@@ -38,10 +38,10 @@ def extract_features(settings):
 
 
 def train_model(settings):
-    classification_kwargs = dict(feature_folders=settings['FEATURE_PATH'],
-                                 feature_type=settings['FEATURE_TYPE'])
-
-    classification_pipeline.run_batch_classification(**classification_kwargs)
+    classification_pipeline.train_models(feature_folders=[settings['FEATURE_PATH']],
+                                         feature_type=settings['FEATURE_TYPE'],
+                                         model_dir=settings['MODEL_PATH'],
+                                         processes=settings['WORKERS'])
 
 
 def fix_settings(settings, root_dir):
