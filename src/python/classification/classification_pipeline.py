@@ -1,4 +1,5 @@
 """Module for running the classification pipeline in python"""
+from __future__ import absolute_import
 import glob
 import os
 import os.path
@@ -9,9 +10,9 @@ import sys
 
 import numpy as np
 
-from classification import submissions, seizure_modeling
+from . import submissions, seizure_modeling
 
-from dataset import dataset, fileutils, features_combined, correlation_convertion, wavelet_classification
+from ..datasets import dataset, fileutils, features_combined, correlation_convertion, wavelet_classification
 
 def train_models(feature_folders, feature_type, model_dir, do_cv=True, processes=1):
     subject_folders = fileutils.expand_folders(feature_folders)

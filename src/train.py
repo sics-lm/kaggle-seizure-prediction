@@ -1,14 +1,18 @@
 """
 Module for running the feature extraction and model training.
 """
+from __future__ import absolute_import
+
 import json
 import os.path
 import sys
-sys.path.append(os.path.abspath('.'))
+#sys.path.append(os.path.abspath('.'))
 
 print(sys.path)
-from features import hills_features, wavelets, cross_correlate
-from classification import classification_pipeline
+from python.features import hills_features, wavelets, cross_correlate
+from python.classification import classification_pipeline
+
+
 
 def extract_features(settings):
     output_dir = settings['FEATURE_PATH']

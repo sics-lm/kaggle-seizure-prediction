@@ -2,6 +2,7 @@
 """
 Module for producing spectra using the Welch method as provided by scipy.
 """
+from __future__ import absolute_import
 import math
 from collections import defaultdict
 
@@ -9,7 +10,7 @@ import numpy as np
 import scipy.signal
 import matplotlib.pyplot as plt
 
-from dataset import fileutils, segment
+from ..datasets import fileutils, segment
 
 
 def get_channel_power_variance(files):

@@ -1,7 +1,8 @@
+from __future__ import absolute_import
 import mne
 
-from dataset import segment as sg
-from features import feature_extractor
+from ..datasets import segment as sg
+from . import feature_extractor
 
 mne.set_log_level(verbose='WARNING')
 from mne.time_frequency.tfr import cwt_morlet

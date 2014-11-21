@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 from __future__ import print_function
-from dataset import fileutils
-from dataset import dataset
+from . import fileutils
+from . import dataset
 
 import pandas as pd
 import numpy as np

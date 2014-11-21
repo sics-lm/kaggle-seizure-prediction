@@ -1,12 +1,12 @@
 """Module for dealing with submissions"""
-
+from __future__ import absolute_import
 import sys
 import csv
 from collections import defaultdict
 
 import numpy as np
 
-from dataset import fileutils
+from ..datasets import fileutils
 
 
 def scores_to_submission(score_dicts, **kwargs):

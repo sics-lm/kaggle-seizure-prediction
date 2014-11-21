@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-
+from __future__ import absolute_import
 import math
 
 import numpy as np
 
-from dataset import fileutils, segment
+from ..datasets import fileutils, segment
 
 
 def amplitude_histograms(s, bins=100):

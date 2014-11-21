@@ -1,16 +1,16 @@
+from __future__ import absolute_import
+
 import mne
-
-from features import feature_extractor,wavelets
-
-
 mne.set_log_level(verbose='WARNING')
-
 
 import sys
 from itertools import chain
 
-from features.transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
-from features.transforms import FilteredFFTWithTFCorrelation as Filtered_TF_xcorr
+from . import feature_extractor
+from . import wavelets
+
+from .transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
+from .transforms import FilteredFFTWithTFCorrelation as Filtered_TF_xcorr
 
 def extract_features_for_segment(
     segment, transformation=None,feature_length_seconds=60, window_size=5, **kwargs):

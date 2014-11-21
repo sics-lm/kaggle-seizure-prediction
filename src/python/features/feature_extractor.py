@@ -1,11 +1,12 @@
 """ Python module for doing feature extraction in parallel over segments """
+from __future__ import absolute_import
 import os.path
 import csv
 import multiprocessing
 import random
 
-from dataset import fileutils
-from dataset.segment import load_segment
+from ..datasets import fileutils
+from ..datasets import segment as sg
 
 
 def extract(feature_folder,
@@ -110,7 +111,7 @@ def worker_function(segment_path, extractor_function, output_dir,
     if output_dir is None:
         output_dir = os.path.dirname(segment_path)
 
-    segment = load_segment(segment_path,
+    segment = sg.load_segment(segment_path,
                            old_segment_format=old_segment_format,
                            normalize_signal=normalize_signal,
                            resample_frequency=resample_frequency)

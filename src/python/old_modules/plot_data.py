@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-
+from __future__ import absolute_import
 
 import os
 import os.path
 
 import matplotlib.pyplot as plt
 
-from dataset import fileutils, segment
+from ..datasets import fileutils, segment
 
 
 def plot_segment(segment_object, channel_slice=None, column_slice=None):

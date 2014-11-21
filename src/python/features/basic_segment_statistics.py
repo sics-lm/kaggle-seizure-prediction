@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 """Module for getting and plotting some basic statstics of segments"""
+from __future__ import absolute_import
 import glob
 import os
 import os.path

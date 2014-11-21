@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import numpy as np
 from scipy import signal
 from scipy.signal import resample, hann, filtfilt, iirfilter, lfilter, butter

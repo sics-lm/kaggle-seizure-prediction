@@ -1,4 +1,5 @@
 """Python module for manipulating datasets."""
+from __future__ import absolute_import
 import random
 import os
 import os.path
@@ -11,7 +12,7 @@ import numpy as np
 from sklearn import cross_validation, preprocessing
 from sklearn.decomposition import PCA
 
-from dataset import fileutils
+from . import fileutils
 
 
 def first(iterable):

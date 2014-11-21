@@ -16,11 +16,11 @@
     "MODEL_PATH": "models",
     "SUBMISSION_PATH": "submissions",
     "LOG_PATH": "logs",
-    "FEATURE_PATH": "features",
+    "FEATURE_PATH": "../data/hills",
     "FEATURE_TYPE": "hills",
     "FEATURE_SETTINGS": { "WINDOW_LENGTH": 5,
                           "FEATURE_WINDOWS": 12},
-    "WORKERS": 1
+    "WORKERS": 4
 
 
 }

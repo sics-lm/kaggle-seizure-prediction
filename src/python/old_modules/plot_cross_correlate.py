@@ -2,13 +2,14 @@
 """
 Module for plotting cross correlations.
 """
+from __future__ import absolute_import
 from collections import defaultdict
 
 import numpy as np
 import matplotlib
 
-from dataset import fileutils
-from features import cross_correlate
+from ..datasets import fileutils
+from ..features import cross_correlate
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -236,7 +237,7 @@ def boxplot_delta_t_distributions(file_correlations, output, channels_per_plot=1
                     elif 'interictal' in f.lower():
                         interictal_channel_corrs[channel_pair][delta_t].append(corr)
 
-   
+
     for i, channel_pair in enumerate(sorted(channels)):
         fig = plt.figure(dpi=300)
 

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from __future__ import print_function
 
 import sys
@@ -11,7 +12,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 
-from dataset import correlation_convertion, dataset, wavelet_classification
+from ..datasets import correlation_convertion, dataset, wavelet_classification
 
 
 try:

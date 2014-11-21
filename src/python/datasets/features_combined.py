@@ -1,9 +1,11 @@
 """
 Module for dealing with combined features
 """
+from __future__ import absolute_import
 import pandas as pd
 
-from dataset import correlation_convertion, wavelet_classification
+from . import correlation_convertion
+from . import wavelet_classification
 
 
 def load(segment_files, **kwargs):

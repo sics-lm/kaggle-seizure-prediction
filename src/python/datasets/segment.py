@@ -1,7 +1,7 @@
 """
 Module for loading and manipulating  EEG segments.
 """
-
+from __future__ import absolute_import
 import os.path
 import glob
 
@@ -11,7 +11,7 @@ import scipy.stats
 import pandas as pd
 import numpy as np
 
-import dataset.fileutils as fileutils
+from . import fileutils
 
 def load_segment(segment_path, old_segment_format=True, normalize_signal=False, resample_frequency=None):
     """

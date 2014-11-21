@@ -3,6 +3,7 @@
 Module for calculating the cross correlation between channels.
 """
 from __future__ import division
+from __future__ import absolute_import
 
 from collections import defaultdict
 import os.path
@@ -11,8 +12,8 @@ import re
 
 import numpy as np
 
-from features import feature_extractor
-from dataset import fileutils
+from . import feature_extractor
+from ..datasets import fileutils
 
 csv_fieldnames = ['channel_i', 'channel_j', 'start_sample', 'end_sample', 't_offset', 'correlation']
 

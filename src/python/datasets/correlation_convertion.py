@@ -1,12 +1,14 @@
 """
 Module for loading cross-correlation features.
 """
+from __future__ import absolute_import
 
 import re
 
 import pandas as pd
 
-from dataset import fileutils, dataset
+from . import fileutils
+from . import dataset
 
 
 channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
