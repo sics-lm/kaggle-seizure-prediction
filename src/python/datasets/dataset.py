@@ -409,6 +409,7 @@ def load_feature_files(feature_folder,
                        sliding_frames=False,
                        processes=1,
                        output_folder=None,
+                       segment_statistics=False,
                        file_pattern="*segment*.csv"):
     """
     Loads all the files matching the class name and patter from the given feature folder.
@@ -425,7 +426,7 @@ def load_feature_files(feature_folder,
     :param sliding_frames: If True, the features will be oversampled by using a sliding window approach.
     :param processes: The number of processes to use for parallel loading of feature files.
     :param output_folder: The file to save the concatenated feature data frame caches to.
-    :param file_pattern: A pattern wich will be used to select what files to load as features.
+    :param file_pattern: A pattern which will be used to select what files to load as features.
     :return: A pandas dataframe where all the features loaded from feature folder with the given class are
              concatenated. The index will have a level called 'segment' with the segment name for the feature frames.
     """

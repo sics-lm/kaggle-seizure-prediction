@@ -2,16 +2,15 @@
 Module for running the feature extraction and model training.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 
 import json
 import os.path
 import sys
-#sys.path.append(os.path.abspath('.'))
+import datetime
 
-print(sys.path)
 from python.features import hills_features, wavelets, cross_correlate
 from python.classification import classification_pipeline
-
 
 
 def extract_features(settings):
@@ -42,10 +41,21 @@ def extract_features(settings):
 
 
 def train_model(settings):
-    classification_pipeline.train_models(feature_folders=[settings['FEATURE_PATH']],
-                                         feature_type=settings['FEATURE_TYPE'],
-                                         model_dir=settings['MODEL_PATH'],
-                                         processes=settings['WORKERS'])
+    # classification_pipeline.train_models(feature_folders=[settings['FEATURE_PATH']],
+    #                                      feature_type=settings['FEATURE_TYPE'],
+    #                                      model_dir=settings['MODEL_PATH'],
+    #                                      processes=settings['WORKERS'])
+    timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
+    classification_pipeline.run_batch_classification(feature_folders=[settings['FEATURE_PATH']],
+                                                     timestamp=timestamp,
+                                                     frame_length=12,
+                                                     feature_type=settings['FEATURE_TYPE'],
+                                                     processes=settings['WORKERS'],
+                                                     do_standardize=True,
+                                                     no_crossvalidation=True,
+                                                     rebuild_model=True,
+                                                     method='svm',
+                                                     model_params={'C': 500, 'gamma': 0})
 
 
 def fix_settings(settings, root_dir):
@@ -75,7 +85,9 @@ def main():
 
     args = parser.parse_args()
     settings = get_settings(args.settings)
+    print("Extracting Features")
     extract_features(settings)
+    print("Training model")
     train_model(settings)
 
 
