@@ -14,6 +14,7 @@ from . import submissions, seizure_modeling
 
 from ..datasets import dataset, fileutils, features_combined, correlation_convertion, wavelet_classification
 
+# TODO: Remove?
 def train_models(feature_folders, feature_type, model_dir, do_cv=True, processes=1):
     subject_folders = fileutils.expand_folders(feature_folders)
     if feature_type in ('hills', 'wavelets'):
@@ -29,6 +30,7 @@ def train_models(feature_folders, feature_type, model_dir, do_cv=True, processes
             train_on_subject(subject, model_dir, load_function, file_pattern=file_pattern, processes=processes)
 
 
+# TODO: Remove?
 def train_on_subject(subject_folder,
                      model_dir,
                      load_function,
@@ -54,6 +56,7 @@ def train_on_subject(subject_folder,
         pickle.dump(model, fp)
 
 
+# TODO: Remove?
 def predict(feature_folders, feature_type, model_dir, submission_folder, processes=1):
     subject_folders = fileutils.expand_folders(feature_folders)
     if feature_type in ('hills', 'wavelets'):
@@ -111,19 +114,32 @@ def run_batch_classification(feature_folders,
                              do_pca=False,
                              random_state=None,
                              **kwargs):
-    """Runs the batch classification on the feature folders.
-    Args:
+    """
+    Runs the batch classification on the feature folders.
 
-        feature_folders: Should be a list of folders containing feature
-                         files or folders containing the canonical subject folders
-                         {'Dog_1', 'Dog_2', 'Dog_3', 'Dog_4', 'Dog_5', 'Patient_1',
-                        'Patient_2'}. If the folder contains any of the subject
-                         folders, it will be replaced by them in the list of feature
-                         folders.
-        submission_file: If this argument is a path, the classification scores
-                         will be written to a csv file with that path.
-    Returns:
-        None.
+    :param feature_folders: Should be a list of folders containing feature files or folders containing the canonical
+    subject folders {'Dog_1', 'Dog_2', 'Dog_3', 'Dog_4', 'Dog_5', 'Patient_1', 'Patient_2'}.
+    If the folder contains any of the subject folders, it will be replaced by them in the list of feature folders.
+    :param timestamp: The provided timestamp for this classification
+    :param file_components: ???
+    :param optional_file_components: ???
+    :param submission_file: If this argument is a path, the classification scores will be written to a csv file with
+    that path.
+    :param frame_length: The length of each frame, in number of windows
+    :param sliding_frames: If True, sliding windows will be used
+    :param rebuild_data: If True, the cache files will be rebuilt from the csv data.
+    :param feature_type: The name of the feature. Valid values are 'cross-correlation', 'hills' and 'wavelets'
+    :param processes: The number of processes to use in the grid search
+    :param csv_directory: Where to place the resulting classification files
+    :param segment_statistics: ???
+    :param do_downsample: If true downsampling of the interictal features will be performed
+    :param downsample_ratio: The ratio of interictal to preictal samples after downsampling.
+    :param do_standardize: If True, the features will be standarized before classification
+    :param do_segment_split: If True, the cross-validation will be performed by splitting on whole segments
+    :param do_pca: If True, the the PCA feature reduction will be performed on the data.
+    :param random_state: Seed
+    :param kwargs: Incoming kwargs that will be passed on to the classifiers
+    :return: None. Creates the output classification and submission files in ../submissions.
     """
 
     all_scores = []
@@ -189,33 +205,32 @@ def load_features(feature_folders,
                   do_pca=False,
                   random_state=None):
     """
-    Loads the features from the list of paths *feature_folder*. Returns an
-    iterator of dictionaries, where each dictionary has the keys 'subject_folder',
-    'interictal_data', ''preictal_data' and 'unlabeled_data'.
+    Loads the features from the list of paths *feature_folder*. Returns an iterator of dictionaries, where each
+    dictionary has the keys 'subject_folder', 'interictal_data', ''preictal_data' and 'unlabeled_data'.
 
-    Args:
-        feature_folders: A list of paths to folders containing features.
-                         The features in these folders will be combined into
-                         three data frames.
-        feature_type: A string describing the type of features to use. If
-                      'wavelets' is supplied, the feature files will be loaded
-                      as wavelets. If 'cross-correlations' or 'xcorr' is
-                      supplied, the features will be loaded as cross-correlation
-                      features. If 'combined' is supplied, the path of the
-                      feature folders will be used to determine which features
-                      it contains, and the results will be combined column-wise
-                      into longer feature vectors.
-        frame_length: The desired frame length in windows of the features.
-        sliding_frames: If True, the training feature frames will be generated
-                        by a sliding window, greatly increasing the number of
-                        generated frames.
-        processes: The number of processes to use for parallel processing.
-        :param segment_statistics: If this filename is supplied, the dataframes will be augmented with features from this file
-    Returns:
-        A generator object which gives a dictionary with features for every call
-        to next. The dictionary contains the keys 'subject_folder',
-        'interictal_data', 'preictal_data' and 'unlabeled_data'.
+    :param feature_folders: A list of paths to folders containing features. The features in these folders will be
+    combined into three data frames.
+    :param feature_type: A string describing the type of features to use. If  'wavelets' is supplied, the feature files
+    will be loaded as wavelets. If 'cross-correlations' or 'xcorr' is supplied, the features will be loaded as
+    cross-correlation features. If 'combined' is supplied, the path of the feature folders will be used to determine
+    which features it contains, and the results will be combined column-wise into longer feature vectors.
+    :param frame_length: The desired frame length in windows of the features.
+    :param sliding_frames: If True, the training feature frames will be generated by a sliding window, greatly
+    increasing the number of generated frames.
+    :param rebuild_data: If True, will rebuild the feature data cache files.
+    :param processes: Number of processes to use in the loading of the data
+    :param segment_statistics: If this filename is supplied, the dataframes will be augmented with features from this
+    file
+    :param do_downsample:
+    :param downsample_ratio:
+    :param do_standardize:
+    :param do_segment_split:
+    :param do_pca:
+    :param random_state:
+    :return: A generator object which gives a dictionary with features for every call to next. The dictionary contains
+    the keys 'subject_folder', 'interictal_data', 'preictal_data' and 'unlabeled_data'.
     """
+
     feature_folders = sorted(fileutils.expand_folders(feature_folders))
 
     if feature_type in ['wavelets', 'hills', 'cross-correlations', 'xcorr']:
@@ -245,7 +260,7 @@ def load_features(feature_folders,
     elif feature_type == 'combined':
         combined_folders = fileutils.group_folders(feature_folders)
         for subject, combo_folders in combined_folders.items():
-            ## We create an output folder which is based on the subject name
+            # We create an output folder which is based on the subject name
             subject_folder = os.path.join('..', '..', 'data', 'combined', subject)
             if not os.path.exists(subject_folder):
                 os.makedirs(subject_folder)
@@ -277,6 +292,11 @@ def preprocess_features(interictal,
                         do_segment_split=False,
                         do_pca=False,
                         random_state=None):
+    """
+    Performs pre-processing on the features.
+
+    This can include downsampling the interictal data, standardizing the data and performing PCA feature reduction.
+    """
     logging.info("Preprocessing features")
     if do_downsample:
         interictal = dataset.downsample(interictal,
@@ -285,7 +305,7 @@ def preprocess_features(interictal,
                                         random_state=random_state)
     if do_standardize:
         logging.info("Standardizing variables.")
-        interictal, preictal, test = dataset.scale([interictal, preictal, test], inplace=True)
+        interictal, preictal, test = dataset.scale([interictal, preictal, test])
         logging.info("Shapes after standardization:")
         logging.info("Interictal: {}".format(interictal.shape))
         logging.info("Preictal: {}".format(preictal.shape))
@@ -341,8 +361,8 @@ def run_classification(interictal_data,
                                              random_state=random_state,
                                              no_crossvalidation=no_crossvalidation)
         if model_file is None:
-            #Create a new filename based on the model method and the
-            #date
+            # Create a new filename based on the model method and the
+            # date
             if file_components is None:
                 model_basename = "model_{}_{}.pickle".format(method, timestamp)
             else:
@@ -355,7 +375,7 @@ def run_classification(interictal_data,
         with open(model_file, 'wb') as fp:
             pickle.dump(model, fp)
 
-    #If we don't use cross-validation we shouldn't refit
+    # If we don't use cross-validation we shouldn't refit
     if do_refit and not no_crossvalidation:
         logging.info("Refitting model with held-out data.")
         model = seizure_modeling.refit_model(interictal_data,
@@ -366,6 +386,7 @@ def run_classification(interictal_data,
         csv_directory = subject_folder
     if not os.path.exists(csv_directory):
         os.makedirs(csv_directory)
+    # TODO model might be referenced before assignment
     scores = write_scores(csv_directory, unlabeled_data, model, file_components=file_components, optional_file_components=optional_file_components, timestamp=timestamp)
     logging.info("Finnished with classification on folder {}".format(subject_folder))
 
@@ -374,18 +395,19 @@ def run_classification(interictal_data,
 
 def write_scores(csv_directory, test_data, model, file_components=None, optional_file_components=None, timestamp=None):
     """
-    Writes the model prediction scores for the segments of *test_data* to a csv
-    file.
-    Args:
-        csv_directory: The director to where the classification scores will be written.
-        test_data: The dataframe holding the test data
-        model: The model to use for predicting the preictal probability of the test data.
-        timestamp: If this argument is given, it will be used for naming the
-                   classification file. If it's not given, the current time
-                   will be used as a time stamp for the file.
-    Returns:
-        A dataframe containing the segment preictal probabilities.
+    Writes the model prediction scores for the segments of *test_data* to a csv file.
+
+    :param csv_directory: The directory to where the classification scores will be written.
+    :param test_data: The dataframe holding the test data
+    :param model: The model to use for predicting the preictal probability of the test data.
+    :param file_components: ???
+    :param optional_file_components: ???
+    :param timestamp: If this argument is provided, it will be used for naming the classification file.
+    Otherwise the current time will be used as a time stamp for the file.
+    :return: A dataframe containing the predicted segment preictal probabilities. The probabilities are also written
+    to disk.
     """
+
 
     if timestamp is None:
         timestamp = datetime.datetime.now().replace(microsecond=0)

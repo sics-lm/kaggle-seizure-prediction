@@ -104,10 +104,9 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
     else:
         raise NotImplementedError("Method {} is not supported".format(method))
 
-    ## Model params overrides the default param_grid
+    # Model params overrides the default param_grid
     if model_params is not None:
         param_grid = model_params
-
 
     return dict(estimator=clf, param_grid=param_grid)
 
@@ -175,12 +174,7 @@ def train_model(interictal,
 
 
 def refit_model(interictal, preictal, clf):
-    """
-    Fits the classifier *clf* to the given preictal and interictal
-    data. If *do_downsample* is true, the majority class will be
-    downsampled before fitting. *downsample_ratio* gives the ratio of
-    how the majority class to the minority class after downsampling.
-    """
+    """ Fits the classifier *clf* to the given preictal and interictal data. """
 
     training_data = dataset.merge_interictal_preictal(interictal, preictal)
     if hasattr(clf, 'best_estimator_'):
@@ -192,7 +186,9 @@ def refit_model(interictal, preictal, clf):
 
 def predict(clf, test_data, probabilities=True):
     """
-    Returns an array of predictions for the given *test_data* using the classifier *clf*. If *probabilities* is True and the classifier supports it, the predictions will be Interictal probabilites. Otherwise, the predictions will be 0-1 predictions.
+    Returns an array of predictions for the given *test_data* using the classifier *clf*. If *probabilities* is True
+    and the classifier supports it, the predictions will be Preictal probabilites.
+    Otherwise, the class labels are used.
     """
     if probabilities and hasattr(clf, 'predict_proba'):
         predictions = clf.predict_proba(test_data)
@@ -287,10 +283,10 @@ def select_model(training_data, method='logistic',
 
 
 def preictal_ratio(predictions):
-    """Returns the ratio of 'Preictal' occurances in the dataframe *predictions*"""
-    is_interictal = predictions == 'Preictal'  # A dataframe with Bools in the class column
-    assert isinstance(is_interictal, pd.DataFrame)
-    return is_interictal.sum() / is_interictal.count()
+    """Returns the ratio of 'Preictal' occurrences in the dataframe *predictions*"""
+    is_preictal = predictions == 'Preictal'  # A dataframe with Bools in the class column
+    assert isinstance(is_preictal, pd.DataFrame)
+    return is_preictal.sum() / is_preictal.count()
 
 
 def assign_segment_scores(test_data, clf):
@@ -301,7 +297,7 @@ def assign_segment_scores(test_data, clf):
     predictions = predict(clf, test_data)
     df_predictions = pd.DataFrame(predictions,
                                   index=test_data.index,
-                                  columns=('preictal',))
+                                  columns=('Preictal',)) # TODO Capital P here?
     segment_groups = df_predictions.groupby(level='segment')
     return segment_groups.mean()
 
@@ -311,7 +307,8 @@ def cm_report(cm, labels, sep='\t'):
     columnwidth = max([len(x) for x in labels])
     cm_lines = ["Colums show what the true values(rows) were classified as."]
 
-    #The following is used to output each cell of the table. By passing a keyword argument 'format' to the string format function, the format of the output value can be set
+    # The following is used to output each cell of the table. By passing a keyword argument 'format' to the string
+    # format function, the format of the output value can be set
     cell = "{:{format}}"
     names_format = "<{}".format(columnwidth)  # The names are left-justified
     col_format = ">{}".format(columnwidth)  # The columns are right formatted

@@ -9,7 +9,9 @@ from . import wavelet_classification
 
 
 def load(segment_files, **kwargs):
-    """Loads the multiple features from segment_files and concatenate them to a single dataframe. The feature loader to use is based on the file name. If the path contains 'wavelet', the wavelet feature loader will be used. If it contains 'corr' the cross-correlation feature loader will be used."""
+    """Loads the multiple features from segment_files and concatenate them to a single dataframe. The feature loader
+    to use is based on the file name. If the path contains 'wavelet', the wavelet feature loader will be used. If it
+    contains 'corr' the cross-correlation feature loader will be used."""
 
     print("Loading files with kwargs: ", kwargs)
     dataframes = []

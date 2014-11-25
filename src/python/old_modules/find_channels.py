@@ -9,6 +9,7 @@ import sys
 import random
 
 from collections import defaultdict
+from . import collect_classification_scores as cls
 
 def collect_channels(root):
     """Returns a dictionary of channel names to the files these names occurs in"""
@@ -29,15 +30,15 @@ def collect_file_channels(segment_files):
                     channel_j=line['channel_j']
                     results[channel_i].add(f)
                     results[channel_j].add(f)
-                except KeyError as e:
+                except KeyError:
                     print("No channel columns in file {}".format(f))
 
     return results
 
 
-def find_segment_files(root, 
-                       score_pattern="*cross_correlation_5.0s.csv", 
-                       do_sample=True, 
+def find_segment_files(root,
+                       score_pattern="*cross_correlation_5.0s.csv",
+                       do_sample=True,
                        sample_size=1):
     """
     Finds all files from root matching the given unix shell stype pattern. If *do_sample* is True, only *sample_size* files from each folder will be included.
@@ -47,7 +48,7 @@ def find_segment_files(root,
         matches = fnmatch.filter(filenames, score_pattern)
         if do_sample and len(matches) > sample_size:
             matches = random.sample(matches, sample_size)
-            
+
         matched_files.extend([os.path.join(dirpath, f) for f in matches])
 
     return matched_files
@@ -55,9 +56,9 @@ def find_segment_files(root,
 
 
 def write_scores(root, output):
-    score_files = find_classification_scores(root)
-    collected_scores = collect_scores(score_files)
-    fixed_scores = fix_segment_names(collected_scores)
+    score_files = cls.find_classification_scores(root)
+    collected_scores = cls.collect_scores(score_files)
+    fixed_scores = cls.fix_segment_names(collected_scores)
     csv_writer = csv.writer(output)
     csv_writer.writerow(['clip', 'preictal'])
     for segment_name, prob in sorted(fixed_scores.items()):
@@ -69,7 +70,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for collecting channel names")
 
     parser.add_argument("root", help="The root folder to search for classification files")
-    parser.add_argument("-o", "--output", 
+    parser.add_argument("-o", "--output",
                         help="The file to write the results to")
     args = parser.parse_args()
 
@@ -77,7 +78,7 @@ if __name__ == '__main__':
         output = sys.stdout
     else:
         output = open(args.output, 'w')
-    
+
     try:
         write_scores(args.root, output)
 

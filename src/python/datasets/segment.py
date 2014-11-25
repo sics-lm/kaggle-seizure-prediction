@@ -50,7 +50,7 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
     :param old_segment_format: If True, use the old segment format.
     :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose name contains the same subject as mat_filename
     """
-    from features import basic_segment_statistics
+    from ..features import basic_segment_statistics
 
     subject = fileutils.get_subject(mat_filename)
     stats_files = [filename for filename

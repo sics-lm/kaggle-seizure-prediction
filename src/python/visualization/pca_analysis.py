@@ -27,11 +27,27 @@ def has_nan(df):
 def run_pca_analysis(feature_folder,
                      do_downsample=True,
                      n_samples=100,
-                     do_standardize=False,
                      frame_length=12,
                      sliding_frames=False,
                      segment_statistics=False,
                      processes=1):
+    """
+    Performs a PCA analysis on the features provided.
+
+    This function will use PCA decomposition to extract the 2 principal components from the feature files provided,
+    and the use those to plot the data. The assumption is that better features should provided clearer separation
+    between interictal and preictal data.
+
+    :param feature_folder: The folder containing the feature files on which will perform the PCA analysis
+    :param do_downsample: If True, downsampling will be performed on the data
+    :param n_samples: The number of samples to take from each class, useful to make the calculation of the PCA
+    transform faster
+    :param frame_length: The number of windows that compose a frame in the extracted data
+    :param sliding_frames: Whether sliding frames should be used for the features
+    :param segment_statistics: ???
+    :param processes: The number of processes to use for loading the dataframes.
+    :return: Returns fig, a matplotlib figure of the transformed samples, and pca, the PCA transform object.
+    """
     interictal, preictal, test_data = wavelet_classification.load_data_frames(feature_folder,
                                                                               frame_length=frame_length,
                                                                               sliding_frames=sliding_frames,
@@ -195,20 +211,20 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true')
 
-    parser.add_argument("--feature-type", help="What kind of features are being processed.", choices=['wavelets', 'xcorr'],
+    parser.add_argument("--feature-type", help="What kind of features are being processed.", choices=['hills', 'wavelets', 'xcorr'],
                         default='wavelets')
 
     logging.getLogger().setLevel('INFO')
 
     args = parser.parse_args()
-    if args.feature_type == 'wavelets':
+    if args.feature_type != 'xcorr':  # We got 'wavelets' or 'hills'
         run_pca_analysis(args.feature_folder, do_downsample=args.do_downsample,
-                         n_samples=args.n_samples, do_standardize=args.do_standardize,
+                         n_samples=args.n_samples,
                          sliding_frames=args.sliding_frames,
                          frame_length=args.frame_length,
                          processes=args.processes,
                          segment_statistics=args.segment_statistics)
-    elif args.feature_type == 'xcorr':
+    else:
         run_xcorr_pca_analysis(feature_folder=args.feature_folder,
                                frame_length=args.frame_length,
                                do_downsample=args.do_downsample,

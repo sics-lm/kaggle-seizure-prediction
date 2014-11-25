@@ -11,13 +11,14 @@ import sys
 import numpy as np
 from itertools import chain
 
+# TODO(thvasilo): Switch to reST docstring style
 
 class EpochShim(object):
     """A wrapper for our segments which mimicts the interface of mne.Epoch, for the band_wavelet_synchrony function."""
     def __init__(self, segment, window_size):
         self.segment = segment
         self.window_size = window_size
-        #The epoch needs a dictionary attribute with the key 'freq'
+        # The epoch needs a dictionary attribute with the key 'freq'
         self.info = dict(sfreq = segment.get_sampling_frequency())
 
     def __iter__(self):

@@ -61,7 +61,7 @@ class SegmentCrossValidator:
 
 
 def mean(*dataframes):
-    """Returns the means of the given dataframe, calculated without
+    """Returns the means of the given dataframe(s), calculated without
     concatenating the frame"""
     lengths = sum([len(dataframe) for dataframe in dataframes])
     sums = dataframes[0].sum()
@@ -70,7 +70,17 @@ def mean(*dataframes):
     means = sums / lengths
     return means
 
+
 def transform(transformation, interictal, preictal, test):
+    """
+    Performs a transformation on the supplied *interictal*, *preictal* and *test* Pandas dataframes.
+    :param transformation: An object that implements the fit_transform function, which applies a transformation
+     to a numpy array.
+    :param interictal: Pandas Dataframe containing the interictal samples
+    :param preictal: Pandas Dataframe containing the preictal samples
+    :param test: Pandas Dataframe containing the test samples
+    :return: A List containing the three input Dataframes, with the *transformation* applied to them
+    """
 
     if not hasattr(transformation, 'fit_transform'):
         logging.warn(
@@ -92,8 +102,8 @@ def transform(transformation, interictal, preictal, test):
 
     # Concatenate the training data as we will use those for
     # fitting the scaler
-    ## This can be quite memory intensive, especially if the
-    ## dataframes are big
+    # This can be quite memory intensive, especially if the
+    # dataframes are big
     training_frame = pd.concat([interictal, preictal], axis=0)
 
     # Perform the transformation
@@ -126,11 +136,11 @@ def transform(transformation, interictal, preictal, test):
     new_interictal['Preictal'] = 0
     new_preictal['Preictal'] = 1
 
-
     return [new_interictal, new_preictal, new_test]
 
 
 def pca_transform(dataframes):
+    """Performs PCA transformation on the *dataframes*"""
 
     interictal, preictal, test = dataframes
     # Perform the PCA
@@ -139,23 +149,14 @@ def pca_transform(dataframes):
     return transform(pca, interictal, preictal, test)
 
 
-
-
-
-def scale(dataframes, center=True, scale=True, inplace=False):
-    """Returns standardized (mean 0, standard deviation 1) versions of the given data frames.
-    Args:
-        dataframes: A variable number of inplace arguments which should be the
-                    dataframes to standardize.
-        center: If True, the columns of the frame will have mean 0.
-        scale:  If True, the columns will have standard deviation of 1.
-        inplace: If True, the dataframes will be standardized inplace, and
-        no new dataframe is created.
-    Returns:
-        A list of the standardized dataframes. If inplace=True, it will be the
-        same dataframes as the argument. If inplace=False, new dataframes will
-        have been created.
+def scale(dataframes):
     """
+    Returns standardized (mean 0, standard deviation 1) versions of the given data frames.
+    :param dataframes: A sequence containing the 3 interictal, preictal and test dataframes.
+    Note that they should be unpacked in this exact order.
+    :return: A list of the standardized dataframes
+    """
+
     interictal, preictal, test = dataframes
 
     # Perform the scaling
@@ -164,28 +165,23 @@ def scale(dataframes, center=True, scale=True, inplace=False):
     return transform(scaler, interictal, preictal, test)
 
 
-
-
 def split_experiment_data(interictal,
                           preictal,
                           training_ratio,
                           do_segment_split=True,
                           random_state=None):
     """
-    Creates a split of the data into two seperate data frames.
-    Args:
-        *interictal*: A data frame containing the interictal samples.
-        *preictal*: A data frame containing the preictal samples.
-        *training_ratio*: a value in the range (0,1) which indicates the ratio
-                          of samples to use for training.
-        *do_downsample*: flag of whether to down sample the larger class.
-        *downsample_ratio*: The maximum imbalance ratio to use for down sampling.
-        *do_segment_split*: flag of whether to split based on segment names.
-    Returns:
-        A partition of the concatenated interictal and preictal data frames into
-        two seperate and disjunct data frames, such that the first partition
-        contains a ratio of *training_ratio* of all the data.
+
+    :param interictal: A data frame containing the interictal samples.
+    :param preictal: A data frame containing the preictal samples.
+    :param training_ratio: A value in the range (0,1) which indicates the ratio of samples to use for training.
+    :param do_segment_split: If True, will split the dataframes based on segment names.
+    :param random_state: A set seed to ensure reproducibility of the experiments.
+    :return: A partition of the concatenated interictal and preictal data frames into
+    two seperate and disjunct data frames, such that the first partition
+    contains a ratio of *training_ratio* of all the data.
     """
+
     dataset = merge_interictal_preictal(interictal, preictal)
     return split_dataset(dataset,
                          training_ratio=training_ratio,
@@ -195,14 +191,12 @@ def split_experiment_data(interictal,
 
 def merge_interictal_preictal(interictal, preictal):
     """
-    Merges the interictal and preictal data frames to a single data frame. Also sorts the multilevel index.
-
-    Args:
-        *interictal*: A data frame containing the interictal samples.
-        *preictal*: A data frame containing the preictal samples.
-    Returns:
-        A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
+    Merges the *interictal* and *preictal* data frames to a single data frame. Also sorts the multilevel index.
+    :param interictal: A data frame containing the interictal samples.
+    :param preictal: A data frame containing the preictal samples.
+    :return: A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
     """
+
     logging.info("Merging interictal and preictal datasets")
     try:
         preictal.sortlevel('segment', inplace=True)
@@ -222,15 +216,14 @@ def merge_interictal_preictal(interictal, preictal):
 
 def downsample(df1, n_samples, do_segment_split=True, random_state=None):
     """
-    Returns a downsampled version of *df1* so that it contains at most
-    a ratio of *downsample_ratio* samples of df2.
-    Args:
-        *df1*: The dataframe which should be downsampled.
-        *n_samples*: The number of samples to include in the sample.
-        *do_segment_split*: Whether the downsampling should be done per segment.
-    Returns:
-        A slice of df1 containing len(df2)*downsample_ratio number of samples.
+    Returns a downsampled version of *df1* so that it contains at most a ratio of *n_sample* samples.
+    :param df1: The dataframe which should be downsampled.
+    :param n_samples: The number of samples to include in the sample.
+    :param do_segment_split: Whether the downsampling should be done per segment.
+    :param random_state: Seed
+    :return: A sample of df1 containing *n_samples* number of samples.
     """
+
     if random_state is not None:
         random.seed(random_state)
 
@@ -259,21 +252,20 @@ def downsample(df1, n_samples, do_segment_split=True, random_state=None):
 def split_dataset(dataframe, training_ratio=.8, do_segment_split=True, shuffle=False, random_state=None):
     """
     Splits the dataset into a training and test partition.
-    Args:
-        *dataframe*: A data frame to split. Should have a 'Preictal' column.
-        *training_ratio*: The ratio of the data to use for the first part.
-        *do_segment_split*: If True, the split will be done on whole segments.
-        *shuffle*: If true, the split will shuffle the data before splitting.
-    Returns:
-        A pair of disjunct data frames, where the first frame contain
-        *training_ratio* of all the data.
+    :param dataframe: A data frame to split. Should have a 'Preictal' column.
+    :param training_ratio: The ratio of the data to use for the first part.
+    :param do_segment_split: If True, the split will be done on whole segments.
+    :param shuffle: If true, the split will shuffle the data before splitting.
+    :param random_state: Seed
+    :return: A pair of disjoint data frames, where the first frame contains *training_ratio* of all the data.
     """
-    ## We'll make the splits based on the sklearn cross validators,
-    ## We calculate the number of folds which correspond to the
-    ## desired training ratio. If *r* is the training ratio and *k*
-    ## the nubmer of folds, we'd like *r* = (*k* - 1)/*k*, that is,
-    ## the ratio should be the same as all the included folds divided
-    ## by the total number of folds. This gives us *k* = 1/(1-*r*)
+
+    # We'll make the splits based on the sklearn cross validators,
+    # We calculate the number of folds which correspond to the
+    # desired training ratio. If *r* is the training ratio and *k*
+    # the nubmer of folds, we'd like *r* = (*k* - 1)/*k*, that is,
+    # the ratio should be the same as all the included folds divided
+    # by the total number of folds. This gives us *k* = 1/(1-*r*)
     k = int(np.floor(1/(1 - training_ratio)))
 
     if do_segment_split:
@@ -294,6 +286,7 @@ def split_dataset(dataframe, training_ratio=.8, do_segment_split=True, shuffle=F
 
 
 def test_k_fold_segment_split():
+    """ Test function for the k-fold segment split """
     interictal_classes = np.zeros(120)
     preictal_classes = np.ones(120)
     classes = np.concatenate((interictal_classes, preictal_classes,))
@@ -337,7 +330,7 @@ def combine_features(dataframes, labeled=True):
 
 def normalize_segment_names(dataframe, inplace=False):
     """
-    Makes the 'segment' index of the dataframe have names which correspond to the original matlab segment names.
+    Makes the segment index of the dataframe have names which correspond to the original .mat segment names.
     """
     index_values = dataframe.index.get_values()
     fixed_values = [(fileutils.get_segment_name(filename), frame) for filename, frame in index_values]
@@ -386,14 +379,6 @@ def load_test_dataframes(feature_folder, **kwargs):
 def load_data_frames(feature_folder,
                      sliding_frames=False,
                      **kwargs):
-    """
-                     load_function=None,
-                     rebuild_data=False,
-                     processes=4,
-                     file_pattern="5.0s.csv",
-                     frame_length=1,
-                     sliding_frames=True):
-    """
     preictal = load_preictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
     interictal = load_interictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
     test = load_test_dataframes(feature_folder, **kwargs)
@@ -409,7 +394,7 @@ def load_feature_files(feature_folder,
                        sliding_frames=False,
                        processes=1,
                        output_folder=None,
-                       segment_statistics=False,
+                       segment_statistics=False,  # TODO Unused, but gets passed from load_data_frames kwargs, causing unexpected arg error
                        file_pattern="*segment*.csv"):
     """
     Loads all the files matching the class name and patter from the given feature folder.
@@ -450,11 +435,10 @@ def load_feature_files(feature_folder,
                                                class_name=class_name,
                                                file_pattern=file_pattern)
         complete_frame = rebuild_features(feature_files,
-                                          class_name,
                                           load_function,
+                                          processes=processes,
                                           frame_length=frame_length,
-                                          sliding_frames=sliding_frames,
-                                          processes=processes)
+                                          sliding_frames=sliding_frames)
         complete_frame.to_pickle(cache_file)
     else:
         logging.info("Loading {} data from "
@@ -466,25 +450,27 @@ def load_feature_files(feature_folder,
 
 
 def rebuild_features(feature_file_dicts,
-                     class_name,
                      load_function,
                      processes=1,
                      frame_length=1,
                      sliding_frames=False):
     """
-    Loads all the features from the given feature folder matching the class name and file pattern. It combines them in a pandas dataframe and assigns a multilevel index to the rows based on the filenames the feature rows are taken from.
-    Args:
-        feature_file_dicts: A list of dictioneries, where each inner dictionary should have the keys 'segment' and 'files'. Segment should be the name of the segment which is loaded, while 'files' should be the argument to *load_function*, typically a single or multiple filenames.
-        class_name: The class name of the files to load, typically {'interictal', 'preictal', 'test'}.
-        load_function: Function to use for loading the feature files.
-        file_pattern: A glob pattern used to select the matching files in the feature folder. Can be used to selectivily load files.
-        rebuild_data: If False, a cached version of the data will be loaded if there is one. If True, the data will always be rebuilt, wich replaces any cached version already present.
-        processes: The number of processes to use for reading the data files in parallel.
-        frame_length: The length in number of windows each feature vector should be.
-        sliding_frames: If True, the feature-vectors will be produced by a sliding frame over all the windows of each feature file.
-    Return:
-        A pandas DataFrame with the feature frames. The frame will have a MultiIndex with the original matlab segment names and the frame number of the feature frames.
+    Loads all the features from the given feature folder matching the class name and file pattern.
+
+    It combines them in a pandas dataframe and assigns a multilevel index to the rows based on the filenames
+    the feature rows are taken from.
+    :param feature_file_dicts: A list of dictionaries, where each inner dictionary should have the keys 'segment' and
+        'files'. Segment should be the name of the segment which is loaded, while 'files' should be the argument to
+        *load_function*, typically a single or multiple filenames.
+    :param load_function: Function to use for loading the feature files.
+    :param processes: The number of processes to use for rebuilding the features
+    :param frame_length: The length of the a frame, in number of windows.
+    :param sliding_frames: If True, the feature-vectors will be produced by a sliding frame over all the windows of
+        each feature file.
+    :return: A pandas DataFrame with the feature frames. The frame will have a MultiIndex with the original matlab
+    segment names and the frame number of the feature frames.
     """
+
     tupled = [(feature['segment'], feature['files']) for feature in feature_file_dicts]
     segment_names, feature_files = zip(*tupled)
 
@@ -532,13 +518,12 @@ def load_files_serial(feature_files, load_function, **kwargs):
 def reshape_frames(dataframe, frame_length=12):
     """
     Returns a new dataframe with the given frame length.
-    Args:
-        dataframe: A pandas DataFrame with one window per row.
-        frame_length: The desired number of windows for each feature frame. Must divide the number of windows in *dataframe* evenly.
-    Returns:
-        A new pandas DataFrame with the desired window frame width. The columns of the new data-frame will be multi-index so that
+    :param dataframe: A pandas DataFrame with one window per row.
+    :param frame_length: The desired number of windows for each feature frame. Must divide the number of windows in *dataframe* evenly.
+    :return: A new pandas DataFrame with the desired window frame width. The columns of the new data-frame will be multi-index so that
         future concatenation of data frames align properly.
     """
+
     # Assert that the length of the data frame is divisible by
     # frame_length
     n_windows, window_width = dataframe.shape
@@ -562,7 +547,9 @@ def reshape_frames(dataframe, frame_length=12):
 
 
 def create_sliding_frames(dataframe, frame_length=12):
-    """ Wrapper for the extend_data_with_sliding_frames function wich works with numpy arrays. This version does the data-frame conversion for us.
+    """ Wrapper for the extend_data_with_sliding_frames function wich works with numpy arrays.
+
+    This version does the data-frame conversion for us.
     """
     extended_array = extend_data_with_sliding_frames(dataframe.values)
     # We should preserve the columns of the dataframe, otherwise
@@ -579,16 +566,17 @@ def create_sliding_frames(dataframe, frame_length=12):
 def extend_data_with_sliding_frames(source_array, frame_length=12):
     """
     Creates an array of frames from the given array of windows using a sliding window.
-    Args:
-        source_array: a numpy array with the shape (n_windows, window_length)
-        frame_length: The desired window length of the frames.
+    :param source_array: a numpy array with the shape (n_windows, window_length)
+    :param frame_length: The desired window length of the frames.
+    :return:
     """
+
     n_rows = source_array.shape[0]
     window_size = source_array.shape[1]
 
-    #Number of frames that we can generate
+    # Number of frames that we can generate
     n_sliding_frames = n_rows-(frame_length-1)
-    #The column size of our new frames
+    # The column size of our new frames
     frame_size = window_size*frame_length
 
     dest_array = np.zeros((n_sliding_frames, frame_size), dtype=np.float64)

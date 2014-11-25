@@ -36,8 +36,6 @@ class Filter:
         return lfilter(b, a, data, axis=0)
 
     def apply_butter_filter(self, data, order, cutoff, btype):
-        ripple = 3
-        attenuation = 50
         cutoff /= self.nyq
         b, a = butter(N=order, Wn=cutoff, btype=btype)
         return filtfilt(b, a, data, axis=1)

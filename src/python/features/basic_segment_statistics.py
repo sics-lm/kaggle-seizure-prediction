@@ -14,7 +14,7 @@ import scipy.stats
 import numpy as np
 import matplotlib.pyplot as plt
 
-from dataset import segment
+from ..datasets import segment
 
 try:
     plt.style.use('ggplot')
@@ -176,7 +176,7 @@ def read_folder(stats_folder, metrics=None):
         stats = pd.concat([read_stats(stat_file, metrics) for stat_file in files])
         return stats
     else:
-        raise FileNotFoundError("No segment statistics file in folder {}".format(stats_folder))
+        raise IOError("No segment statistics file in folder {}".format(stats_folder))
 
 
 def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()', channel_ordering=None, use_cache=True):
