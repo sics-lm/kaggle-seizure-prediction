@@ -1,6 +1,7 @@
 # Seizure Detection
 
-This repository contains the submission made by members of the Learning Machines group at the Swedish Institute of Computer Science for the American Epilepsy Society Seizure Prediction Challenge on Kaggle.
+This repository contains the submission made by members of the Learning Machines group at the Swedish Institute of
+Computer Science for the American Epilepsy Society Seizure Prediction Challenge on Kaggle.
 
 http://www.kaggle.com/c/seizure-prediction
 
@@ -43,34 +44,32 @@ data/
   ...
 ```
 
-The directory name of the data should match the value in SETTINGS.json under the key `competition-data-dir`.
+The directory name of the data should match the value in SETTINGS.json under the key `TRAIN_DATA_PATH`.
 
 Then simply run:
 ```
 ./train.py
 ```
 
-One classifier is trained for each patient, and dumped to the data-cache directory.
+This will first extract the features for each subject in the `FEATURE_PATH` directory.
+
+This is a long-running process and can take many hours to finish. Make sure to update the `WORKERS`
+parameter in `SETTINGS.json` to increase the number of feature extraction jobs run in parallel.
+
+One classifier is then trained for each subject, and dumped to the `FEATURE_PATH\[Subject]` directory. The classifier filename
+will also include the timestamp of when the classifier was created.
 
 ```
-data-cache/classifier_Dog_1_fft-with-time-freq-corr-1-48-r400-usf-gen1_rf3000mss1Bfrs0.pickle
-data-cache/classifier_Dog_2_fft-with-time-freq-corr-1-48-r400-usf-gen1_rf3000mss1Bfrs0.pickle
+FEATURE_PATH/Dog_1/model_svm_[TIMESTAMP].pickle
+FEATURE_PATH/Dog_2/model_svm_[TIMESTAMP].pickle
 ...
-data-cache/classifier_Patient_8_fft-with-time-freq-corr-1-48-r400-usf-gen1_rf3000mss1Bfrs0.pickle
+FEATURE_PATH/Patient_2/model_svm_[TIMESTAMP].pickle
 ```
 
-Although using these classifiers outside the scope of this project is not very straightforward.
+This is also a long running process that can take more than 2 hours to finish. It also requires a high amount of
+memory, 16GB of RAM is recommended, 8GB will not suffice.
 
-More convenient is to run the predict script.
-
-```
-./predict.py
-```
-
-This will take at least 2 hours. Feel free to update the classifier's `n_jobs` parameter
-in `seizure_detection.py`.
-
-A submission file will be created under the directory specified by the `submission-dir` key
+A submission file will be created under the directory specified by the `SUBMISSION_PATH` key
 in `SETTINGS.json` (default `submissions/`).
 
 Predictions are made using the test segments found in the competition data directory. They
@@ -87,28 +86,3 @@ data/
 ```
 
 To make predictions on a new dataset, simply replace these test segments with new ones.
-The files must numbered sequentially starting from 1 otherwise it will not find all of
-the files.
-
-## Run cross-validation
-
-```
-./cross_validation.py
-```
-
-Cross-validation set is obtained by splitting on entire segments. That way we avoid taking multiple samples from the same segment, since they could be correlated.
-
-
-## SETTINGS.json
-
-```
-{
-  "competition-data-dir": "seizure-data",
-  "data-cache-dir": "data-cache",
-  "submission-dir": "./submissions"
-}
-```
-
-* `competition-data-dir`: directory containing the downloaded competition data
-* `data-cache-dir`: directory the task framework will store cached data
-* `submission-dir`: directory submissions are written to

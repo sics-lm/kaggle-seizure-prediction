@@ -11,10 +11,9 @@ import sys
 import numpy as np
 from itertools import chain
 
-# TODO(thvasilo): Switch to reST docstring style
 
 class EpochShim(object):
-    """A wrapper for our segments which mimicts the interface of mne.Epoch, for the band_wavelet_synchrony function."""
+    """A wrapper for our segments which mimics the interface of mne.Epoch, for the band_wavelet_synchrony function."""
     def __init__(self, segment, window_size):
         self.segment = segment
         self.window_size = window_size
@@ -30,13 +29,9 @@ def epochs_from_segment(segment, window_size=5.0):
     """
     Creates an MNE Epochs object from a Segment object
 
-    Args:
-    segment: The segment object we want to convert
-    window_size: The size of the window in seconds
-
-    Returns:
-    An mne.Epochs object, where each epoch corresponds to a **window_size**
-    part of the segment.
+    :param segment: The segment object we want to convert
+    :param window_size: The size of the window in seconds
+    :return: An mne.Epochs object, where each epoch corresponds to a **window_size** part of the segment.
     """
 
     assert isinstance(segment, sg.Segment) or isinstance(segment, sg.DFSegment)
@@ -67,21 +62,18 @@ def epochs_from_segment(segment, window_size=5.0):
 
     return epochs
 
+
 def make_fixed_length_events(raw, event_id, window_duration=5.):
-    """Make a set of events separated by a fixed duration
-    Parameters
-    ----------
-    raw : instance of Raw
-    A raw object to use the data from.
-    id : int
-    The id to use.
-    window_duration: float
-    The duration to separate events by.
-    Returns
-    -------
-    new_events : numpy array
-    The new events.
     """
+    Make a set of events separated by a fixed duration
+    Parameters. Adapted from the make_fixed_length_events function in mne
+    to accommodate the need for all segments to have the same number samples.
+    :param raw: A raw object to use the data from.
+    :param event_id: The id to use.
+    :param window_duration: The duration to separate events by.
+    :return: The new events as a numpy array.
+    """
+
     start = raw.time_as_index(0)
     start = start[0] + raw.first_samp
     stop = raw.last_samp + 1
@@ -107,20 +99,20 @@ def make_fixed_length_events(raw, event_id, window_duration=5.):
 
 def extract_features_for_segment(segment, feature_length_seconds=60, window_size=5, no_epochs=False):
     """
-    Creates an SPLV feature dictionary from a Segment object
-    Args:
-        segment: A Segment object containing the EEG segment from which we want
-        to extract the features
-        feature_length_seconds: The number of seconds each frame should consist
-        of, should be exactly divisible by window_size.
-        window_size: The length of a window in seconds.
-    Returns:
-        A dict of features, where each keys are the frames indexes in the segment
-        and the values are a List of doubles containing all the feature values
-        for that frame.
-        Ex. For a 10 min segment with feature_length_seconds=60 (sec) we should
-        get 10 frames. The length of the lists then depends on the window_size,
-        number of channels and number of frequency bands we are examining.
+    Creates an SPLV [1] feature dictionary from a Segment object
+
+    [1] Le Van Quyen, Michel, et al. "Comparison of Hilbert transform and wavelet methods for the analysis of neuronal
+    synchrony." Journal of neuroscience methods 111.2 (2001): 83-98.
+
+    :param segment: A Segment object containing the EEG segment from which we want  to extract the features
+    :param feature_length_seconds: The number of seconds each frame should consist of, should be exactly divisible by
+    window_size.
+    :param window_size: The length of a window in seconds.
+    :param no_epochs: If True, the EpochShim will be used instead of an mne.Epoch
+    :return: A dict of features, where each keys are the frames indexes in the segment and the values are a
+    List of doubles containing all the feature values for that frame.
+    Ex. For a 10 min segment with feature_length_seconds=60 (sec) we should get 10 frames. The length of the lists then
+    depends on the window_size, number of channels and number of frequency bands we are examining.
     """
 
     # Here we define how many windows we will have to concatenate
@@ -162,13 +154,11 @@ def extract_features_for_segment(segment, feature_length_seconds=60, window_size
     return feature_dict
 
 
-
-
 def eeg_rhythms():
     """
     Returns a dict of the EEG rhythm bands as described in
-    [1] "Comparing SVM and Convolutional Networks for Epileptic Seizure
-    Prediction from Intracranial EEG"
+    Mirowski, Piotr W., et al. "Comparing SVM and convolutional networks for epileptic seizure prediction from
+    intracranial EEG." Machine Learning for Signal Processing, 2008. MLSP 2008. IEEE Workshop on. IEEE, 2008.
     """
     return {"delta" : (1, 4), "theta": (4, 7), "alpha" : (7, 13),
             "low-beta" : (13, 15), "high-beta" : (14, 30),
@@ -179,20 +169,15 @@ def segment_wavelet_synchrony(segment, bands=None, window_size=5.0, no_epochs=Fa
     """
     Calculates the wavelet synchrony of a Segment object
 
-    Args:
-        segment: A Segment object containing the EEG segment of which we want
-        create the wavelet transform of.
-        bands: A dict containing {band : (start_freq, stop_freq)} String to
-        Tuple2 pairs.
-        window_size: The size of the windows.
-        no_epochs: If this is True, the EpochShim will be used instead of an mne.Epoch
-
-    Returns:
-        A dict containing {band: List[av_sync_array]} String to List of
-        (n_channels x n_channels) ndarrays.
-        Each band corresponds to a List of ndarrays where each array
-        corresponds to the channel-to-channel synchrony within an epoch/window.
+    :param segment: A Segment object containing the EEG segment of which we want create the wavelet transform of.
+    :param bands: A dict containing {band : (start_freq, stop_freq)} String to Tuple2 pairs.
+    :param window_size: The length of the windows, in seconds.
+    :param no_epochs: If True, the EpochShim will be used instead of an mne.Epoch
+    :return:  A dict containing {band: List[av_sync_array]} String to List of  (n_channels x n_channels) ndarrays.
+    Each band corresponds to a List of ndarrays where each array corresponds to the channel-to-channel synchrony
+    within an epoch/window.
     """
+
     if bands is None:
         bands = eeg_rhythms()
 
@@ -212,20 +197,16 @@ def segment_wavelet_synchrony(segment, bands=None, window_size=5.0, no_epochs=Fa
 
 def band_wavelet_synchrony(epochs, start_freq, stop_freq):
     """
-    Computes the phase-locking synchrony SPLV for a specific frequency band,
-    by computing the synchrony over all freqs in the [start_freq, stop_freq)
-    band and taking the average.
+    Computes the phase-locking synchrony SPLV for a specific frequency band, by computing the synchrony over all
+    frequencies in the [start_freq, stop_freq) band and taking the average.
 
-    Args:
-        epochs: The Epochs object for which we compute the wavelet synchrony.
-        start_freq: The start of the frequency band
-        stop_freq: The end of the frequency band, excluded from the calculation
-
-    Returns:
-         A List of (n_channels x n_channels) lower-triangular ndarrays.
-         Each item in the list corresponds to the phase synchrony between
-         the channels for an epoch/window.
+    :param epochs: The Epochs object for which we compute the wavelet synchrony.
+    :param start_freq: The start of the frequency band
+    :param stop_freq: The end of the frequency band, excluded from the calculation
+    :return: A List of (n_channels x n_channels) lower-triangular ndarrays. Each item in the list corresponds to the
+    phase synchrony between the channels for an epoch/window.
     """
+
     freqs = range(start_freq, stop_freq)
     tf_decompositions = []
     for epoch in epochs:
@@ -280,6 +261,22 @@ def extract_features(segment_paths,
                      window_size=5,
                      no_epochs=False,
                      only_missing_files=True):
+    """
+    Performs feature extraction of the segment files found in *segment_paths*. The features are written to csv
+    files in *output_dir*. See :py:function`feature_extractor.extract` for more info.
+    :param segment_paths:
+    :param output_dir:
+    :param workers:
+    :param sample_size:
+    :param old_segment_format:
+    :param resample_frequency:
+    :param normalize_signal:
+    :param feature_length_seconds:
+    :param window_size:
+    :param no_epochs:
+    :param only_missing_files:
+    :return:
+    """
     feature_extractor.extract(segment_paths,
                               extract_features_for_segment,
                               ## Arguments for feature_extractor.extract
