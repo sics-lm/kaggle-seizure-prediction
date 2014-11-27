@@ -52,7 +52,7 @@ def load_segments(feature_folder, glob_pattern='*.mat', sample_size=None):
 
 def median_absolute_deviation(data, subject_median=None, axis=0):
     """A robust estimate of the standard deviation"""
-    ## The scaling factor for estimating the standard deviation from the MAD
+    # The scaling factor for estimating the standard deviation from the MAD
     c = scipy.stats.norm.ppf(3/4)
     if isinstance(data, pd.DataFrame):
         if subject_median is None:
@@ -71,8 +71,11 @@ def load_and_transform_segments(feature_folder, glob_suffix='*', methods=None, p
     """Applies the each of the expressions in *methods* to each segment globbed by glob_pattern in feature_folder.
     Args:
         feature_folder: A folder containing the mat files to load.
-        methods: A list of string values or dictionary with string values and string names. The string values should be expressions which can be 'evaled' when concatenated to a dataframe object. eg: ['.mean()'] will be concatenated and evaluateded as 'eval(\'df.mean()\')'
-        If methods is a dictionary, the keys will be used to name the corresponding index of the dataframe, otherwise the same expression as is evaluated will be used.
+        methods: A list of string values or dictionary with string values and string names. The string values should be
+        expressions which can be 'evaled' when concatenated to a dataframe object. eg: ['.mean()'] will be concatenated
+        and evaluateded as 'eval(\'df.mean()\')'
+        If methods is a dictionary, the keys will be used to name the corresponding index of the dataframe, otherwise
+        the same expression as is evaluated will be used.
     """
     class_results = defaultdict(list)
 
@@ -151,7 +154,7 @@ def calculate_statistics(feature_folder, csv_directory, processes=1, glob_suffix
 
 def read_stats(stat_file, metrics=None, use_cache=True):
     if metrics is not None:
-        ## We convert the metrics to a sorted tuple, so that it's hashable
+        # We convert the metrics to a sorted tuple, so that it's hashable
         metrics = tuple(sorted(metrics))
     cache = read_stats.cache
     if use_cache and stat_file in cache and metrics in cache[stat_file]:
@@ -184,8 +187,10 @@ def get_subject_metric(stats_df, metric_name, aggregator='{dataframe}.median()',
     Returns the metric given by stats df as a NDArray-like of shape (n_channels, 1)
     :param stats_df: The statistics dataframe aquired from read_stats.
     :param metric_name: The metric we wan't to select.
-    :param aggregator: A string with an expression used to aggregate the per segment statistic to a single statistic for the whole subject.
-    :param channel_ordering: An optional ordered sequence of channel names, which will ensure that the outputted statistics vector has the same order as the segment which the statistic should be applied on.
+    :param aggregator: A string with an expression used to aggregate the per segment statistic to a single statistic for
+    the whole subject.
+    :param channel_ordering: An optional ordered sequence of channel names, which will ensure that the outputted
+    statistics vector has the same order as the segment which the statistic should be applied on.
     :return: A NDArray of shape (n_channels, 1) where each element along axis 0 correspond to a statistic for that channel.
     """
     cache = get_subject_metric.cache

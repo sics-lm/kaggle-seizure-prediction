@@ -425,6 +425,9 @@ def write_scores(csv_directory, test_data, model, file_components=None, optional
 
 
 def get_latest_model(feature_folder, method, model_pattern="model*{method}*.pickle"):
+    """
+    Retrieve the latest cached model for specified feature folder
+    """
     model_glob = os.path.join(feature_folder, model_pattern.format(method=method))
     files = glob.glob(model_glob)
     times = [(os.path.getctime(model_file), model_file)

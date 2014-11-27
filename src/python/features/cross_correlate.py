@@ -29,14 +29,21 @@ def convert_channel_name(name):
 def calculate_cross_correlations(s, time_delta_config, channels=None, window_length=None,
                                  segment_start=None, segment_end=None, all_time_deltas=False,
                                  old_csv_format=False):
-    """Calculates the maximum cross-correlation of all pairs of channels in the segment s.
+    """
+    Calculates the maximum cross-correlation of all pairs of channels in the segment s.
+
     *time_delta_config* is a time delta specification dictionary with channel pairs as keys. The special pair
     ('default', 'default') will be used for any channel pair not present in the dictionary.
+
     The optional argument *channels* can be used to decide which channels should be included.
+
     If *window_length* is supplied, the data will be divided into windows of *window_length* seconds.
+
     *segment_start* and *segment_stop* can be given as times in second to only work on a part of the segment.
+
     *workers* is the number of processes to use for calculating the cross-correlations. *csv_writer* is the
-    object which writes the data to file. If *all_time_deltas* is True, all correlations for all time steps will be
+    object which writes the data to file.
+    If *all_time_deltas* is True, all correlations for all time steps will be
     included in the files, otherwise only the maximum correlation between two channels will be included.
 
     """
@@ -61,7 +68,7 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
             else:
                 time_delta_begin, time_delta_end, time_delta_step = time_delta_config['default', 'default']
 
-            #convert the time shifts range from seconds to discrete sample steps, the step range must be at least 1
+            # Convert the time shifts range from seconds to discrete sample steps, the step range must be at least 1
             time_delta_range = (int(time_delta_begin*frequency),
                                 int(time_delta_end*frequency),
                                 max(int(time_delta_step*frequency), 1))
@@ -73,15 +80,15 @@ def calculate_cross_correlations(s, time_delta_config, channels=None, window_len
             else:
                 windows = [(segment_start, segment_end)]
 
-
             for window_start, window_end in windows:
                 window_i = s.get_channel_data(channel_i, window_start, window_end)
                 window_j = s.get_channel_data(channel_j, window_start, window_end)
 
-                #We skip strange boundry cases where the slice is too small to be useful
+                # We skip strange boundary cases where the slice is too small to be useful
                 if len(window_i) > 2:
                     time_deltas = maximum_crosscorelation(window_i, window_j, time_delta_range, all_time_deltas)
-                    #time_deltas is a list of (delta_t, correlation) values, if all_time_deltas is False, it will be the maximum correlation
+                    # Time_deltas is a list of (delta_t, correlation) values, if all_time_deltas is False,
+                    # it will be the maximum correlation
                     for delta_t, correlation in time_deltas:
 
                         t_offset = delta_t / float(frequency)
@@ -156,7 +163,7 @@ def maximum_crosscorelation(x, y, time_delta_range, all_time_deltas=False):
     current_max = -1
     best_t = None
 
-    #normalization of the values are done with sqrt(corr(x,x) dot corr(y,y))
+    # Normalization of the values are done with sqrt(corr(x,x) dot corr(y,y))
     C_xx = np.dot(x,x)/x.size
     C_yy = np.dot(y,y)/y.size
 
@@ -174,10 +181,9 @@ def maximum_crosscorelation(x, y, time_delta_range, all_time_deltas=False):
             current_max = c
             best_t = -t
 
-
     for t in range(0, time_delta_end + 1, time_delta_step):
-        C_xy = corr(x, y, t)
-        c = abs(C_xy / norm_const)
+        c_xy = corr(x, y, t)
+        c = abs(c_xy / norm_const)
         if all_time_deltas:
                 time_deltas.append((t, c))
 
@@ -197,8 +203,8 @@ def example_segments():
 
 
 def test():
-    x = np.sin((np.arange(0,100) * np.pi))
-    y = np.sin((np.arange(0,100) * np.pi) + 4)
+    x = np.sin((np.arange(0, 100) * np.pi))
+    y = np.sin((np.arange(0, 100) * np.pi) + 4)
     print(maximum_crosscorelation(x, y, 5))
     # s = segment.Segment(fileutils.get_preictal_files('../data/Dog_1')[0])
     # channels = s.get_channels()[:2]

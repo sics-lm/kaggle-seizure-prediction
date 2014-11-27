@@ -133,6 +133,21 @@ def train_model(interictal,
                 model_params=None,
                 random_state=None,
                 no_crossvalidation=False):
+    """
+    Trains a model on the provided data. If requested it will perform cross-validation experiments on the data
+    and report performance measurements.
+    :param interictal: A dataframe containing the interictal data
+    :param preictal: A dataframe containing the interictal data
+    :param method: A String describing the method to be used. See function get_model_class for valid values.
+    :param training_ratio: The ratio of the data that will be used for the training set
+    :param do_segment_split: Do the cross-validation split by segment
+    :param processes: Number of processes to use for the cross-validation experiments.
+    :param cv_verbosity: The verbosity level for the cross-validation experiments
+    :param model_params: A dict containing the parameters to be passed to the model
+    :param random_state: Seed
+    :param no_crossvalidation: Do not perform cross-validation
+    :return: A trained classfier model.
+    """
     if random_state is not None:
         np.random.seed(random_state)
 

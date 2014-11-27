@@ -45,10 +45,13 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
     :param stats_glob: A folder which keeps statistics files produced by the module basic_segment_statistics. The file
                         to use will be inferred from the subject name in mat_filename, and a stats_file with the same
                         subject name in it should exist in stats_folder.
-    :param center_name: The name of the metric to use as a centering vector (one value for each channel). The must correspond to a metric present in stats file.
-    :param scale_name: The name of the metric to use as a scaling vector (one value for each channel). The must correspond to a metric present in stats file.
+    :param center_name: The name of the metric to use as a centering vector (one value for each channel).
+    Must correspond to a metric present in stats file.
+    :param scale_name: The name of the metric to use as a scaling vector (one value for each channel).
+    Must correspond to a metric present in stats file.
     :param old_segment_format: If True, use the old segment format.
-    :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose name contains the same subject as mat_filename
+    :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose
+    name contains the same subject as mat_filename
     """
     from ..features import basic_segment_statistics
 
@@ -77,7 +80,7 @@ class Segment:
     """Wrapper class for EEG segments backed by a multidimensional numpy array."""
     def __init__(self, mat_filename):
         """Creates a new segment object from the file named *mat_filename*"""
-        #First extract the variable name of the struct, there should be exactly one struct in the file
+        # First extract the variable name of the struct, there should be exactly one struct in the file
         try:
             [(struct_name, shape, dtype)] = scipy.io.whosmat(mat_filename)
             if dtype != 'struct':
@@ -87,7 +90,7 @@ class Segment:
             self.dirname = os.path.dirname(os.path.abspath(mat_filename))
             self.name = struct_name
 
-            #The matlab struct contains the variable mappings, we're only interested in the variable *self.name*
+            # The matlab struct contains the variable mappings, we're only interested in the variable *self.name*
             self.mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[self.name]
             self.mat_struct.data = self.mat_struct.data.astype('float64')
 
@@ -157,38 +160,32 @@ class Segment:
     def resample_frequency(self, new_frequency, method='resample', inplace=True, **method_kwargs):
         """
         Resample the signal to a new frequency.
-        Args:
-            new_frequency: The frequency to downsample to. For
-                           *method* = 'decimate', it should be lower than
-                           the current frequency.
-            method: The method to use for resampling, should be either of
-                    'resample' or 'decimate', corresponding to
-                    *scipy.signal.resample* and *scipy.signal.decimate*
-                    respectively.
-            inplace: Whether the resampled segment values should replace the
-                     current one. If False, a new DFSegment object will be
-                     returned.
-            method_kwargs: Key-word arguments to pass to the resampling method,
-                           see *scipy.signal.resample* and
-                           *scipy.signal.decimate* for details.
-        Returns:
-            A DFSegment with the new frequency. If inplace=True, the calling
-            object will be returned, otherwise a newly constructed segment is
-            returned.
+
+        :param new_frequency: The frequency to downsample to. For *method* = 'decimate', it should be lower than
+        the current frequency.
+        :param method: The method to use for resampling, should be either of 'resample' or 'decimate', corresponding to
+        *scipy.signal.resample* and *scipy.signal.decimate* respectively.
+        :param inplace: Whether the resampled segment values should replace the current one. If False, a new DFSegment
+        object will be returned.
+        :param method_kwargs: Key-word arguments to pass to the resampling method, see *scipy.signal.resample* and
+        *scipy.signal.decimate* for details.
+        :return: A DFSegment with the new frequency. If inplace=True, the calling object will be returned, otherwise a
+        newly constructed segment is returned.
         """
+
         if not inplace:
             raise ValueError("Resample on Segment only supports inplace")
         data = self.mat_struct.data
         if method == 'resample':
             print("Using scipy.signal.resample")
-            #Use scipy.signal.resample
+            # Use scipy.signal.resample
             n_samples = int(self.get_n_samples() * new_frequency/self.mat_struct.sampling_frequency)
             resampled_signal = scipy.signal.resample(data, n_samples, axis=1, **method_kwargs)
         elif method == 'decimate':
             print("Using scipy.signal.decimate")
-            #Use scipy.signal.decimate
+            # Use scipy.signal.decimate
             decimation_factor = int(round(self.mat_struct.sampling_frequency/new_frequency))
-            #Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
+            # Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
             adjusted_new_frequency = self.mat_struct.sampling_frequency/decimation_factor
             if adjusted_new_frequency != new_frequency:
                 print("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
@@ -249,6 +246,7 @@ class Segment:
         mad = np.median(np.abs(median_residuals), axis=1)[:, np.newaxis]
         return mad/c
 
+
 class DFSegment(object):
     def __init__(self, sampling_frequency, dataframe, do_downsample=False, downsample_frequency=200):
         self.sampling_frequency = sampling_frequency
@@ -278,13 +276,13 @@ class DFSegment(object):
             channel_index = channel
 
         if start_time is None and end_time is None:
-            #Return the whole channel
+            # Return the whole channel
             return self.dataframe.loc[:, channel_index]
         else:
             if start_time is None:
                 start_index = 0
             else:
-                #Calculate which index is the first
+                # Calculate which index is the first
                 start_index = int(np.floor(start_time * self.get_sampling_frequency()))
 
             if end_time is None:
@@ -309,7 +307,6 @@ class DFSegment(object):
                 end_index = int(np.ceil(end_time * self.get_sampling_frequency()))
             return self.dataframe.iloc[start_index:end_index].transpose()
 
-
     def get_length_sec(self):
         return self.get_duration()
 
@@ -320,38 +317,32 @@ class DFSegment(object):
         return self.dataframe
 
     def resample_frequency(self, new_frequency, method='resample', inplace=False, **method_kwargs):
+        # TODO Code duplication with the other resample_frequency function here
         """
         Resample the signal to a new frequency.
-        Args:
-            new_frequency: The frequency to downsample to. For
-                           *method* = 'decimate', it should be lower than
-                           the current frequency.
-            method: The method to use for resampling, should be either of
-                    'resample' or 'decimate', corresponding to
-                    *scipy.signal.resample* and *scipy.signal.decimate*
-                    respectively.
-            inplace: Whether the resampled segment values should replace the
-                     current one. If False, a new DFSegment object will be
-                     returned.
-            method_kwargs: Key-word arguments to pass to the resampling method,
-                           see *scipy.signal.resample* and
-                           *scipy.signal.decimate* for details.
-        Returns:
-            A DFSegment with the new frequency. If inplace=True, the calling
-            object will be returned, otherwise a newly constructed segment is
-            returned.
+
+        :param new_frequency: The frequency to downsample to. For *method* = 'decimate', it should be lower than
+        the current frequency.
+        :param method: The method to use for resampling, should be either of 'resample' or 'decimate', corresponding to
+        *scipy.signal.resample* and *scipy.signal.decimate* respectively.
+        :param inplace: Whether the resampled segment values should replace the current one. If False, a new DFSegment
+        object will be returned.
+        :param method_kwargs: Key-word arguments to pass to the resampling method, see *scipy.signal.resample* and
+        *scipy.signal.decimate* for details.
+        :return: A DFSegment with the new frequency. If inplace=True, the calling object will be returned, otherwise a
+        newly constructed segment is returned.
         """
 
         if method == 'resample':
             print("Using scipy.signal.resample")
-            #Use scipy.signal.resample
+            # Use scipy.signal.resample
             n_samples = int(len(self.dataframe) * new_frequency/self.sampling_frequency)
             resampled_signal = scipy.signal.resample(self.dataframe, n_samples, **method_kwargs)
         elif method == 'decimate':
             print("Using scipy.signal.decimate")
-            #Use scipy.signal.decimate
+            # Use scipy.signal.decimate
             decimation_factor = int(self.sampling_frequency/new_frequency)
-            #Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
+            # Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
             adjusted_new_frequency = self.sampling_frequency/decimation_factor
             if adjusted_new_frequency != new_frequency:
                 print("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
@@ -363,8 +354,8 @@ class DFSegment(object):
         else:
             raise ValueError("Resampling method {} is unknown.".format(method))
 
-        #We should probably reconstruct the index
-        #index = pd.MultiIndex.from_product([[filename], [sequence], np.arange(mat_struct.data.shape[1])], names=['filename', 'sequence', 'index'])
+        # We should probably reconstruct the index
+        # index = pd.MultiIndex.from_product([[filename], [sequence], np.arange(mat_struct.data.shape[1])], names=['filename', 'sequence', 'index'])
         resampled_dataframe = pd.DataFrame(data=resampled_signal, columns=self.dataframe.columns)
         if inplace:
             self.sampling_frequency = new_frequency
@@ -372,7 +363,6 @@ class DFSegment(object):
             return self
         else:
             return DFSegment(new_frequency, resampled_dataframe)
-
 
     def get_windowed(self, window_length, start_time=None, end_time=None):
         """Returns an iterator with windows of this segment. If *segment_start* or *segment_end* is supplied, only windows within this
@@ -391,7 +381,6 @@ class DFSegment(object):
 
         for window_start in np.arange(start_index, end_index-window_sample_length, window_sample_length):
             yield self.dataframe.iloc[window_start : window_start + window_sample_length]
-
 
     @classmethod
     def from_mat_file(cls, mat_filename):

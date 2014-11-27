@@ -19,7 +19,7 @@ CANONICAL_FOLDERS = ('Dog_1', 'Dog_2', 'Dog_3',
 
 def get_segment_name(name):
     """Returns the canonical segment name for a string *name*. The canonical
-    segment name is the one identifying the original matlab data file and will
+    segment name is the one identifying the original .mat data file and will
     be inferred by the prefix of the basename using a regular expression. If the
     name can't be matched, the argument is returned."""
 
@@ -33,7 +33,8 @@ def get_segment_name(name):
 
 
 def get_subject(string):
-    """Extracts the subject string from the given string. The string must contain a substring matching a canonical folder name. If the string doesn't contain a subject, None is returned"""
+    """Extracts the subject string from the given string. The string must contain a substring matching a canonical
+    folder name. If the string doesn't contain a subject, None is returned"""
     subject_pattern = r".*(Patient_[12]|Dog_[1-5]).*"
     subject = re.match(subject_pattern, string)
     if subject is not None:
@@ -44,7 +45,8 @@ def get_subject(string):
 
 def generate_canonical_names(name_file=CANONICAL_NAMES_FILE):
     """
-    Generates a json file containing all the canonical test file names. The file is saved to the path denoted by the module constant CANONICAL_NAMES_FILE'
+    Generates a json file containing all the canonical test file names. The file is saved to the path denoted by
+    the module constant CANONICAL_NAMES_FILE'
     """
     import subprocess
     filenames = subprocess.check_output(['find', '../../data/', '-name', '*test*.mat']).split()
@@ -77,12 +79,12 @@ def expand_paths(filenames, recursive=True):
     for file in filenames:
         if os.path.isdir(file):
             if recursive:
-                #We recurse over all files contained in the directory and add them to the list of files
+                # We recurse over all files contained in the directory and add them to the list of files
                 for dirpath, _, subfilenames in os.walk(file):
                     new_files.extend([os.path.join(dirpath, filename)
                                       for filename in subfilenames])
             else:
-                #No recursion, we just do a listfile on the files of any directoy in filenames
+                # No recursion, we just do a listfile on the files of any directoy in filenames
                 for subfile in os.listdir(file):
                     if os.path.isfile(subfile):
                         new_files.append(os.path.join(file, subfile))
@@ -92,7 +94,8 @@ def expand_paths(filenames, recursive=True):
 
 
 def expand_folders(feature_folders, canonical_folders=CANONICAL_FOLDERS):
-    """Goes through the list of *feature_folders* and replcaes any directory which contains the canonical subject folders with the path to those folders. Folders not containing any canonical feature folder is left as is.
+    """Goes through the list of *feature_folders* and replaces any directory which contains the canonical subject
+    folders with the path to those folders. Folders not containing any canonical feature folder is left as is.
     """
     canonical_folders = set(canonical_folders)
     new_folders = []
@@ -158,13 +161,13 @@ def find_grouped_feature_files(feature_folders, class_name, file_pattern="*segme
     """
     segments = defaultdict(list)
     for feature_folder in feature_folders:
-        ## First we locate the files with the canonical segment they
-        ## are derived from, using the usual find_feature_files
+        # First we locate the files with the canonical segment they
+        # are derived from, using the usual find_feature_files
         feature_file_dicts = find_feature_files(feature_folder, class_name, file_pattern=file_pattern)
 
-        ## feature_file_dicts is a list of dictionaries, containing a
-        ## segment name key and a files key, we group this into our
-        ## segments dictionary
+        # feature_file_dicts is a list of dictionaries, containing a
+        # segment name key and a files key, we group this into our
+        # segments dictionary
         for feature_file_dict in feature_file_dicts:
             segment = feature_file_dict['segment']
             filename = feature_file_dict['files']

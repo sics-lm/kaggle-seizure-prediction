@@ -126,9 +126,9 @@ def worker_function(segment_path, extractor_function, output_dir,
         output_dir = os.path.dirname(segment_path)
 
     segment = sg.load_segment(segment_path,
-                           old_segment_format=old_segment_format,
-                           normalize_signal=normalize_signal,
-                           resample_frequency=resample_frequency)
+                              old_segment_format=old_segment_format,
+                              normalize_signal=normalize_signal,
+                              resample_frequency=resample_frequency)
 
     features = extractor_function(segment, **extractor_kwargs)
     write_features(features, segment_path, extractor_function, output_dir, extractor_kwargs, naming_function)

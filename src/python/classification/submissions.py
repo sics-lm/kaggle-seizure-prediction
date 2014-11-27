@@ -27,27 +27,20 @@ def create_submission_rows(score_dict,
                            default_score=0.0):
     """
     Produce a list of scores in a format suitable for writing to a submissions file.
-    Args:
-        score_dict: A dictionary with scores. The keys should be filenames with
-                    a prefix which identifies the segment file it's based on.
-                    The values should be floating point scores for each of the
-                    files
-        do_normalize: If True, the scores of each subject will be normalized to
-                      be more evenly distributed over the [0,1] range.
-        old_normalization: If True, the normalization will just subtract the
-                           minimum value and scale by the (max - min), instead
-                           of doing a standardization to mean 0.5 and std of 0.5.
-        canonical_names: If this is a set of names, they will be used to decide
-                         if any segments are missing from the scores dict. These
-                         segments will then be given the default score.
-        default_score: Which score to give segments which aren't present in
-                       score_dict.
-    Returns:
-        A list of dictionaries, where each inner dictionary represents one of
-        the scores. The inner dictionaries has the keys 'clip' and 'preictal',
-        where the 'clip' item gives the clip filename. The list is sorted by
-        clip.
+
+    :param score_dict: A dictionary with scores. The keys should be filenames with a prefix which identifies the
+    segment file it's based on. The values should be floating point scores for each of the files
+    :param do_normalize: If True, the scores of each subject will be normalized to be more evenly distributed over the
+    [0,1] range.
+    :param old_normalization: If True, the normalization will just subtract the minimum value and scale by the
+    (max - min), instead of doing a standardization to mean 0.5 and std of 0.5.
+    :param canonical_names: If this is a set of names, they will be used to decide if any segments are missing from the
+    scores dict. These segments will then be given the default score.
+    :param default_score: Which score to give segments which aren't present in score_dict.
+    :return: A list of dictionaries, where each inner dictionary represents one of the scores. The inner dictionaries
+    has the keys 'clip' and 'preictal', where the 'clip' item gives the clip filename. The list is sorted by clip.
     """
+
     clip_scores = dict()
     present_segments = set()
     for name, score in score_dict.items():
@@ -160,7 +153,11 @@ def collect_file_scores(filenames):
 
 
 def merge_scores(score_dicts):
-    """Merges the collection of score dictionaries to a single one. The dictionaries will be merged in the order they're supplied, so the last dictionary in the collection will be the ones who's scores are kept if multiple dictionaries have the same keys"""
+    """
+    Merges the collection of score dictionaries to a single one. The dictionaries will be merged in the order they're
+     supplied, so the last dictionary in the collection will be the ones who's scores are kept if multiple dictionaries
+     have the same keys
+     """
     scores = dict()
     for score_dict in score_dicts:
         scores.update(score_dict)
