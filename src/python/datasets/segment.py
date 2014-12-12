@@ -53,6 +53,7 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
     :param scale_name: The name of the metric to use as a scaling vector (one value for each channel).
     Must correspond to a metric present in stats file.
     :param old_segment_format: If True, use the old segment format.
+    :param k: For winsorizing this is the number of standard deviations the signal can be before it's clipped.
     :return: A segment object scaled, centered and trimmed using the values loaded from a file in *stats_folder* whose
     name contains the same subject as mat_filename
     """
@@ -124,10 +125,15 @@ class Segment:
         return self.get_n_samples() / self.get_sampling_frequency()
 
     def get_channel_data(self, channel, start_time=None, end_time=None):
-        """Returns all data of the given channel as a numpy array.
-        *channel* can be either the name of the channel or the index of the channel.
-        If *start_time* or *end_time* is given in seconds, only the data corresponding to that window will be returned.
-        If *start_time* is after the end of the segment, nothing is returned."""
+        """
+        Returns all data of the given channel as a numpy array.
+
+        :param channel: Either the name of the channel or the index of the channel.
+        :param start_time: Start time in seconds from when to the data should be returned. Defaults to the start of
+                           the segment.
+        :param end_time: End time in seconds from when the data should be returned. Defaults to the end of the segment.
+        :return:
+        """
         if isinstance(channel, int):
             index = channel
         else:
@@ -239,18 +245,37 @@ class Segment:
     def median(self):
         return np.median(self.mat_struct.data, axis=1)[:, np.newaxis]
 
-    def mad(self, median):
-        """Return the median absolute deviation for this segment only,
-        scaled by phi-1(3/4) to approximate the standard deviation."""
+    def mad(self, median=None):
+        """
+        Return the median absolute deviation for this segment only,
+        scaled by phi-1(3/4) to approximate the standard deviation.
+        :param median: If this is not None, it will be used as the median from which the deviation is calculated.
+        :return: A NDarray of shape (n_channels, 1) with the MAD for the channels of this segment.
+        """
+
         c = scipy.stats.norm.ppf(3 / 4)
-        subject_median = self.median()
+        if median is None:
+            subject_median = self.median()
+        else:
+            subject_median = median
         median_residuals = self.mat_struct.data - subject_median  # deviation between median and data
         mad = np.median(np.abs(median_residuals), axis=1)[:, np.newaxis]
         return mad / c
 
 
 class DFSegment(object):
+    """
+    A representation of the segment using a pandas DataFrame.
+    """
     def __init__(self, sampling_frequency, dataframe, do_downsample=False, downsample_frequency=200):
+        """
+        Construct a new signal DataFrame wrapper.
+        :param sampling_frequency: The frequence of the signal.
+        :param dataframe: The signal data as a pandas DataFrame
+        :param do_downsample: if True, the signal will be resampled to the downsample_frequency.
+        :param downsample_frequency: The frequency to which the signal should be downsampled.
+        :return: A DFSegment.
+        """
         self.sampling_frequency = sampling_frequency
         self.dataframe = dataframe
         if do_downsample:
@@ -268,10 +293,15 @@ class DFSegment(object):
         return self.get_n_samples() / self.get_sampling_frequency()
 
     def get_channel_data(self, channel, start_time=None, end_time=None):
-        """Returns all data of the given channel as a numpy array.
-        *channel* can be either the name of the channel or the index of the channel.
-        If *start_time* or *end_time* is given in seconds, only the data corresponding to that window will be returned.
-        If *start_time* is after the end of the segment, nothing is returned."""
+        """
+        Returns all data of the given channel as a numpy array.
+
+        :param channel: Either the name of the channel or the index of the channel.
+        :param start_time: Start time in seconds from when to the data should be returned. Defaults to the start of
+                           the segment.
+        :param end_time: End time in seconds from when the data should be returned. Defaults to the end of the segment.
+        :return:
+        """
         if isinstance(channel, int):
             channel_index = self.get_channels()[channel]
         else:
@@ -368,8 +398,17 @@ class DFSegment(object):
             return DFSegment(new_frequency, resampled_dataframe)
 
     def get_windowed(self, window_length, start_time=None, end_time=None):
-        """Returns an iterator with windows of this segment. If *segment_start* or *segment_end* is supplied,
-        only windows within this interval will be returned."""
+        """
+        Returns an iterator with windows of this segment. If *segment_start* or *segment_end* is supplied,
+        only windows within this interval will be returned.
+
+        :param window_length: The length in seconds for the windows.
+        :param start_time: The start time in seconds of the segment from when windows are generated.
+        :param end_time: The end time in seconds of the segment for when windows should not be generated. The window
+                         overlapping the end time _will_ be included.
+        :return: An iterator which yields windows of the signal.
+        """
+
         if start_time is None:
             start_index = 0
         else:
@@ -387,6 +426,11 @@ class DFSegment(object):
 
     @classmethod
     def from_mat_file(cls, mat_filename):
+        """
+        Creates a DFSegment from the given matlab segment file.
+        :param mat_filename: The segment file to read.
+        :return: A DFSegment object with the data from the segment file.
+        """
         try:
             [(struct_name, shape, dtype)] = scipy.io.whosmat(mat_filename)
             if dtype != 'struct':
@@ -415,12 +459,21 @@ class DFSegment(object):
 
     @classmethod
     def from_mat_files(cls, file_names):
-        """Loads all files in the sequence *file_names* and concatenates them into a single segment"""
+        """
+        Loads the given segment files into a single DFSegment.
+        :param file_names: The matlab segment files to read.
+        :return: A DFSegment with the segment data from the file names.
+        """
         return concat([cls.from_mat_file(file_name) for file_name in file_names])
 
 
 def concat(segments):
-    """Concatenates DFSegments."""
+    """
+    Concatenates DFSegments.
+    :param segments: The DFSegments to concatenate.
+    :return: A large DFSegment with all the segments concatenated.
+    """
+
     new_df = pd.concat([s.dataframe for s in segments])
     sampling_frequency = segments[0].get_sampling_frequency()
     new_df.sortlevel(inplace=True)
