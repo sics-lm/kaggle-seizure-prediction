@@ -18,7 +18,7 @@ class EpochShim(object):
         self.segment = segment
         self.window_size = window_size
         # The epoch needs a dictionary attribute with the key 'freq'
-        self.info = dict(sfreq = segment.get_sampling_frequency())
+        self.info = dict(sfreq=segment.get_sampling_frequency())
 
     def __iter__(self):
         for window in self.segment.get_windowed(self.window_size):
@@ -160,9 +160,9 @@ def eeg_rhythms():
     Mirowski, Piotr W., et al. "Comparing SVM and convolutional networks for epileptic seizure prediction from
     intracranial EEG." Machine Learning for Signal Processing, 2008. MLSP 2008. IEEE Workshop on. IEEE, 2008.
     """
-    return {"delta" : (1, 4), "theta": (4, 7), "alpha" : (7, 13),
-            "low-beta" : (13, 15), "high-beta" : (14, 30),
-            "low-gamma" : (30, 45), "high-gamma" : (65, 101)}
+    return {"delta": (1, 4), "theta": (4, 7), "alpha": (7, 13),
+            "low-beta": (13, 15), "high-beta": (14, 30),
+            "low-gamma": (30, 45), "high-gamma": (65, 101)}
 
 
 def segment_wavelet_synchrony(segment, bands=None, window_size=5.0, no_epochs=False):
@@ -293,21 +293,39 @@ def extract_features(segment_paths,
                               no_epochs=no_epochs)
 
 
-if __name__ == '__main__':
-
+def main():
     import argparse
     parser = argparse.ArgumentParser(description="Calculates the SPLV phase lock between pairwise channels.")
 
-    parser.add_argument("segments", help="The files to process. This can either be the path to a matlab file holding the segment or a directory holding such files.", nargs='+', metavar="SEGMENT_FILE")
-    parser.add_argument("--csv-directory", help="Directory to write the csv files to, if omitted, the files will be written to the same directory as the segment")
-    parser.add_argument("--window-size", help="What length in seconds the epochs should be.", type=float, default=5.0)
-    parser.add_argument("--feature-length", help="The length of the feature vectors in seconds, will be produced by concatenating the phase lock values from the windows.", type=float, default=60.0)
-    parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.", type=int, default=1)
-    parser.add_argument("--no-epochs", help="Don't use mne Epochs when generating the windows, just use the raw windows from the segment.",
+    parser.add_argument("segments",
+                        help=("The files to process. This can either be the path to a matlab file holding "
+                              "the segment or a directory holding such files."),
+                        nargs='+',
+                        metavar="SEGMENT_FILE")
+    parser.add_argument("--csv-directory",
+                        help=("Directory to write the csv files to, if omitted, the files will be written to the "
+                              "same directory as the segment"))
+    parser.add_argument("--window-size",
+                        help="What length in seconds the epochs should be.",
+                        type=float,
+                        default=5.0)
+    parser.add_argument("--feature-length",
+                        help=("The length of the feature vectors in seconds, will be produced by concatenating the "
+                              "phase lock values from the windows."),
+                        type=float,
+                        default=60.0)
+    parser.add_argument("--workers",
+                        help="The number of worker processes used for calculating the cross-correlations.",
+                        type=int,
+                        default=1)
+    parser.add_argument("--no-epochs",
+                        help=("Don't use mne Epochs when generating the windows, just use the raw windows from "
+                              "the segment."),
                         action='store_true',
                         dest='no_epochs',
                         default=False)
-    parser.add_argument("--resample-frequency", help="The frequency to resample to,",
+    parser.add_argument("--resample-frequency",
+                        help="The frequency to resample to,",
                         type=float,
                         dest='resample_frequency')
 
@@ -323,3 +341,7 @@ if __name__ == '__main__':
                      feature_length_seconds=args.feature_length,
                      window_size=args.window_size,
                      no_epochs=args.no_epochs)
+
+
+if __name__ == '__main__':
+    main()
