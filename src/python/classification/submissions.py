@@ -15,7 +15,7 @@ def scores_to_submission(score_dicts, **kwargs):
     for writing to a submission file.
     """
     all_scores = merge_scores(score_dicts)
-    canonical_names = fileutils.load_canonical_names()
+    canonical_names = fileutils.load_testsegment_names()
     submission = create_submission_rows(all_scores, canonical_names=canonical_names, **kwargs)
     return submission
 
