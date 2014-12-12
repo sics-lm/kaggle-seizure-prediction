@@ -180,14 +180,16 @@ def submission_from_files(classification_files, **kwargs):
     write_scores(scores, **kwargs)
 
 
-if __name__ == '__main__':
+def main():
     import argparse
     parser = argparse.ArgumentParser(description="""Script for producing submission files""")
 
     parser.add_argument("classification_files",
-                        help="""The files containing the classification scores. The score files should be csv:s with two columns, the first with the segment names and the second with the segment scores""",
+                        help=("The files containing the classification scores. The score files should be"
+                              "csv:s with two columns, the first with the segment names and the second with"
+                              " the segment scores"),
                         nargs='+')
-    parser.add_argument( "-o", "--output",
+    parser.add_argument("-o", "--output",
                         help="The file the submission scores should be written two, the default is stdout",
                         dest='output')
     parser.add_argument("-n", "--normalize",
@@ -211,3 +213,7 @@ if __name__ == '__main__':
         submission_from_files(args.classification_files,
                               do_normalize=args.do_normalize,
                               default_score=args.default_score)
+
+
+if __name__ == '__main__':
+    main()
