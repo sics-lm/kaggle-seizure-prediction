@@ -6,9 +6,10 @@ Computer Science for the American Epilepsy Society Seizure Prediction Challenge 
 http://www.kaggle.com/c/seizure-prediction
 
 Parts of the code is based on https://github.com/MichaelHills/seizure-detection by Michael Hills for the previous
-seizure detection challenge http://www.kaggle.com/c/seizure-detection
+seizure detection challenge.
 
-This README modelled on https://www.kaggle.com/wiki/ModelSubmissionBestPractices and https://raw.githubusercontent.com/MichaelHills/seizure-detection/master/README.md
+This README modelled on https://www.kaggle.com/wiki/ModelSubmissionBestPractices and
+https://github.com/MichaelHills/seizure-detection/blob/master/README.md
 
 ##Hardware / OS platform used
 
