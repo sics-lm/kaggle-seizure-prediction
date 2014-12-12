@@ -567,7 +567,7 @@ def get_cli_args():
                         dest='cv_verbosity')
     parser.add_argument("--model-params", "--p",
                         help=("Allows setting model parameters for the method"
-                              " used. This should be a string with a python"
+                              " used. This should be a string with a seizure_detection"
                               " expression containing a datastructure similar"
                               " to the grid_param argument to the cross "
                               "validation grid search, but the values doesn't have to be sequences. ",
