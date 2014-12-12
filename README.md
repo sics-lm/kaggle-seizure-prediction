@@ -2,6 +2,8 @@
 
 This repository contains the submission made by members of the Learning Machines group at the Swedish Institute of
 Computer Science for the American Epilepsy Society Seizure Prediction Challenge on Kaggle.
+Parts of the code is based on https://github.com/MichaelHills/seizure-detection by Michael Hills for the previous
+seizure detection competition: http://www.kaggle.com/c/seizure-detection
 
 http://www.kaggle.com/c/seizure-prediction
 
