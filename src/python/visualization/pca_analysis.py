@@ -202,7 +202,8 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true')
 
-    parser.add_argument("--feature-type", help="What kind of features are being processed.", choices=['hills', 'wavelets', 'xcorr'],
+    parser.add_argument("--feature-type", help="What kind of features are being processed.",
+                        choices=['hills', 'wavelets', 'xcorr'],
                         default='wavelets')
 
     logging.getLogger().setLevel('INFO')
