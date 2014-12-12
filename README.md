@@ -63,7 +63,7 @@ parameter in `SETTINGS.json` to increase the number of feature extraction jobs r
 One classifier is then trained for each subject, and dumped to the `FEATURE_PATH\[Subject]` directory. The classifier filename
 will also include the timestamp of when the classifier was created.
 
-pp```
+```
 FEATURE_PATH/Dog_1/model_svm_[TIMESTAMP].pickle
 FEATURE_PATH/Dog_2/model_svm_[TIMESTAMP].pickle
 ...
