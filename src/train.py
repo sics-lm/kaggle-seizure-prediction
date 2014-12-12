@@ -6,7 +6,6 @@ from __future__ import print_function
 
 import json
 import os.path
-import sys
 import datetime
 
 from python.features import hills_features, wavelets, cross_correlate
@@ -67,6 +66,7 @@ def train_model(settings):
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     classification_pipeline.run_batch_classification(feature_folders=[settings['FEATURE_PATH']],
                                                      timestamp=timestamp,
+                                                     submission_file=settings['SUBMISSION_PATH'],
                                                      frame_length=12,
                                                      feature_type=settings['FEATURE_TYPE'],
                                                      processes=settings['WORKERS'],

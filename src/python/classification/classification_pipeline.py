@@ -163,10 +163,11 @@ def run_batch_classification(feature_folders,
                                             optional_file_components=optional_file_components,
                                             random_state=random_state,
                                             **kwargs)
-        score_dict = segment_scores.to_dict()['preictal']
+        score_dict = segment_scores.to_dict()['Preictal']
         all_scores.append(score_dict)
 
-    if submission_file is None:
+    if submission_file is None or os.path.isdir(submission_file):
+        #We need to generate a new submission filename
         if file_components is None:
             file_components = [feature_type,
                                kwargs['method'],
@@ -180,8 +181,10 @@ def run_batch_classification(feature_folders,
                                                file_components,
                                                optional_file_components,
                                                timestamp=timestamp)
-
-        if csv_directory is not None:
+        #Let the submission path take precedence if it's a folder
+        if submission_file is not None:
+            submission_file = os.path.join(submission_file, filename)
+        elif csv_directory is not None:
             submission_file = os.path.join(csv_directory, filename)
         else:
             submission_file = os.path.join('..', '..', 'submissions', filename)
