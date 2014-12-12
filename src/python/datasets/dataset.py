@@ -20,6 +20,7 @@ def first(iterable):
     for element in iterable:
         return element
 
+
 class SegmentCrossValidator:
     """Wrapper for the scikit_learn CV generators to generate folds on a segment basis."""
     def __init__(self, dataframe, base_cv=None, **cv_kwargs):
@@ -28,7 +29,8 @@ class SegmentCrossValidator:
         self.all_segments = pd.DataFrame({'Preictal': dataframe['Preictal'], 'i': np.arange(len(dataframe))})
         self.all_segments.set_index('i', append=True, inplace=True)
 
-        #Now create a series with only the segments as rows. This is what we will pass into the wrapped cross validation generator
+        # Now create a series with only the segments as rows. This is what we will pass into the wrapped cross
+        # validation generator
         self.segments = self.all_segments['Preictal'].groupby(level='segment').first()
         self.segments.sort(inplace=True)
 
@@ -42,19 +44,19 @@ class SegmentCrossValidator:
         Return a generator object which returns a pair of indices for every iteration.
         """
         for training_indices, test_indices in self.cv:
-            #The indices returned from self.cv are relative to the segment name data series, we pick out the segment names they belong to
+            # The indices returned from self.cv are relative to the segment name data series, we pick out the segment
+            # names they belong to
             training_segments = list(self.segments[training_indices].index)
             test_segments = list(self.segments[test_indices].index)
             # Now that we have the segment names, we pick out the rows in the properly indexed dataframe
             all_training_indices = self.all_segments.loc[training_segments]
             all_test_indices = self.all_segments.loc[test_segments]
 
-            #Now pick out the values for only the 'i' level index of the rows which matched the segment names
+            # Now pick out the values for only the 'i' level index of the rows which matched the segment names
             original_df_training_indices = all_training_indices.index.get_level_values('i')
             original_df_test_indices = all_test_indices.index.get_level_values('i')
 
             yield original_df_training_indices, original_df_test_indices
-
 
     def __len__(self):
         return len(self.cv)
@@ -83,7 +85,7 @@ def transform(transformation, interictal, preictal, test):
     """
 
     if not hasattr(transformation, 'fit_transform'):
-        logging.warn(
+        logging.warning(
             "Transformation {} has not fit_transform function, no transformation applied".format(transformation))
         return [interictal, preictal, test]
 
@@ -171,6 +173,7 @@ def split_experiment_data(interictal,
                           do_segment_split=True,
                           random_state=None):
     """
+    Splits the interictal and preictal training data into a training and test set.
 
     :param interictal: A data frame containing the interictal samples.
     :param preictal: A data frame containing the preictal samples.
@@ -194,7 +197,8 @@ def merge_interictal_preictal(interictal, preictal):
     Merges the *interictal* and *preictal* data frames to a single data frame. Also sorts the multilevel index.
     :param interictal: A data frame containing the interictal samples.
     :param preictal: A data frame containing the preictal samples.
-    :return: A data frame containing both interictal and preictal data. The multilevel index of the data frame is sorted.
+    :return: A data frame containing both interictal and preictal data. The multilevel index of the data frame
+             is sorted.
     """
 
     logging.info("Merging interictal and preictal datasets")
@@ -305,7 +309,6 @@ def test_k_fold_segment_split():
         assert np.all(training_fold1 == training_fold1) and np.all(test_fold1 == test_fold2)
 
 
-
 def combine_features(dataframes, labeled=True):
     """
     Combine the features of the dataframes by segment. The dataframe needs
@@ -331,7 +334,12 @@ def combine_features(dataframes, labeled=True):
 def normalize_segment_names(dataframe, inplace=False):
     """
     Makes the segment index of the dataframe have names which correspond to the original .mat segment names.
+    :param dataframe: The dataframe with segment names
+    :param inplace: If True, the segment index will be changed in place in the given data frame.
+    :return: A DataFrame where the segment name part of the index has been canonicalized. If inplace is True, the
+             orignal dataframe is returned, otherwise a copy is returned.
     """
+
     index_values = dataframe.index.get_values()
     fixed_values = [(fileutils.get_segment_name(filename), frame) for filename, frame in index_values]
     if not inplace:
@@ -340,7 +348,30 @@ def normalize_segment_names(dataframe, inplace=False):
     return dataframe
 
 
+def load_data_frames(feature_folder,
+                     sliding_frames=False,
+                     **kwargs):
+    """
+    Loads all the feature data frames with the given feature folder.
+    :param feature_folder: A folder holding feature files.
+    :param sliding_frames: If True, the training data will be extended by using sliding frames over the feature windows.
+    :param kwargs: Keyword arguments to use for the load function.
+    :return: A triple of data frames (interictal, preictal, test)
+    """
+    preictal = load_preictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
+    interictal = load_interictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
+    test = load_test_dataframes(feature_folder, **kwargs)
+    return interictal, preictal, test
+
+
 def load_preictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
+    """
+    Convenience function for loading preictal dataframes. Sets the 'Preictal' column to 1.
+    :param feature_folder: The folder to load the feature data from.
+    :param sliding_frames: If True, the data frame will be extended using sliding frames over the feature windows.
+    :param kwargs: keyword arguments to use for loading the features.
+    :return: A DataFrame of preictal data with a 'Preictal' column set to 1.
+    """
     preictal = load_feature_files(feature_folder,
                                   class_name="preictal",
                                   sliding_frames=sliding_frames,
@@ -353,10 +384,18 @@ def load_preictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
 
 
 def load_interictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
+    """
+    Convenience function for loading interictal dataframes. Sets the 'Preictal' column to 0.
+    :param feature_folder: The folder to load the feature data from.
+    :param sliding_frames: If True, the data frame will be extended using sliding frames over the feature windows.
+    :param kwargs: keyword arguments to use for loading the features.
+    :return: A DataFrame of interictal data with a 'Preictal' column set to 0.
+    """
+
     interictal = load_feature_files(feature_folder,
-                                  class_name="preictal",
-                                  sliding_frames=sliding_frames,
-                                  **kwargs)
+                                    class_name="preictal",
+                                    sliding_frames=sliding_frames,
+                                    **kwargs)
     interictal['Preictal'] = 0
     interictal.sortlevel('segment', inplace=True)
     if isinstance(interictal.columns, pd.MultiIndex):
@@ -365,6 +404,13 @@ def load_interictal_dataframes(feature_folder, sliding_frames=False, **kwargs):
 
 
 def load_test_dataframes(feature_folder, **kwargs):
+    """
+    Convenience function for loading unlabeled test dataframes. Does not add a 'Preictal' column.
+
+    :param feature_folder: The folder to load the feature data from.
+    :param kwargs: keyword arguments to use for loading the features.
+    :return: A DataFrame of unlabeled test data without a 'Preictal' column.
+    """
     test = load_feature_files(feature_folder,
                               class_name="test",
                               # Never use sliding frames for the test-data
@@ -374,15 +420,6 @@ def load_test_dataframes(feature_folder, **kwargs):
     if isinstance(test.columns, pd.MultiIndex):
         test.sortlevel(axis=1, inplace=True)
     return test
-
-
-def load_data_frames(feature_folder,
-                     sliding_frames=False,
-                     **kwargs):
-    preictal = load_preictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
-    interictal = load_interictal_dataframes(feature_folder, sliding_frames=sliding_frames, **kwargs)
-    test = load_test_dataframes(feature_folder, **kwargs)
-    return interictal, preictal, test
 
 
 def load_feature_files(feature_folder,
@@ -498,9 +535,19 @@ def rebuild_features(feature_file_dicts,
 
 
 def load_files_parallel(feature_files, load_function, processes, **kwargs):
+    """
+    Function for loading feature files in parallel.
+    :param feature_files: The collection of files to load.
+    :param load_function: The function used to load the objects.
+    :param processes: The number of processes to use for loading the feature files.
+    :param kwargs: Keyword arguments which will be sent to the load function.
+    :return: A list of loaded feature data frames or numpy arrays.
+    """
     logging.info("Reading files in parallel")
     pool = multiprocessing.Pool(processes)
     try:
+        #Create a partial function with the keyword arguments set. This is done since the parallel map from
+        # multiprocessing expects a function which takes a single argument.
         partial_load_and_pivot = partial(load_function, **kwargs)
         segment_frames = pool.map(partial_load_and_pivot, feature_files)
     finally:
@@ -509,6 +556,13 @@ def load_files_parallel(feature_files, load_function, processes, **kwargs):
 
 
 def load_files_serial(feature_files, load_function, **kwargs):
+    """
+    Function for loading the feature files serially.
+    :param feature_files: The collection of feature files to load.
+    :param load_function: The function to use for loading the feature files.
+    :param kwargs: keyword arguments for the load function.
+    :return: A list of loaded feature data frames or numpy arrays.
+    """
     logging.info("Reading files serially")
     return [load_function(files, **kwargs)
             for files in feature_files]
@@ -518,8 +572,10 @@ def reshape_frames(dataframe, frame_length=12):
     """
     Returns a new dataframe with the given frame length.
     :param dataframe: A pandas DataFrame with one window per row.
-    :param frame_length: The desired number of windows for each feature frame. Must divide the number of windows in *dataframe* evenly.
-    :return: A new pandas DataFrame with the desired window frame width. The columns of the new data-frame will be multi-index so that
+    :param frame_length: The desired number of windows for each feature frame. Must divide the number of windows in
+                         *dataframe* evenly.
+    :return: A new pandas DataFrame with the desired window frame width. The columns of the new data-frame will be
+             multi-index so that
         future concatenation of data frames align properly.
     """
 
@@ -546,9 +602,13 @@ def reshape_frames(dataframe, frame_length=12):
 
 
 def create_sliding_frames(dataframe, frame_length=12):
-    """ Wrapper for the extend_data_with_sliding_frames function wich works with numpy arrays.
-
+    """
+    Wrapper for the extend_data_with_sliding_frames function which works with numpy arrays.
     This version does the data-frame conversion for us.
+
+    :param dataframe: The dataframe to extend.
+    :param frame_length: The frame length to use in the resulting extended data frame.
+    :return: A new data frame where the original dataframe has been extended with sliding frames.
     """
     extended_array = extend_data_with_sliding_frames(dataframe.values)
     # We should preserve the columns of the dataframe, otherwise
@@ -567,7 +627,7 @@ def extend_data_with_sliding_frames(source_array, frame_length=12):
     Creates an array of frames from the given array of windows using a sliding window.
     :param source_array: a numpy array with the shape (n_windows, window_length)
     :param frame_length: The desired window length of the frames.
-    :return:
+    :return: A new numpy ndarray extended by taking sliding frames of the source array.
     """
 
     n_rows = source_array.shape[0]
