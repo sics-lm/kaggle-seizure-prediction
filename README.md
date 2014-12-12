@@ -5,10 +5,10 @@ Computer Science for the American Epilepsy Society Seizure Prediction Challenge 
 
 http://www.kaggle.com/c/seizure-prediction
 
-This README modelled on https://www.kaggle.com/wiki/ModelSubmissionBestPractices and https://github.com/MichaelHills/seizure-detection
-
 Parts of the code is based on https://github.com/MichaelHills/seizure-detection by Michael Hills for the previous
-seizure detection competition: http://www.kaggle.com/c/seizure-detection
+seizure detection challenge http://www.kaggle.com/c/seizure-detection
+
+This README modelled on https://www.kaggle.com/wiki/ModelSubmissionBestPractices and https://github.com/MichaelHills/seizure-detection
 
 ##Hardware / OS platform used
 
@@ -62,7 +62,7 @@ parameter in `SETTINGS.json` to increase the number of feature extraction jobs r
 One classifier is then trained for each subject, and dumped to the `FEATURE_PATH\[Subject]` directory. The classifier filename
 will also include the timestamp of when the classifier was created.
 
-```
+pp```
 FEATURE_PATH/Dog_1/model_svm_[TIMESTAMP].pickle
 FEATURE_PATH/Dog_2/model_svm_[TIMESTAMP].pickle
 ...
