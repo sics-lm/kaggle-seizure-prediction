@@ -13,12 +13,15 @@ import numpy as np
 
 from . import fileutils
 
+
 def load_segment(segment_path, old_segment_format=True, normalize_signal=False, resample_frequency=None):
     """
     Convienience function for loading segments
     :param segment_path: Path to the segment file to load.
-    :param old_segment_format: If True, the old format will be used. If False, the format backed by a pandas dataframe will be used.
-    :param normalize_signal: If True, the signal will be normalized using the subject median and median absolute deviation.
+    :param old_segment_format: If True, the old format will be used. If False, the format backed by a pandas
+                               dataframe will be used.
+    :param normalize_signal: If True, the signal will be normalized using the subject median and median absolute
+                             deviation.
     :param resample_frequency: If this is set to a number, the signal will be resampled to that frequency.
     :return: A Segment or DFSegment object with the data from the segment in *segment_path*.
     """
@@ -60,7 +63,8 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
                    in glob.glob(stats_glob)
                    if subject == fileutils.get_subject(filename)]
     if len(stats_files) != 1:
-        raise ValueError("Can't determine which stats file to use with the glob {} and the subject {}".format(stats_glob, subject))
+        raise ValueError("Can't determine which stats file to use"
+                         "with the glob {} and the subject {}".format(stats_glob, subject))
     stats = basic_segment_statistics.read_stats(stats_files[0])
     center = basic_segment_statistics.get_subject_metric(stats, center_name)
     scale = basic_segment_statistics.get_subject_metric(stats, scale_name)
@@ -78,6 +82,7 @@ def load_and_standardize(mat_filename, stats_glob='../../data/segment_statistics
 
 class Segment:
     """Wrapper class for EEG segments backed by a multidimensional numpy array."""
+
     def __init__(self, mat_filename):
         """Creates a new segment object from the file named *mat_filename*"""
         # First extract the variable name of the struct, there should be exactly one struct in the file
@@ -93,7 +98,6 @@ class Segment:
             # The matlab struct contains the variable mappings, we're only interested in the variable *self.name*
             self.mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[self.name]
             self.mat_struct.data = self.mat_struct.data.astype('float64')
-
 
         except ValueError as exception:
             print("Error when loading {}".format(mat_filename))
@@ -156,7 +160,6 @@ class Segment:
     def get_sequence(self):
         return self.mat_struct.sequence
 
-
     def resample_frequency(self, new_frequency, method='resample', inplace=True, **method_kwargs):
         """
         Resample the signal to a new frequency.
@@ -179,14 +182,14 @@ class Segment:
         if method == 'resample':
             print("Using scipy.signal.resample")
             # Use scipy.signal.resample
-            n_samples = int(self.get_n_samples() * new_frequency/self.mat_struct.sampling_frequency)
+            n_samples = int(self.get_n_samples() * new_frequency / self.mat_struct.sampling_frequency)
             resampled_signal = scipy.signal.resample(data, n_samples, axis=1, **method_kwargs)
         elif method == 'decimate':
             print("Using scipy.signal.decimate")
             # Use scipy.signal.decimate
-            decimation_factor = int(round(self.mat_struct.sampling_frequency/new_frequency))
+            decimation_factor = int(round(self.mat_struct.sampling_frequency / new_frequency))
             # Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
-            adjusted_new_frequency = self.mat_struct.sampling_frequency/decimation_factor
+            adjusted_new_frequency = self.mat_struct.sampling_frequency / decimation_factor
             if adjusted_new_frequency != new_frequency:
                 print("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
             new_frequency = adjusted_new_frequency
@@ -198,7 +201,6 @@ class Segment:
             raise ValueError("Resampling method {} is unknown.".format(method))
         self.mat_struct.data = resampled_signal
         self.mat_struct.sampling_frequency = new_frequency
-
 
     def winsorize(self, scale, k=5):
         """Makes any sample which is more than *k* scale units (std or mad) away from the centers, be exactly *k* scale
@@ -240,11 +242,11 @@ class Segment:
     def mad(self, median):
         """Return the median absolute deviation for this segment only,
         scaled by phi-1(3/4) to approximate the standard deviation."""
-        c = scipy.stats.norm.ppf(3/4)
+        c = scipy.stats.norm.ppf(3 / 4)
         subject_median = self.median()
         median_residuals = self.mat_struct.data - subject_median  # deviation between median and data
         mad = np.median(np.abs(median_residuals), axis=1)[:, np.newaxis]
-        return mad/c
+        return mad / c
 
 
 class DFSegment(object):
@@ -298,7 +300,7 @@ class DFSegment(object):
             if start_time is None:
                 start_index = 0
             else:
-                #Calculate which index is the first
+                # Calculate which index is the first
                 start_index = int(np.floor(start_time * self.get_sampling_frequency()))
 
             if end_time is None:
@@ -336,14 +338,14 @@ class DFSegment(object):
         if method == 'resample':
             print("Using scipy.signal.resample")
             # Use scipy.signal.resample
-            n_samples = int(len(self.dataframe) * new_frequency/self.sampling_frequency)
+            n_samples = int(len(self.dataframe) * new_frequency / self.sampling_frequency)
             resampled_signal = scipy.signal.resample(self.dataframe, n_samples, **method_kwargs)
         elif method == 'decimate':
             print("Using scipy.signal.decimate")
             # Use scipy.signal.decimate
-            decimation_factor = int(self.sampling_frequency/new_frequency)
+            decimation_factor = int(self.sampling_frequency / new_frequency)
             # Since the decimate factor has to be an int, the actual new frequency isn't necessarily the in-argument
-            adjusted_new_frequency = self.sampling_frequency/decimation_factor
+            adjusted_new_frequency = self.sampling_frequency / decimation_factor
             if adjusted_new_frequency != new_frequency:
                 print("Because of rounding, the actual new frequency is {}".format(adjusted_new_frequency))
             new_frequency = adjusted_new_frequency
@@ -355,7 +357,8 @@ class DFSegment(object):
             raise ValueError("Resampling method {} is unknown.".format(method))
 
         # We should probably reconstruct the index
-        # index = pd.MultiIndex.from_product([[filename], [sequence], np.arange(mat_struct.data.shape[1])], names=['filename', 'sequence', 'index'])
+        # index = pd.MultiIndex.from_product([[filename], [sequence],
+        # np.arange(mat_struct.data.shape[1])], names=['filename', 'sequence', 'index'])
         resampled_dataframe = pd.DataFrame(data=resampled_signal, columns=self.dataframe.columns)
         if inplace:
             self.sampling_frequency = new_frequency
@@ -365,8 +368,8 @@ class DFSegment(object):
             return DFSegment(new_frequency, resampled_dataframe)
 
     def get_windowed(self, window_length, start_time=None, end_time=None):
-        """Returns an iterator with windows of this segment. If *segment_start* or *segment_end* is supplied, only windows within this
-        interval will be returned."""
+        """Returns an iterator with windows of this segment. If *segment_start* or *segment_end* is supplied,
+        only windows within this interval will be returned."""
         if start_time is None:
             start_index = 0
         else:
@@ -379,8 +382,8 @@ class DFSegment(object):
 
         window_sample_length = int(np.floor(window_length * self.get_sampling_frequency()))
 
-        for window_start in np.arange(start_index, end_index-window_sample_length, window_sample_length):
-            yield self.dataframe.iloc[window_start : window_start + window_sample_length]
+        for window_start in np.arange(start_index, end_index - window_sample_length, window_sample_length):
+            yield self.dataframe.iloc[window_start: window_start + window_sample_length]
 
     @classmethod
     def from_mat_file(cls, mat_filename):
@@ -391,7 +394,7 @@ class DFSegment(object):
 
             filename = os.path.basename(mat_filename)
 
-            #The matlab struct contains the variable mappings, we're only interested in the variable *name*
+            # The matlab struct contains the variable mappings, we're only interested in the variable *name*
             mat_struct = scipy.io.loadmat(mat_filename, struct_as_record=False, squeeze_me=True)[struct_name]
             sampling_frequency = mat_struct.sampling_frequency
             try:
@@ -399,9 +402,11 @@ class DFSegment(object):
             except AttributeError:
                 sequence = 0
 
-            index = pd.MultiIndex.from_product([[filename], [sequence], np.arange(mat_struct.data.shape[1])], names=['filename', 'sequence', 'index'])
+            index = pd.MultiIndex.from_product([[filename], [sequence], np.arange(mat_struct.data.shape[1])],
+                                               names=['filename', 'sequence', 'index'])
             ## Most operations we do on dataframes are optimized for float64
-            dataframe = pd.DataFrame(data=mat_struct.data.transpose().astype('float64'), columns=mat_struct.channels, index=index)
+            dataframe = pd.DataFrame(data=mat_struct.data.transpose().astype('float64'), columns=mat_struct.channels,
+                                     index=index)
             return cls(sampling_frequency, dataframe)
 
         except ValueError as exception:
@@ -428,8 +433,8 @@ def test_segment_classes():
     print('Matching durations: ', s_old.get_duration() == s_new.get_duration())
     for start in np.arange(0, s_new.get_duration(), 9.3):
         for channel in s_new.get_channels():
-            c_new = s_new.get_channel_data(channel, start, start+9.3)
-            c_old = s_old.get_channel_data(channel, start, start+9.3)
+            c_new = s_new.get_channel_data(channel, start, start + 9.3)
+            c_old = s_old.get_channel_data(channel, start, start + 9.3)
             print('Length of new: {}, length of old: {}'.format(len(c_new), len(c_old)))
             print('Data matching for channel {}: {}'.format(channel, all(c_new == c_old)))
 
