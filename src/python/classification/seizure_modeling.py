@@ -19,6 +19,11 @@ from ..datasets import dataset
 
 
 def get_model_class(method):
+    """
+    Returns the class associated with a method string.
+    :param method: A string describing the method to use.
+    :return: A class corresponding to the method.
+    """
     if method == 'logistic':
         return sklearn.linear_model.LogisticRegression
     elif method == 'svm':
@@ -42,6 +47,13 @@ def get_model_class(method):
 def get_model(method, training_data_x, training_data_y, model_params=None, random_state=None):
     """
     Returns a dictionary with the model and cross-validation parameter grid for the model named *method*.
+    :param method: The classification method to use.
+    :param training_data_x: The training data.
+    :param training_data_y: The predictor for the training data (the class label).
+    :param model_params: If given, will override the default model parameters for the grid search.
+    :param random_state: If given it will be used as a constant random seed for the classifiers which supports it.
+    :return: A dictionary with the keys 'estimator' and 'param_grid' which can be used for the grid search to select
+             the parameters of the model.
     """
     param_grid = dict()  # This is the parameter grid which the grid search will go over
 
@@ -113,7 +125,11 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
 
 def get_cv_generator(training_data, do_segment_split=True, random_state=None):
     """
-    Returns a cross-validation generator.
+    Returns a cross validation generator.
+    :param training_data: The training data to create the folds from.
+    :param do_segment_split: If True, the folds will be generated based on the segment names.
+    :param random_state: A constant to use as a random seed.
+    :return: A generator which can be used by the grid search to generate cross validation folds.
     """
     k_fold_kwargs = dict(n_folds=10, random_state=random_state)
     if do_segment_split:
@@ -145,7 +161,7 @@ def train_model(interictal,
     :param cv_verbosity: The verbosity level for the cross-validation experiments
     :param model_params: A dict containing the parameters to be passed to the model
     :param random_state: Seed
-    :param no_crossvalidation: Do not perform cross-validation
+    :param no_crossvalidation: If True, no cross-validation will be performed. In this case, model_params should be set.
     :return: A trained classfier model.
     """
     if random_state is not None:
@@ -189,20 +205,33 @@ def train_model(interictal,
 
 
 def refit_model(interictal, preictal, clf):
-    """ Fits the classifier *clf* to the given preictal and interictal data. """
+    """
+    Fits the classifier *clf* to the given preictal and interictal data.
+
+    :param interictal: The interictal training data.
+    :param preictal: The preictal training data.
+    :param clf: The classifier to fit. Can be either a grid search or a classifier.
+    :return: None. The classifier is fit inplace.
+    """
 
     training_data = dataset.merge_interictal_preictal(interictal, preictal)
     if hasattr(clf, 'best_estimator_'):
-        return clf.best_estimator_.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
+        clf.best_estimator_.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
     else:
-        return clf.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
+        clf.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
 
 
 def predict(clf, test_data, probabilities=True):
     """
-    Returns an array of predictions for the given *test_data* using the classifier *clf*. If *probabilities* is True
-    and the classifier supports it, the predictions will be Preictal probabilites.
+    Returns an array of predictions for the given *test_data* using the classifier *clf*.
+    If *probabilities* is True and the classifier supports it, the predictions will be Preictal probabilites.
     Otherwise, the class labels are used.
+
+    :param clf: The classifier to use.
+    :param test_data: The data to predict labels for.
+    :param probabilities: If True and the classifier supports it, the array will contain class probabilites. Otherwise
+                          it will contain 0-1 class guesses.
+    :return: An ndarray with the class predictions for the test data.
     """
     if probabilities and hasattr(clf, 'predict_proba'):
         predictions = clf.predict_proba(test_data)
@@ -223,6 +252,12 @@ def predict(clf, test_data, probabilities=True):
 def get_report(clf, test_data_x, test_data_y):
     """
     Returns a string with a report of how the classifier *clf* does on the test data.
+
+    :param clf: The classifier to use for calculating the scores.
+    :param test_data_x: The test data observations to use for predictions.
+    :param test_data_y: The test data class label to use.
+    :return: A string containing a report on the performance of the classifier comparing the predicted class labels
+             versus the true.
     """
     test_data_y_pred = predict(clf, test_data_x, probabilities=False)
 
@@ -249,7 +284,12 @@ def get_report(clf, test_data_x, test_data_y):
 
 
 def grid_scores(clf):
-    """Returns a string with the grid scores"""
+    """
+    Returns a string with the grid scores
+
+    :param clf: The grid search object to calculate the scores from.
+    :return: A string containing a report of the grid scores for the given grid search object.
+    """
     score_lines = ["Grid scores on development set:", ""]
     for params, mean_score, scores in clf.grid_scores_:
         score_lines.append("{:0.3f} (+/-{:0.03f}) for {}".format(mean_score, scores.std()/2, params))
@@ -264,7 +304,18 @@ def select_model(training_data, method='logistic',
                  cv_verbosity=2,
                  model_params=None,
                  random_state=None):
-    """Fits a model given by *method* to the training data."""
+    """
+    Fits a model given by *method* to the training data.
+    :param training_data: The training data to fit the model with
+    :param method: A string which specifies the model to use.
+    :param do_segment_split: If True, the training data will be split by segment.
+    :param processes: The number of processes to use for the grid search.
+    :param cv_verbosity: The verbosity level of the grid search. 0 is silent, 2 is maximum verbosity.
+    :param model_params: An optional dictionary with keyword arguments to tune the grid search.
+    :param random_state: A constant which will seed the random number generator if given.
+    :return: The fitted grid search object.
+    """
+
     logging.info("Training a {} model".format(method))
 
     training_data_x = training_data.drop('Preictal', axis=1)
@@ -322,7 +373,13 @@ def assign_segment_scores(test_data, clf):
 
 
 def cm_report(cm, labels, sep='\t'):
-    """Returns a pretty print for the confusion matrix"""
+    """
+    Returns a pretty printed confusion matrix as a string.
+    :param cm: The confusion matrix to use. Should support subscript with pair.
+    :param labels: The labels to use for the classes.
+    :param sep: The seperator to use between columns of the matrix.
+    :return: A string with a confusion matrix given by *cm*.
+    """
     columnwidth = max([len(x) for x in labels])
     cm_lines = ["Colums show what the true values(rows) were classified as."]
 
