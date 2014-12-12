@@ -13,6 +13,7 @@ from . import dataset
 
 channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
 
+
 def convert_channel_name(name):
     """Pass"""
     match = re.match(channel_pattern, name)
@@ -43,11 +44,13 @@ def new_load_and_pivot(dataframe):
 
 def load_and_pivot(filename, frame_length=1, sliding_frames=True):
     """
-    Loads the given csv. Will return a data frame with the channel
-    pairs as columns. *frame_length* determines how many windows from
-    the csv file will be collected into every row of the data
-    frame.
+    Loads the cross correlation features from the given filename.
+    :param filename: The filename to load features from.
+    :param frame_length: The desired frame length in windows to use.
+    :param sliding_frames: If True, the data will be extended by using sliding frames of the feature windows.
+    :return: A DataFrame with the loaded features.
     """
+
     with open(filename) as fp:
         dataframe = pd.read_csv(fp, sep="\t")
 
@@ -69,7 +72,10 @@ def load_and_pivot(filename, frame_length=1, sliding_frames=True):
 def load_data_frames(feature_folder,
                      **kwargs):
     """
-    Loads the dataframes for the feature files in *feature_folder*. This function has been deprecated in favor of dataset.load_data_frames.
+    Loads the DataFrames for the feature files in *feature_folder*.
+    :param feature_folder: The folder containing the feature files.
+    :param kwargs: keyword arguments to the load function
+    :return: A triplet of DataFrames (interictal, preictal, test)
     """
     return dataset.load_data_frames(feature_folder,
                                     load_function=load_and_pivot,
