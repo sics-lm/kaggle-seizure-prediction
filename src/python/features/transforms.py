@@ -63,7 +63,6 @@ class Filter:
         return data
 
 
-
 class FFT:
     """
     Apply Fast Fourier Transform to the last axis.
@@ -89,7 +88,7 @@ class Slice:
         return "slice%d-%d" % (self.start, self.end)
 
     def apply(self, data):
-        s = [slice(None),] * data.ndim
+        s = [slice(None), ] * data.ndim
         s[-1] = slice(self.start, self.end)
         return data[s]
 
@@ -253,8 +252,8 @@ class DaubWaveletStats:
         for i in range(len(data)):
             outi = out[i]
             new_data = pywt.wavedec(data[i], 'db%d' % self.n, level=self.n*2)
-            for i, x in enumerate(new_data):
-                set_stats(outi, x, i)
+            for j, x in enumerate(new_data):
+                set_stats(outi, x, j)
 
         return out
 
@@ -526,9 +525,7 @@ class TimeCorrelation:
         elif self.scale_option == 'us':
             data1 = UnitScale().apply(data1)
 
-
         data1 = CorrelationMatrix().apply(data1)
-
 
         if self.with_eigen:
             w = Eigenvalues().apply(data1)
