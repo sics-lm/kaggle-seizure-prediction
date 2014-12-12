@@ -43,13 +43,13 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
     """
     Returns a dictionary with the model and cross-validation parameter grid for the model named *method*.
     """
-    param_grid = dict()  ## This is the parameter grid which the grid search will go over
+    param_grid = dict()  # This is the parameter grid which the grid search will go over
 
     min_c = sklearn.svm.l1_min_c(training_data_x, training_data_y, loss='log')
 
     if method == 'logistic':
         clf = sklearn.linear_model.LogisticRegression(C=1, random_state=random_state)
-        param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2'], 'random_state':[random_state]}
+        param_grid = {'C': np.linspace(min_c, 1e5, 10), 'penalty': ['l1', 'l2'], 'random_state': [random_state]}
 
     elif method == 'svm':
         clf = sklearn.svm.SVC(probability=True, class_weight='auto', cache_size=1000)
@@ -67,9 +67,9 @@ def get_model(method, training_data_x, training_data_y, model_params=None, rando
 
     elif method == 'sgd':
         clf = sklearn.linear_model.SGDClassifier()
-        param_grid = [{'loss' : ['hinge', 'log'],
-                       'penalty' : ['l1', 'l2', 'elasticnet'],
-                       'alpha' : [0.0001, 0.001, 0.01, 0.1]}]
+        param_grid = [{'loss': ['hinge', 'log'],
+                       'penalty': ['l1', 'l2', 'elasticnet'],
+                       'alpha': [0.0001, 0.001, 0.01, 0.1]}]
 
     elif method == 'random-forest':
         clf = sklearn.ensemble.RandomForestClassifier()
@@ -164,10 +164,10 @@ def train_model(interictal,
         clf.fit(training_x, training_y)
     else:
         training_data, test_data = dataset.split_experiment_data(interictal,
-                                                             preictal,
-                                                             training_ratio=training_ratio,
-                                                             do_segment_split=do_segment_split,
-                                                             random_state=random_state)
+                                                                 preictal,
+                                                                 training_ratio=training_ratio,
+                                                                 do_segment_split=do_segment_split,
+                                                                 random_state=random_state)
         logging.info("Shapes after splitting experiment data:")
         logging.info("training_data: {}".format(training_data.shape))
         logging.info("test_data: {}".format(test_data.shape))
@@ -196,7 +196,6 @@ def refit_model(interictal, preictal, clf):
         return clf.best_estimator_.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
     else:
         return clf.fit(training_data.drop('Preictal', axis=1), training_data['Preictal'])
-
 
 
 def predict(clf, test_data, probabilities=True):
@@ -308,11 +307,16 @@ def assign_segment_scores(test_data, clf):
     """
     Returns a data frame with the segments of *test_data* as indices
     and the ratio of preictal guesses as a 'Preictal' column
+
+    :param test_data: A DataFrame with the unlabeled test data.
+    :param clf: The classifier to use for predicting scores.
+    :return: A DataFrame with segments to preictal ratio. The probability is given by the columns 'Preictal'
     """
+
     predictions = predict(clf, test_data)
     df_predictions = pd.DataFrame(predictions,
                                   index=test_data.index,
-                                  columns=('Preictal',)) # TODO Capital P here?
+                                  columns=('Preictal',))
     segment_groups = df_predictions.groupby(level='segment')
     return segment_groups.mean()
 
