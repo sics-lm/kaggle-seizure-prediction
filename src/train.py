@@ -14,6 +14,15 @@ from python.classification import classification_pipeline
 
 
 def extract_features(settings):
+    """
+    Extract features based on the dictionary *settings*. The type of features extracted depends on the key
+    'FEATURE_TYPE' and should be either 'xcorr', 'wavelets' or 'hills'.
+
+    :param settings: A dictionary with settings. Usually created from the json file 'SETTINGS.json' in the project root
+                     directory.
+    :return: None. The features will be saved as csv files to the directory given by the key 'FEATURE_PATH' in the
+             settings dictionary.
+    """
     output_dir = settings['FEATURE_PATH']
     workers = settings['WORKERS']
     window_size = settings['FEATURE_SETTINGS']['WINDOW_LENGTH']
@@ -41,6 +50,16 @@ def extract_features(settings):
 
 
 def train_model(settings):
+    """
+    Trains a SVM classifier using the features selected by the  *settings* dictionary.
+    When fitted, the model will automatically be used to assign scores and a submission file will be generated in the
+    folder given by 'SUBMISSION_PATH' in the *settings* dictionary.
+
+    :param settings: A dictionary with settings. Usually created from the json file 'SETTINGS.json' in the project root
+                     directory.
+    :return: None. The model will be pickled to a file in the corresponding subject feature folder. A submission file
+             will be written to the folder given by 'SUBMISSION_PATH' in the settings dictionary.
+    """
     # classification_pipeline.train_models(feature_folders=[settings['FEATURE_PATH']],
     #                                      feature_type=settings['FEATURE_TYPE'],
     #                                      model_dir=settings['MODEL_PATH'],
@@ -59,6 +78,12 @@ def train_model(settings):
 
 
 def fix_settings(settings, root_dir):
+    """
+    Goes through the settings dictionary and makes sure the paths are correct.
+    :param settings: A dictionary with settings, usually obtained from SETTINGS.json in the root directory.
+    :param root_dir: The root path to which any path should be relative.
+    :return: A settings dictionary where all the paths are fixed to be relative to the supplied root directory.
+    """
     fixed_settings = dict()
     for key, setting in settings.items():
         if 'path' in key.lower():
@@ -71,6 +96,11 @@ def fix_settings(settings, root_dir):
 
 
 def get_settings(settings_path):
+    """
+    Reads the given json settings file and makes sure the path in it are correct.
+    :param settings_path: The path to the json file holding the settings.
+    :return: A dictionary with settings.
+    """
     with open(settings_path) as settings_fp:
         settings = json.load(settings_fp)
     root_dir = os.path.dirname(settings_path)
