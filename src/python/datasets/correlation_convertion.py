@@ -15,7 +15,12 @@ channel_pattern = re.compile(r'(?:[a-zA-Z0-9]*_)*(c[0-9]*|[A-Z]*_[0-9]*)$')
 
 
 def convert_channel_name(name):
-    """Pass"""
+    """
+    Converts channel names to more compact versions, especially useful for the dogs since their channels have
+    really long names.
+    :param name: The name to convert.
+    :return: A shortened version of the name if possible, otherwise the original name.
+    """
     match = re.match(channel_pattern, name)
     if match:
         return match.group(1) or match.group(2)
