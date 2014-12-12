@@ -347,8 +347,9 @@ def run_classification(interictal_data,
     if not os.path.exists(csv_directory):
         os.makedirs(csv_directory)
     # TODO model might be referenced before assignment
-    scores = write_scores(csv_directory, unlabeled_data, model, file_components=file_components, optional_file_components=optional_file_components, timestamp=timestamp)
-    logging.info("Finnished with classification on folder {}".format(subject_folder))
+    scores = write_scores(csv_directory, unlabeled_data, model, file_components=file_components,
+                          optional_file_components=optional_file_components, timestamp=timestamp)
+    logging.info("Finished with classification on folder {}".format(subject_folder))
 
     return scores
 
@@ -376,7 +377,7 @@ def write_scores(csv_directory, test_data, model, file_components=None, optional
     if file_components is None:
         score_file = "classification_{}.csv".format(timestamp)
     else:
-        score_file = fileutils.generate_filename('classification','.csv', components=file_components,
+        score_file = fileutils.generate_filename('classification', '.csv', components=file_components,
                                                  optional_components=optional_file_components, timestamp=timestamp)
     score_path = os.path.join(csv_directory, score_file)
     logging.info("Writing classification scores to {}.".format(score_path))
@@ -589,7 +590,6 @@ def main():
 
     if args_dict['random_state'] is not None:
         np.random.seed(args_dict['random_state'])
-
 
     file_components = [args_dict['feature_type'],
                        args_dict['method'],
