@@ -13,7 +13,7 @@ from .transforms import FFTWithTimeFreqCorrelation as FFT_TF_xcorr
 from .transforms import FilteredFFTWithTFCorrelation as Filtered_TF_xcorr
 
 
-def extract_features_for_segment(segment, transformation=None,feature_length_seconds=60, window_size=5):
+def extract_features_for_segment(segment, transformation=None, feature_length_seconds=60, window_size=5):
     """
     Creates a feature dictionary from a Segment object, according to the provided
     transformation function.
@@ -115,12 +115,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Calculates features according to Mike Hills winning submission.")
 
     parser.add_argument("segments", help="The files to process. This can either be the path to a matlab file holding"
-                                         " the segment or a directory holding such files.", nargs='+', metavar="SEGMENT_FILE")
+                                         " the segment or a directory holding such files.", nargs='+',
+                        metavar="SEGMENT_FILE")
     parser.add_argument("--csv-directory", help="Directory to write the csv files to, if omitted, the files will be"
                                                 " written to the same directory as the segment")
     parser.add_argument("--window-size", help="What length in seconds the epochs should be.", type=float, default=5.0)
     parser.add_argument("--feature-length", help="The length of the feature vectors in seconds, will be produced by "
-                                                 "concatenating the phase lock values from the windows.", type=float, default=60.0)
+                                                 "concatenating the phase lock values from the windows.", type=float,
+                        default=60.0)
     parser.add_argument("--workers", help="The number of worker processes used for calculating the cross-correlations.",
                         type=int, default=1)
     parser.add_argument("--resample-frequency", help="The frequency to resample to,",
