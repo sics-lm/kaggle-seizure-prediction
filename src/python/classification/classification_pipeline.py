@@ -40,8 +40,10 @@ def run_batch_classification(feature_folders,
     subject folders {'Dog_1', 'Dog_2', 'Dog_3', 'Dog_4', 'Dog_5', 'Patient_1', 'Patient_2'}.
     If the folder contains any of the subject folders, it will be replaced by them in the list of feature folders.
     :param timestamp: The provided timestamp for this classification
-    :param file_components: ???
-    :param optional_file_components: ???
+    :param file_components: A list of strings which should be used as parts of the filename of any file generated during
+                            the classification.
+    :param optional_file_components: A dictionary of strings to booleans of filename parts which should be included only
+                                     if the value is True.
     :param submission_file: If this argument is a path, the classification scores will be written to a csv file with
     that path.
     :param frame_length: The length of each frame, in number of windows
@@ -211,6 +213,18 @@ def preprocess_features(interictal,
     Performs pre-processing on the features.
 
     This can include downsampling the interictal data, standardizing the data and performing PCA feature reduction.
+    :param interictal: A DataFrame with the interictal training data.
+    :param preictal: A DataFrame with the preictal training data.
+    :param test: A DataFrame with the unlabled test data.
+    :param do_downsample: If True, the majority class (the interictal data) will be downsampled.
+    :param downsample_ratio: The ratio of interictal/preictal class size after downsampling. Set to 1.0 to make the
+                             classes equal size.
+    :param do_standardize: If True, the data will be centered to 0 mean and scaled to std. deviation 1.
+    :param do_segment_split: If True, all data manipulation (such as downsampling) will be on a segment basis.
+                             If False, the data will be manipulated at the observation level.
+    :param do_pca: If True, the dataset will be projected on it's principal components.
+    :param random_state: If not None, this constant will be used to seed the random number generator.
+    :return: A triple of DataFrames (interictal, preictal, test)
     """
     logging.info("Preprocessing features")
     if do_downsample:
@@ -255,6 +269,37 @@ def run_classification(interictal_data,
                        model_params=None,
                        random_state=None,
                        no_crossvalidation=False):
+    """
+    Trains a model for a single subject and returns the classification scores for the unlabeled data of that subject.
+
+    :param interictal_data: A DataFrame with the interictal training data.
+    :param preictal_data: A DataFrame with the preictal training data.
+    :param unlabeled_data: A DataFrame with the unlabled test data.
+    :param subject_folder: The folder holding the features for the subject, this is where the model file and subject
+                           scores are saved if csv_directory is not given.
+    :param training_ratio: The ratio of training data to use for the training set during cross validation.
+    :param file_components: A list of strings which should be included in any filename generated.
+    :param optional_file_components: A dictionary of strings as keys and booleans as values for filename components
+                                     which should be included in generated filenames if the value is true.
+    :param model_file: If given, the model will be unpickled from the given path and used for classification.
+    :param rebuild_model: If given, a new model will always be fitted regardless of whether *model_file* is given.
+    :param method: The model to use for classification.
+    :param do_segment_split: If True, all data manipulation (e.g. training/test split) will be on a per segment basis.
+                             If False, the data will be manipulated on a per row basis, ignoring segments.
+    :param processes: The number of parallel processes to use for cross validation.
+    :param csv_directory: If given, the subject classification scores will be written to this folder. If None, the
+                          scores are saved to the subject folder.
+    :param do_refit: If True, the model will be refit using all training data after cross validation has selected the
+                     parameters. If False, the model will only be fit with *training_ratio* of the training data.
+    :param cv_verbosity: The verbosity level for the parameter grid search. 0 is silent, 2 is maximum verbosity.
+    :param model_params: A dictionary with keywords to use as arguments for the model. If cross validation is used,
+                         the values need to be lists. If cross validation is not used, the values needs to be the type
+                         expected by the model.
+    :param random_state: An optional constant to seed the random number generator with.
+    :param no_crossvalidation: If True, no cross validation will be performed. If this is the case, *model_params* must
+                               be given.
+    :return: A dictionary of scores
+    """
     logging.info("Running classification on folder {}".format(subject_folder))
 
     if model_file is None and not rebuild_model:
@@ -315,14 +360,14 @@ def write_scores(csv_directory, test_data, model, file_components=None, optional
     :param csv_directory: The directory to where the classification scores will be written.
     :param test_data: The dataframe holding the test data
     :param model: The model to use for predicting the preictal probability of the test data.
-    :param file_components: ???
-    :param optional_file_components: ???
-    :param timestamp: If this argument is provided, it will be used for naming the classification file.
-    Otherwise the current time will be used as a time stamp for the file.
+    :param file_components: A list of strings which should be included in any filename generated.
+    :param optional_file_components: A dictionary of strings as keys and booleans as values for filename components
+                                     which should be included in generated filenames if the value is true.
+    :param timestamp: If this argument is provided, it will be used as part of the generated filename.
+                      Otherwise the current time will be used as a time stamp for the file.
     :return: A dataframe containing the predicted segment preictal probabilities. The probabilities are also written
-    to disk.
+    to the *csv_directory*.
     """
-
 
     if timestamp is None:
         timestamp = datetime.datetime.now().replace(microsecond=0)
