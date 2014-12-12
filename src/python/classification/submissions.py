@@ -13,6 +13,11 @@ def scores_to_submission(score_dicts, **kwargs):
     """
     Returns a list of dictionaries with 'clip' and 'preictal' keys, suitable
     for writing to a submission file.
+
+    :param score_dicts: List of dictionaries containing segment scores.
+    :param kwargs: keword arguments to the create_submission_rows function.
+    :return: A list of dictionaries, where each inner dictionary represents one of the scores. The inner dictionaries
+    has the keys 'clip' and 'preictal', where the 'clip' item gives the clip filename. The list is sorted by clip.
     """
     all_scores = merge_scores(score_dicts)
     canonical_names = fileutils.load_testsegment_names()
@@ -68,7 +73,10 @@ def create_submission_rows(score_dict,
 
 def old_normalize_scores(clip_scores):
     """
-    Normalizes the scores per subject.
+    Normalizes the scores per subject. This version just stretches the scores to the maximum an minimum values.
+
+    :param clip_scores: A dictionary with segment name to score mappings.
+    :return: A dictionary with segment name to score mappings, where the scores for each subject has been normalized.
     """
     # subject_scores is a dictionary with subjects as keys and a list of all
     # scores for that subject as values
@@ -86,7 +94,11 @@ def old_normalize_scores(clip_scores):
 
 def normalize_scores(clip_scores):
     """
-    Normalizes the scores per subject.
+    Normalizes the scores per subject. This version centers the score to 0.5, scales it by 2 standard deviations and
+    clips any values less than 0 or greater than 1.
+
+    :param clip_scores: A dictionary with segment name to score mappings.
+    :return: A dictionary with segment name to score mappings, where the scores for each subject has been normalized.
     """
     # subject_scores is a dictionary with subjects as keys and a list of all
     # scores for that subject as values
@@ -104,7 +116,12 @@ def normalize_scores(clip_scores):
 
 
 def collect_subject_scores(clip_scores):
-    """Returns a dictionary with the subjects as keys and a list with the score for the subject as values"""
+    """
+    Groups the scores per subject.
+    :param clip_scores: A dictionary with segment name to score mappings.
+    :return: A dictionary with subject to score mappings. The keys are the subject names and the values are lists of
+             scores for the subject in question.
+    """
     subject_scores = defaultdict(list)
     for segment, score in clip_scores.items():
         subject = fileutils.get_subject(segment)
@@ -113,8 +130,14 @@ def collect_subject_scores(clip_scores):
 
 
 def normalize_score(score, mean, std):
-    """Normalizes the score by considering a normal distribution centered on 0.5
-       with a std of 0.5"""
+    """
+    Normalizes the score by centering it at 0.5 and scale it by 2 standard deviations. Values below 0 or above 1
+    are clipped.
+    :param score: The score to standardize.
+    :param mean: The mean score for this subject.
+    :param std: The standard deviation of scores for the subject.
+    :return: The score centered at 0.5 and scaled by 2 standard deviations.
+    """
     score -= mean
     if std != 0:
         score /= std*2  # We don't want to clip to much of the distribution
@@ -127,14 +150,24 @@ def normalize_score(score, mean, std):
 
 
 def old_normalize_score(score, scores_max, scores_min):
-    """Simple normalization which subtracts the minimum score and scales in
-       proportion to the maximum score."""
+    """
+    Normalizes the score by subtracting the minimum score for the subject and scale it by the maximum score.
+    :param score: The score to normalize.
+    :param scores_max: The maximum score for the subject.
+    :param scores_min: The minimum score for the subject.
+    :return: The normalized score.
+    """
     score -= scores_min
     score /= scores_max - scores_min
     return score
 
 
 def read_score_file(filename):
+    """
+    Reads the given score file.
+    :param filename: A CSV file with segment scores.
+    :return: A dictionary with segment name to score mappings.
+    """
     """Returns a dictionary of the scores in the csv file *filename*"""
     with open(filename, 'r') as fp:
         csv_file = csv.reader(fp)
@@ -144,10 +177,10 @@ def read_score_file(filename):
 
 def collect_file_scores(filenames):
     """
-    Collects the scores from multiple files into a score file. The files will be
-    read in sorted order, so scores with the same segment name will use the
-    scores from the last filename in the list. If the filenames are timestamped
-    this means that the latest score will be used.
+    Reads multiple score files.
+
+    :param filenames: The files to read scores from.
+    :return: A list of dictionaries with segment name to score mappings.
     """
     return [read_score_file(filename) for filename in sorted(filenames)]
 
@@ -155,9 +188,12 @@ def collect_file_scores(filenames):
 def merge_scores(score_dicts):
     """
     Merges the collection of score dictionaries to a single one. The dictionaries will be merged in the order they're
-     supplied, so the last dictionary in the collection will be the ones who's scores are kept if multiple dictionaries
-     have the same keys
-     """
+    supplied, so the last dictionary in the collection will be the ones who's scores are kept if multiple dictionaries
+    have the same keys
+
+    :param score_dicts: A list of score dictionaries, containing segment name to score mappings.
+    :return: A dictionary containing segment name to score mappings.
+    """
     scores = dict()
     for score_dict in score_dicts:
         scores.update(score_dict)
@@ -168,7 +204,18 @@ def write_scores(scores,
                  output=sys.stdout,
                  do_normalize=True,
                  default_score=0):
-    """Writes the given classification_files to output in submission format."""
+    """
+    Writes the given segment scores to a submission file. If a expected segment is missing, it will be filled with
+    a default value.
+
+    :param scores: A list of score dictionaries. Each if the inner dictionaries should have two keys: 'clip' and
+                   'preictal'. 'clip' is the name of the segment and 'preictal' is the class probability of that
+                    segment being preictal.
+    :param output: The file-like object which the scores should be written to.
+    :param do_normalize: If True, scores will be normalized per subject.
+    :param default_score: The value to use for missing segments in the *scores* list.
+    :return: None. The scores are written to the output file-like object.
+    """
     submissions = scores_to_submission(scores, do_normalize=do_normalize, default_score=default_score)
     csv_writer = csv.DictWriter(output, fieldnames=['clip', 'preictal'])
     csv_writer.writeheader()
@@ -176,6 +223,12 @@ def write_scores(scores,
 
 
 def submission_from_files(classification_files, **kwargs):
+    """
+    Creates a submission file based on the given subject score files.
+    :param classification_files: Files containing segment scores.
+    :param kwargs: keyword arguments which will be sent to *write_scores*
+    :return: None.
+    """
     scores = collect_file_scores(classification_files)
     write_scores(scores, **kwargs)
 
