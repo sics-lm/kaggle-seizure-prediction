@@ -24,12 +24,12 @@ except AttributeError:
 def has_nan(df):
     return np.count_nonzero(np.isnan(df)) != 0
 
+
 def run_pca_analysis(feature_folder,
                      do_downsample=True,
                      n_samples=100,
                      frame_length=12,
                      sliding_frames=False,
-                     segment_statistics=False,
                      processes=1):
     """
     Performs a PCA analysis on the features provided.
@@ -51,14 +51,12 @@ def run_pca_analysis(feature_folder,
     interictal, preictal, test_data = wavelet_classification.load_data_frames(feature_folder,
                                                                               frame_length=frame_length,
                                                                               sliding_frames=sliding_frames,
-                                                                              segment_statistics=segment_statistics,
                                                                               processes=processes)
 
     if has_nan(interictal) or has_nan(preictal) or has_nan(test_data):
         print("WARNING: NaN values found, quitting!",
               file=sys.stderr)
         sys.exit(1)
-
 
     fig, pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
@@ -80,14 +78,12 @@ def run_xcorr_pca_analysis(feature_folder,
                            n_samples=100,
                            do_standardize=False,
                            sliding_frames=False,
-                           segment_statistics=False,
                            processes=1):
     interictal, preictal, test_data = correlation_convertion.load_data_frames(feature_folder,
                                                                               frame_length=frame_length,
                                                                               sliding_frames=sliding_frames,
-                                                                              segment_statistics=segment_statistics,
                                                                               processes=processes)
-    fig,pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
+    fig, pca = mould_data(interictal, preictal, test_data, do_downsample=do_downsample, n_samples=n_samples)
 
     timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
     pca_name = "pca_analysis_frame_length_{}_{}".format(frame_length, timestamp)
@@ -193,14 +189,9 @@ if __name__ == '__main__':
                         default=4,
                         type=int)
 
-    parser.add_argument("--segment-statistics",
-                        dest='segment_statistics',
-                        action='store_true',
-                        default=False,
-                        help="Augment the data with segment statistics")
-
     parser.add_argument("--frame-length",
-                        help="The size in windows each frame (feature vector) should be. Only applicable to --feature-type 'xcorr' at the momen",
+                        help=("The size in windows each frame (feature vector) should be. Only applicable "
+                              "to --feature-type 'xcorr' at the moment"),
                         dest='frame_length',
                         default=12,
                         type=int)
@@ -222,8 +213,7 @@ if __name__ == '__main__':
                          n_samples=args.n_samples,
                          sliding_frames=args.sliding_frames,
                          frame_length=args.frame_length,
-                         processes=args.processes,
-                         segment_statistics=args.segment_statistics)
+                         processes=args.processes)
     else:
         run_xcorr_pca_analysis(feature_folder=args.feature_folder,
                                frame_length=args.frame_length,
@@ -231,5 +221,4 @@ if __name__ == '__main__':
                                n_samples=args.n_samples,
                                do_standardize=args.do_standardize,
                                sliding_frames=args.sliding_frames,
-                               processes=args.processes,
-                               segment_statistics=args.segment_statistics)
+                               processes=args.processes)

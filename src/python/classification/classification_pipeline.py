@@ -50,7 +50,6 @@ def run_batch_classification(feature_folders,
     :param feature_type: The name of the feature. Valid values are 'cross-correlation', 'hills' and 'wavelets'
     :param processes: The number of processes to use in the grid search
     :param csv_directory: Where to place the resulting classification files
-    :param segment_statistics: ???
     :param do_downsample: If true downsampling of the interictal features will be performed
     :param downsample_ratio: The ratio of interictal to preictal samples after downsampling.
     :param do_standardize: If True, the features will be standarized before classification
@@ -68,7 +67,6 @@ def run_batch_classification(feature_folders,
                                       sliding_frames=sliding_frames,
                                       rebuild_data=rebuild_data,
                                       processes=processes,
-                                      segment_statistics=segment_statistics,
                                       do_downsample=do_downsample,
                                       downsample_ratio=downsample_ratio,
                                       do_standardize=do_standardize,
@@ -119,7 +117,6 @@ def load_features(feature_folders,
                   sliding_frames=False,
                   rebuild_data=False,
                   processes=1,
-                  segment_statistics=False,
                   do_downsample=False,
                   downsample_ratio=2.0,
                   do_standardize=False,
@@ -141,8 +138,6 @@ def load_features(feature_folders,
     increasing the number of generated frames.
     :param rebuild_data: If True, will rebuild the feature data cache files.
     :param processes: Number of processes to use in the loading of the data
-    :param segment_statistics: If this filename is supplied, the dataframes will be augmented with features from this
-    file
     :param do_downsample:
     :param downsample_ratio:
     :param do_standardize:
@@ -165,8 +160,7 @@ def load_features(feature_folders,
                                                                               rebuild_data=rebuild_data,
                                                                               processes=processes,
                                                                               frame_length=frame_length,
-                                                                              sliding_frames=sliding_frames,
-                                                                              segment_statistics=segment_statistics)
+                                                                              sliding_frames=sliding_frames)
             interictal, preictal, unlabeled = preprocess_features(interictal, preictal, unlabeled,
                                                                   do_downsample=do_downsample,
                                                                   downsample_ratio=downsample_ratio,
@@ -194,8 +188,7 @@ def load_features(feature_folders,
                                                   processes=processes,
                                                   frame_length=frame_length,
                                                   sliding_frames=sliding_frames,
-                                                  output_folder=subject_folder,
-                                                  segment_statistics=segment_statistics)
+                                                  output_folder=subject_folder)
             interictal, preictal, unlabeled = dataframes
             yield dict(interictal_data=interictal,
                        preictal_data=preictal,
@@ -534,15 +527,9 @@ def get_cli_args():
                               "validation grid search, but the values doesn't have to be sequences. ",
                               "It will be used instead of the default grid_params."),
                         dest='model_params')
-    parser.add_argument("--segment-statistics",
-                        help=("If this flag is set, the feature dataframes will be augmented by a segment statistics "
-                              "file if it exists in the feature folder. This is not compatible with combined features"),
-                        dest='segment_statistics',
-                        action='store_true',
-                        default=False)
     parser.add_argument("--random-state",
-                        help=("Give a start seed for random stuff. Ensures repeatability between runs. If set to 'None', "
-                              "The random functions won't be seeded (using default initialization)"),
+                        help=("Give a start seed for random stuff. Ensures repeatability between runs. "
+                              "If set to 'None', The random functions won't be seeded (using default initialization)"),
                         dest='random_state',
                         default='1729')
     args_dict = vars(parser.parse_args())

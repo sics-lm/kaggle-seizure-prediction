@@ -394,7 +394,6 @@ def load_feature_files(feature_folder,
                        sliding_frames=False,
                        processes=1,
                        output_folder=None,
-                       segment_statistics=False,  # TODO Unused, but gets passed from load_data_frames kwargs, causing unexpected arg error
                        file_pattern="*segment*.csv"):
     """
     Loads all the files matching the class name and patter from the given feature folder.
