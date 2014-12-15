@@ -78,7 +78,7 @@ class FFT:
 class Slice:
     """
     Take a slice of the data on the last axis.
-    e.g. Slice(1, 48) works like a normal seizure_detection slice, that is 1-47 will be taken
+    e.g. Slice(1, 48) works like a normal sics_seizure_prediction slice, that is 1-47 will be taken
     """
     def __init__(self, start, end):
         self.start = start

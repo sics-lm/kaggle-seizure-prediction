@@ -8,8 +8,8 @@ import json
 import os.path
 import datetime
 
-from seizure_detection.features import hills_features, wavelets, cross_correlate
-from seizure_detection.classification import classification_pipeline
+from sics_seizure_prediction.features import hills_features, wavelets, cross_correlate
+from sics_seizure_prediction.classification import classification_pipeline
 
 
 def extract_features(settings):
