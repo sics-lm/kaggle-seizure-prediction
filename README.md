@@ -26,7 +26,7 @@ https://github.com/MichaelHills/seizure-detection/blob/master/README.md
  * pandas-0.14.0
  * scipy
  * mne
-
+ * matplotlib
 
 ##Train the model and make predictions
 
