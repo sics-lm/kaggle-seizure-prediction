@@ -11,14 +11,14 @@ seizure detection challenge.
 This README modelled on https://www.kaggle.com/wiki/ModelSubmissionBestPractices and
 https://github.com/MichaelHills/seizure-detection/blob/master/README.md
 
-##Hardware / OS platform used
+## Hardware / OS platform used
 
  * Feature extraction on 16 cores 128GB RAM server, classification on Core i7, 16GB RAM PC
  * Server: FreeBSD 9.3, PC: Ubuntu 14.04
 
-##Dependencies
+## Dependencies
 
-###Required
+### Required
 
  * Python 2.7
  * scikit_learn-0.14.1
@@ -28,7 +28,7 @@ https://github.com/MichaelHills/seizure-detection/blob/master/README.md
  * mne
  * matplotlib
 
-##Train the model and make predictions
+## Train the model and make predictions
 
 Obtain the competition data and place it in the root directory of the project.
 ```
